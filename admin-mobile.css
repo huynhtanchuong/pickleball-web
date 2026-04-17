@@ -459,3 +459,138 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
   margin-bottom: 8px;
 }
 .adm-add-set-btn:active { opacity: 0.7; }
+
+/* ── COLLAPSIBLE GROUP SECTION ── */
+.adm-group-section { margin-bottom: 8px; }
+.adm-group-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.adm-group-header:active { opacity: 0.7; }
+.adm-group-progress {
+  font-size: 0.68rem;
+  color: var(--adm-muted);
+  font-weight: 600;
+  margin-left: auto;
+}
+.adm-collapse-icon {
+  font-size: 0.7rem;
+  color: var(--adm-muted);
+  width: 16px;
+  text-align: center;
+}
+
+/* ── COLLAPSED CARD SUMMARY ── */
+.adm-card-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  padding: 2px 0;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.adm-card-summary:active { opacity: 0.75; }
+.adm-summary-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+.adm-summary-teams {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--adm-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.adm-summary-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.adm-summary-score {
+  font-size: 1rem;
+  font-weight: 900;
+  color: var(--adm-green);
+  font-variant-numeric: tabular-nums;
+}
+.adm-summary-time {
+  font-size: 0.7rem;
+  color: var(--adm-muted);
+}
+
+/* ── CARD BODY (expanded) ── */
+.adm-card-body { margin-top: 14px; }
+
+/* ── MATCH INFO (time/court/referee) ── */
+.adm-match-info {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  font-size: 0.75rem;
+  color: var(--adm-muted);
+  font-weight: 600;
+}
+
+/* ── INFO EDIT FIELDS ── */
+.adm-info-edit {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.adm-info-input {
+  background: var(--adm-bg);
+  border: 1px solid var(--adm-border);
+  color: var(--adm-text);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  width: 100%;
+}
+.adm-info-input:focus { outline: 2px solid var(--adm-blue); border-color: transparent; }
+.adm-info-save-btn {
+  background: var(--adm-card2);
+  border: 1px solid var(--adm-border);
+  color: var(--adm-text);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  align-self: flex-start;
+}
+.adm-info-save-btn:active { opacity: 0.7; }
+
+/* ── RESET MATCH BUTTON ── */
+.adm-reset-btn {
+  padding: 14px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  background: var(--adm-gray);
+  color: var(--adm-text);
+  transition: opacity 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.adm-reset-btn:active { opacity: 0.7; }
+
+/* ── AUTO NOTE ── */
+.adm-auto-note {
+  color: var(--adm-muted) !important;
+  font-style: italic;
+  font-size: 0.8rem !important;
+}

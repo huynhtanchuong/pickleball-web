@@ -242,7 +242,7 @@ function renderPublicStage(containerId, matches, stage) {
   }
 
   if (stage === "group") {
-    // Sub-group by group_name with divider headers
+    // Sub-group by group_name with collapsible headers
     const groups = {};
     matches.forEach(m => {
       if (!groups[m.group_name]) groups[m.group_name] = [];
@@ -250,11 +250,15 @@ function renderPublicStage(containerId, matches, stage) {
     });
     let html = "";
     Object.keys(groups).sort().forEach(g => {
-      html += `<div class="group-divider" style="grid-column:1/-1;">
-        <span class="group-divider-label">Group ${esc(g)}</span>
-        <span class="group-divider-line"></span>
-      </div>`;
+      html += `
+        <div class="pub-group-header" onclick="togglePubGroup('${g}')" style="grid-column:1/-1;">
+          <span class="group-divider-label">Bảng ${esc(g)}</span>
+          <span class="group-divider-line"></span>
+          <span class="pub-collapse-icon" id="pub-icon-${g}">▼</span>
+        </div>
+        <div id="pub-grp-${g}" style="display:contents;">`;
       groups[g].forEach(m => { html += publicMatchHTML(m, stage); });
+      html += `</div>`;
     });
     container.innerHTML = html;
   } else {
@@ -281,26 +285,34 @@ function publicMatchHTML(m, stage) {
               : playing ? '<span class="badge-live">● Playing</span>'
               :           '<span class="badge-ns">◌ Not Started</span>';
 
-  // For semi/final: show set scores
+  // For semi/final: show set scores (handle both uppercase and lowercase DB fields)
   let setsHtml = "";
   if (needsSets(m)) {
     const sets = [
-      { a: m.s1A || 0, b: m.s1B || 0, label: "S1" },
-      { a: m.s2A || 0, b: m.s2B || 0, label: "S2" },
-      { a: m.s3A || 0, b: m.s3B || 0, label: "S3" },
+      { a:m.s1A||m.s1a||0, b:m.s1B||m.s1b||0, label:"S1" },
+      { a:m.s2A||m.s2a||0, b:m.s2B||m.s2b||0, label:"S2" },
+      { a:m.s3A||m.s3a||0, b:m.s3B||m.s3b||0, label:"S3" },
     ];
-    const activeSets = sets.filter((s, i) => i === 0 || s.a > 0 || s.b > 0 || (i === 2 && m.scoreA === 1 && m.scoreB === 1));
+    const activeSets = sets.filter((s,i) => i===0 || s.a>0 || s.b>0 || (i===2 && m.scoreA===1 && m.scoreB===1));
     setsHtml = `<div class="mc-sets">` +
       activeSets.map(s => {
-        const wA = s.a > s.b, wB = s.b > s.a;
+        const wA=s.a>s.b, wB=s.b>s.a;
         return `<div class="mc-set-item">
           <span class="mc-set-label">${s.label}</span>
-          <span class="mc-set-score ${wA ? "winner" : ""}">${s.a}</span>
+          <span class="mc-set-score ${wA?"winner":""}">${s.a}</span>
           <span class="mc-set-sep">-</span>
-          <span class="mc-set-score ${wB ? "winner" : ""}">${s.b}</span>
+          <span class="mc-set-score ${wB?"winner":""}">${s.b}</span>
         </div>`;
       }).join("") + `</div>`;
   }
+
+  // Match info: time, court, referee
+  const infoHtml = (m.match_time||m.court||m.referee) ? `
+    <div class="mc-info">
+      ${m.match_time ? `<span>🕐 ${esc(m.match_time)}</span>` : ""}
+      ${m.court      ? `<span>🏟 ${esc(m.court)}</span>`      : ""}
+      ${m.referee    ? `<span>👤 ${esc(m.referee)}</span>`    : ""}
+    </div>` : "";
 
   return `
     <div class="match-card ${cardMod}" data-id="${m.id}">
@@ -314,6 +326,7 @@ function publicMatchHTML(m, stage) {
         <span class="mc-team right ${winnerB ? "winner" : ""}">${esc(m.teamB)}</span>
       </div>
       ${setsHtml}
+      ${infoHtml}
       <div class="mc-footer">
         <span class="mc-group-tag">${groupTag}</span>
         ${badge}
@@ -330,20 +343,17 @@ function needsSets(m) {
 }
 
 function computeSetWins(m) {
-  // Returns { winsA, winsB } based on individual set scores
   let wA = 0, wB = 0;
+  // Support both uppercase (local) and lowercase (Supabase DB) field names
   const sets = [
-    [m.s1A || 0, m.s1B || 0],
-    [m.s2A || 0, m.s2B || 0],
-    [m.s3A || 0, m.s3B || 0],
+    [m.s1A||m.s1a||0, m.s1B||m.s1b||0],
+    [m.s2A||m.s2a||0, m.s2B||m.s2b||0],
+    [m.s3A||m.s3a||0, m.s3B||m.s3b||0],
   ];
-  sets.forEach(([a, b]) => {
-    if (a > 0 || b > 0) { // only count sets that have been played
-      if (a > b) wA++;
-      else if (b > a) wB++;
-    }
+  sets.forEach(([a,b]) => {
+    if (a>0||b>0) { if(a>b) wA++; else if(b>a) wB++; }
   });
-  return { winsA: wA, winsB: wB };
+  return { winsA:wA, winsB:wB };
 }
 
 function getSetInput(id, field) {
@@ -443,7 +453,8 @@ async function updateScore(id) {
     const { winsA, winsB } = computeSetWins(tmp);
     scoreA = winsA;
     scoreB = winsB;
-    payload = { s1A, s1B, s2A, s2B, s3A, s3B, scoreA, scoreB };
+    // Use lowercase for Supabase (DB columns are lowercase)
+    payload = { s1a:s1A, s1b:s1B, s2a:s2A, s2b:s2B, s3a:s3A, s3b:s3B, scoreA, scoreB };
   } else {
     scoreA = parseInt(getInput(id, "scoreA"), 10) || 0;
     scoreB = parseInt(getInput(id, "scoreB"), 10) || 0;
@@ -539,7 +550,7 @@ async function finishMatch(id) {
     const s2A = getSetInput(id, "s2A"), s2B = getSetInput(id, "s2B");
     const s3A = getSetInput(id, "s3A"), s3B = getSetInput(id, "s3B");
     const { winsA, winsB } = computeSetWins({ s1A, s1B, s2A, s2B, s3A, s3B });
-    Object.assign(payload, { s1A, s1B, s2A, s2B, s3A, s3B, scoreA: winsA, scoreB: winsB });
+    Object.assign(payload, { s1a:s1A, s1b:s1B, s2a:s2A, s2b:s2B, s3a:s3A, s3b:s3B, scoreA:winsA, scoreB:winsB });
   } else {
     payload.scoreA = parseInt(getInput(id, "scoreA"), 10) || 0;
     payload.scoreB = parseInt(getInput(id, "scoreB"), 10) || 0;
@@ -718,6 +729,16 @@ function resetDemo() {
   localStorage.removeItem("pb_matches");
   localMatches = null;
   fetchMatches();
+}
+
+// ── Toggle public group collapse ──────────────────────────────
+function togglePubGroup(g) {
+  const grp  = document.getElementById(`pub-grp-${g}`);
+  const icon = document.getElementById(`pub-icon-${g}`);
+  if (!grp) return;
+  const hidden = grp.style.display === "none";
+  grp.style.display = hidden ? "contents" : "none";
+  if (icon) icon.textContent = hidden ? "▼" : "▶";
 }
 
 // ── Boot (public page only) ───────────────────────────────────

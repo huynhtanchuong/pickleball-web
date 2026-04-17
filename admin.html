@@ -9,9 +9,7 @@
 </head>
 <body>
 
-  <!-- ══════════════════════════════════════════
-       LOGIN SCREEN
-  ══════════════════════════════════════════ -->
+  <!-- LOGIN -->
   <div class="login-wrap" id="login-screen">
     <div class="login-card">
       <div style="font-size:2.5rem;margin-bottom:8px;">🏓</div>
@@ -19,11 +17,9 @@
       <p>Pickleball Tournament</p>
       <div class="form-group">
         <label for="pw-input">Password</label>
-        <input type="password" id="pw-input"
-          placeholder="Enter password"
+        <input type="password" id="pw-input" placeholder="Enter password"
           onkeydown="if(event.key==='Enter') doLogin()"
-          autocomplete="current-password"
-          autofocus />
+          autocomplete="current-password" autofocus />
       </div>
       <button class="login-btn" onclick="doLogin()">Sign In</button>
       <div class="login-error" id="login-error"></div>
@@ -33,12 +29,9 @@
     </div>
   </div>
 
-  <!-- ══════════════════════════════════════════
-       ADMIN PANEL
-  ══════════════════════════════════════════ -->
+  <!-- ADMIN PANEL -->
   <div id="admin-panel" style="display:none;">
 
-    <!-- Header -->
     <div class="adm-header">
       <div class="adm-header-left">
         <span>🏓</span>
@@ -59,28 +52,37 @@
     <div class="adm-section">
       <div class="adm-section-title">⚙️ Bracket</div>
       <div class="adm-btn-row">
-        <button class="adm-btn adm-btn-blue" onclick="generateSemifinals()">⚡ Gen Semifinals</button>
-        <button class="adm-btn adm-btn-purple" onclick="generateFinal()">🏆 Gen Final</button>
-        <button class="adm-btn adm-btn-gray" onclick="resetDemo()">↺ Reset</button>
+        <button class="adm-btn adm-btn-blue"   onclick="regenSemifinals()">⚡ Re-gen Bán Kết</button>
+        <button class="adm-btn adm-btn-purple" onclick="regenFinal()">🏆 Re-gen Chung Kết</button>
+        <button class="adm-btn adm-btn-gray"   onclick="resetDemo()">↺ Reset All</button>
       </div>
+      <p style="font-size:0.72rem;color:var(--adm-muted);margin-top:8px;">
+        ⏳ Bán kết &amp; chung kết tự động tạo khi trận cuối hoàn thành.
+      </p>
     </div>
 
     <!-- Group Stage -->
     <div class="adm-section">
-      <div class="adm-section-title">📋 Group Stage</div>
+      <div class="adm-section-title">📋 Vòng Bảng</div>
       <div id="match-list-group"><p class="empty">Loading…</p></div>
     </div>
 
     <!-- Semifinals -->
     <div class="adm-section">
-      <div class="adm-section-title">⚡ Semifinals</div>
-      <div id="match-list-semi"><p class="empty">No semifinals yet.</p></div>
+      <div class="adm-section-title">⚡ Bán Kết</div>
+      <div id="match-list-semi"><p class="empty adm-auto-note">⏳ Tự động tạo khi vòng bảng xong.</p></div>
     </div>
 
     <!-- Final -->
     <div class="adm-section">
-      <div class="adm-section-title">🏆 Final</div>
-      <div id="match-list-final"><p class="empty">No final yet.</p></div>
+      <div class="adm-section-title">🏆 Chung Kết</div>
+      <div id="match-list-final"><p class="empty adm-auto-note">⏳ Tự động tạo khi bán kết xong.</p></div>
+    </div>
+
+    <!-- Bracket visual -->
+    <div class="adm-section">
+      <div class="adm-section-title">🗂 Bracket</div>
+      <div id="bracket-container"></div>
     </div>
 
     <!-- Standings -->
@@ -89,11 +91,10 @@
       <div id="standings-container"><p class="empty">Loading…</p></div>
     </div>
 
-  </div><!-- /admin-panel -->
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="app.js"></script>
   <script src="admin.js"></script>
-
 </body>
 </html>

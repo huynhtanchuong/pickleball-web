@@ -1,14 +1,11 @@
 // ============================================================
-//  admin.js — Admin login + bracket management
-//  Loaded AFTER app.js on admin.html only.
+//  admin.js — Admin panel logic
 // ============================================================
 
 const ADMIN_PASSWORD = "admin123";
 const ADMIN_KEY      = "pb_admin_auth";
 
 // ── Auth ──────────────────────────────────────────────────────
-// isAdmin() is defined in app.js (loaded first) — no redeclaration needed here.
-
 function doLogin() {
   const pw  = document.getElementById("pw-input").value;
   const err = document.getElementById("login-error");
@@ -30,21 +27,16 @@ function doLogout() {
 function showAdminPanel() {
   document.getElementById("login-screen").style.display = "none";
   document.getElementById("admin-panel").style.display  = "block";
-  const connected = initSupabase();
+  initSupabase();
   fetchMatches();
-  subscribeRealtime(); // always — handles both realtime + polling fallback
+  subscribeRealtime();
 }
 
-// ── Boot: check existing session ─────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
-  if (isAdmin()) {
-    showAdminPanel();
-  }
-  // login screen is already visible by default
+  if (isAdmin()) showAdminPanel();
 });
 
-// ── Override renderMatches for admin (split by stage) ────────
-//  app.js renderMatches is replaced here for admin context.
+// ── Override renderMatches for admin ─────────────────────────
 function renderMatches(matches) {
   const groupMatches = matches.filter(m => !m.stage || m.stage === "group");
   const semiMatches  = matches.filter(m => m.stage === "semi");
@@ -53,26 +45,47 @@ function renderMatches(matches) {
   renderStageList("match-list-group", groupMatches, "group");
   renderStageList("match-list-semi",  semiMatches,  "semi");
   renderStageList("match-list-final", finalMatches, "final");
-
-  // Also update bracket visual if it exists
   updateBracketUI(matches);
+
+  // Auto-generate bracket stages
+  autoGenerateBracket(matches);
 }
 
+// ── Auto-generate bracket ─────────────────────────────────────
+async function autoGenerateBracket(matches) {
+  const groupMatches = matches.filter(m => !m.stage || m.stage === "group");
+  const semiMatches  = matches.filter(m => m.stage === "semi");
+  const finalMatches = matches.filter(m => m.stage === "final");
+
+  // Auto-gen semis: all group matches done AND no semis yet
+  const allGroupDone = groupMatches.length > 0 && groupMatches.every(m => m.status === "done");
+  if (allGroupDone && semiMatches.length === 0) {
+    await generateSemifinals(true); // silent=true
+    return;
+  }
+
+  // Auto-gen final: both semis done AND no final yet
+  const allSemiDone = semiMatches.length >= 2 && semiMatches.every(m => m.status === "done");
+  if (allSemiDone && finalMatches.length === 0) {
+    await generateFinal(true); // silent=true
+  }
+}
+
+// ── Render stage list ─────────────────────────────────────────
 function renderStageList(containerId, matches, stage) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
   if (!matches || matches.length === 0) {
     const msgs = {
-      group: "No group matches found.",
-      semi:  "No semifinals yet. Generate them above once group stage is complete.",
-      final: "No final yet. Generate it once both semifinals are done."
+      group: '<p class="empty">No group matches.</p>',
+      semi:  '<p class="empty adm-auto-note">⏳ Semifinals will auto-generate when all group matches finish.</p>',
+      final: '<p class="empty adm-auto-note">⏳ Final will auto-generate when both semifinals finish.</p>'
     };
-    container.innerHTML = `<p class="empty">${msgs[stage] || "No matches."}</p>`;
+    container.innerHTML = msgs[stage] || '<p class="empty">No matches.</p>';
     return;
   }
 
-  // For group stage, sub-group by group_name
   if (stage === "group") {
     const groups = {};
     matches.forEach(m => {
@@ -81,23 +94,41 @@ function renderStageList(containerId, matches, stage) {
     });
     let html = "";
     Object.keys(groups).sort().forEach(g => {
-      html += `<span class="adm-group-divider">Group ${esc(g)}</span>`;
-      groups[g].forEach(m => { html += matchHTML(m, stage); });
+      const allDone = groups[g].every(m => m.status === "done");
+      html += `
+        <div class="adm-group-section">
+          <div class="adm-group-header" onclick="toggleGroup('${g}')">
+            <span class="adm-group-divider">Bảng ${esc(g)}</span>
+            <span class="adm-group-progress">${groups[g].filter(m=>m.status==="done").length}/${groups[g].length} done</span>
+            <span class="adm-collapse-icon" id="icon-grp-${g}">▼</span>
+          </div>
+          <div class="adm-group-body" id="grp-${g}">
+            ${groups[g].map(m => matchHTML(m, stage)).join("")}
+          </div>
+        </div>`;
     });
     container.innerHTML = html;
   } else {
-    let html = "";
-    matches.forEach(m => { html += matchHTML(m, stage); });
-    container.innerHTML = html;
+    container.innerHTML = matches.map(m => matchHTML(m, stage)).join("");
   }
 }
 
+function toggleGroup(g) {
+  const body = document.getElementById(`grp-${g}`);
+  const icon = document.getElementById(`icon-grp-${g}`);
+  if (!body) return;
+  const collapsed = body.style.display === "none";
+  body.style.display = collapsed ? "block" : "none";
+  if (icon) icon.textContent = collapsed ? "▼" : "▶";
+}
+
+// ── Match card HTML ───────────────────────────────────────────
 function matchHTML(m, stage) {
-  const done       = m.status === "done";
-  const playing    = m.status === "playing";
-  const dis        = done ? "disabled" : "";
-  const winnerA    = done && m.scoreA > m.scoreB;
-  const winnerB    = done && m.scoreB > m.scoreA;
+  const done    = m.status === "done";
+  const playing = m.status === "playing";
+  const dis     = done ? "disabled" : "";
+  const winnerA = done && m.scoreA > m.scoreB;
+  const winnerB = done && m.scoreB > m.scoreA;
 
   let cardCls = done ? "is-done" : playing ? "is-playing is-live" : "is-ns";
   if (stage === "semi")  cardCls += " is-semi";
@@ -109,26 +140,31 @@ function matchHTML(m, stage) {
     ? '<span class="adm-status-badge adm-status-playing">● PLAYING</span>'
     : '<span class="adm-status-badge adm-status-ns">◌ NOT STARTED</span>';
 
-  const stageLabel = stage === "semi" ? "Semifinal" : stage === "final" ? "Final" : "";
+  const stageLabel = stage === "semi" ? "Bán Kết" : stage === "final" ? "Chung Kết" : "";
 
-  // Best-of-3 sets for semi/final
+  // Meta info: time, court, referee
+  const metaHtml = (m.match_time || m.court || m.referee) ? `
+    <div class="adm-match-info">
+      ${m.match_time ? `<span>🕐 ${esc(m.match_time)}</span>` : ""}
+      ${m.court      ? `<span>🏟 ${esc(m.court)}</span>`      : ""}
+      ${m.referee    ? `<span>👤 ${esc(m.referee)}</span>`    : ""}
+    </div>` : "";
+
+  // Score section
   const useSets = (stage === "semi" || stage === "final");
-
   let scoreSection = "";
   if (useSets) {
-    // Show set wins summary + 3 set rows
     const { winsA, winsB } = computeSetWins(m);
-    // Show set 3 only if both teams have won 1 set each
     const showSet3 = winsA >= 1 && winsB >= 1;
-
     scoreSection = `
       <div class="adm-set-wins" data-id="${m.id}">Sets: ${winsA} — ${winsB}</div>
       ${setRowHTML(m, 1, dis)}
       ${setRowHTML(m, 2, dis)}
-      ${showSet3 || m.s3A || m.s3B ? setRowHTML(m, 3, dis) : `
-        <div class="adm-set-row-placeholder" id="set3-${m.id}">
-          <button class="adm-add-set-btn" onclick="showSet3('${m.id}')" ${dis}>+ Set 3</button>
-        </div>`}`;
+      ${showSet3 || m.s3a || m.s3b || m.s3A || m.s3B
+        ? setRowHTML(m, 3, dis)
+        : `<div id="set3-${m.id}">
+             <button class="adm-add-set-btn" onclick="showSet3('${m.id}')" ${dis}>+ Set 3</button>
+           </div>`}`;
   } else {
     scoreSection = `
       <div class="adm-score-row">
@@ -148,30 +184,64 @@ function matchHTML(m, stage) {
       </div>`;
   }
 
-  return `
-    <div class="adm-match-card ${cardCls}" data-id="${m.id}" data-updated="${m.updated_at || ''}">
-      <div class="adm-card-header">
+  // Collapsed summary (shown when card is collapsed)
+  const summary = `
+    <div class="adm-card-summary" onclick="toggleCard('${m.id}')">
+      <div class="adm-summary-left">
         ${statusBadge}
-        <span class="adm-match-meta">${stageLabel}</span>
+        <span class="adm-summary-teams">${esc(m.teamA)} <span style="color:var(--adm-muted)">vs</span> ${esc(m.teamB)}</span>
       </div>
+      <div class="adm-summary-right">
+        ${done ? `<span class="adm-summary-score">${m.scoreA}:${m.scoreB}</span>` : ""}
+        ${m.match_time ? `<span class="adm-summary-time">${esc(m.match_time)}</span>` : ""}
+        <span class="adm-collapse-icon" id="icon-${m.id}">▶</span>
+      </div>
+    </div>`;
+
+  // Full card body (hidden by default)
+  const body = `
+    <div class="adm-card-body" id="body-${m.id}" style="display:none;">
+      ${metaHtml}
       <div class="adm-teams">
-        <span class="adm-team-name ${winnerA ? "winner" : ""}">${esc(m.teamA)}</span>
+        <span class="adm-team-name ${winnerA?"winner":""}">${esc(m.teamA)}</span>
         <span class="adm-vs">vs</span>
-        <span class="adm-team-name right ${winnerB ? "winner" : ""}">${esc(m.teamB)}</span>
+        <span class="adm-team-name right ${winnerB?"winner":""}">${esc(m.teamB)}</span>
       </div>
       ${scoreSection}
       <div class="adm-actions">
         <button class="adm-save-btn" ${dis} onclick="updateScore('${m.id}')">💾 Save</button>
-        <button class="adm-finish-btn ${done ? "is-done" : ""}" ${dis} onclick="finishMatch('${m.id}')">
-          ${done ? "✓ Finished" : "🏁 Finish Match"}
+        <button class="adm-finish-btn ${done?"is-done":""}" ${dis} onclick="finishMatch('${m.id}')">
+          ${done ? "✓ Finished" : "🏁 Finish"}
         </button>
+        ${done ? `<button class="adm-reset-btn" onclick="resetMatch('${m.id}')">↺ Reset</button>` : ""}
+      </div>
+      <div class="adm-info-edit">
+        <input class="adm-info-input" placeholder="🕐 Giờ (vd: 7h20)" data-field="match_time" data-id="${m.id}" value="${esc(m.match_time||'')}">
+        <input class="adm-info-input" placeholder="🏟 Sân (vd: Sân 1)" data-field="court" data-id="${m.id}" value="${esc(m.court||'')}">
+        <input class="adm-info-input" placeholder="👤 Trọng tài" data-field="referee" data-id="${m.id}" value="${esc(m.referee||'')}">
+        <button class="adm-info-save-btn" onclick="saveMatchInfo('${m.id}')">Lưu thông tin</button>
       </div>
     </div>`;
+
+  return `<div class="adm-match-card ${cardCls}" data-id="${m.id}" data-updated="${m.updated_at||''}">${summary}${body}</div>`;
 }
 
+function toggleCard(id) {
+  const body = document.getElementById(`body-${id}`);
+  const icon = document.getElementById(`icon-${id}`);
+  if (!body) return;
+  const open = body.style.display !== "none";
+  body.style.display = open ? "none" : "block";
+  if (icon) icon.textContent = open ? "▶" : "▼";
+}
+
+// ── Set row HTML ──────────────────────────────────────────────
 function setRowHTML(m, setNum, dis) {
+  // Support both lowercase (from DB) and uppercase field names
   const fA = `s${setNum}A`, fB = `s${setNum}B`;
-  const vA = m[fA] || 0, vB = m[fB] || 0;
+  const fAl = `s${setNum}a`, fBl = `s${setNum}b`;
+  const vA = m[fA] || m[fAl] || 0;
+  const vB = m[fB] || m[fBl] || 0;
   const wA = vA > vB && (vA > 0 || vB > 0);
   const wB = vB > vA && (vA > 0 || vB > 0);
   return `
@@ -179,19 +249,12 @@ function setRowHTML(m, setNum, dis) {
       <span class="adm-set-num">Set ${setNum}</span>
       <div class="adm-set-inputs">
         <button class="adm-set-btn minus" ${dis} onclick="adjustSetScore('${m.id}','${fA}',-1)">−</button>
-        <input class="adm-set-input ${wA ? "set-win" : ""}" type="number" min="0"
+        <input class="adm-set-input ${wA?"set-win":""}" type="number" min="0"
           value="${vA}" data-field="${fA}" data-id="${m.id}" ${dis}>
         <span class="adm-set-sep">—</span>
-        <input class="adm-set-input ${wB ? "set-win" : ""}" type="number" min="0"
+        <input class="adm-set-input ${wB?"set-win":""}" type="number" min="0"
           value="${vB}" data-field="${fB}" data-id="${m.id}" ${dis}>
         <button class="adm-set-btn plus" ${dis} onclick="adjustSetScore('${m.id}','${fB}',1)">+</button>
-      </div>
-      <div class="adm-set-inputs" style="margin-top:4px">
-        <button class="adm-set-btn plus" ${dis} onclick="adjustSetScore('${m.id}','${fA}',1)">+</button>
-        <span style="width:52px;text-align:center;font-size:0.65rem;color:var(--adm-muted)">${esc(m.teamA)}</span>
-        <span class="adm-set-sep"></span>
-        <span style="width:52px;text-align:center;font-size:0.65rem;color:var(--adm-muted)">${esc(m.teamB)}</span>
-        <button class="adm-set-btn minus" ${dis} onclick="adjustSetScore('${m.id}','${fB}',-1)">−</button>
       </div>
     </div>`;
 }
@@ -201,230 +264,232 @@ function showSet3(id) {
   if (!placeholder) return;
   const stored = localStorage.getItem("pb_matches");
   const matches = stored ? JSON.parse(stored) : [];
-  const m = matches.find(x => x.id === id) || { s3A: 0, s3B: 0, teamA: "", teamB: "" };
+  const m = matches.find(x => x.id === id) || { s3A:0, s3B:0, s3a:0, s3b:0, teamA:"", teamB:"" };
   placeholder.outerHTML = setRowHTML(m, 3, "");
 }
 
-// ── +1 / -1 score adjustment ──────────────────────────────────
-// Updates the input value only — does NOT auto-save.
-// User taps Save or the debounced auto-save fires after 800ms of inactivity.
+// ── +1/-1 debounced ───────────────────────────────────────────
 const _saveDebounce = {};
 
 function adjustScore(id, field, delta) {
   const input = document.querySelector(`input[data-id="${id}"][data-field="${field}"]`);
   if (!input) return;
-  const newVal = Math.max(0, (parseInt(input.value, 10) || 0) + delta);
-  input.value = newVal;
-
-  // Debounced auto-save: fires 800ms after last tap
+  input.value = Math.max(0, (parseInt(input.value,10)||0) + delta);
   clearTimeout(_saveDebounce[id]);
-  _saveDebounce[id] = setTimeout(() => { updateScore(id); }, 800);
+  _saveDebounce[id] = setTimeout(() => updateScore(id), 800);
 }
 
-// ── Bracket logic ─────────────────────────────────────────────
+// ── Save match info (time/court/referee) ──────────────────────
+async function saveMatchInfo(id) {
+  const timeVal = document.querySelector(`input[data-id="${id}"][data-field="match_time"]`)?.value || "";
+  const courtVal= document.querySelector(`input[data-id="${id}"][data-field="court"]`)?.value || "";
+  const refVal  = document.querySelector(`input[data-id="${id}"][data-field="referee"]`)?.value || "";
 
+  if (!db) {
+    const stored = localStorage.getItem("pb_matches");
+    localMatches = stored ? JSON.parse(stored) : [];
+    const m = localMatches.find(x => x.id === id);
+    if (m) { m.match_time = timeVal; m.court = courtVal; m.referee = refVal; }
+    saveLocal(localMatches);
+    setStatus("Info saved ✓", "ok");
+    return;
+  }
+  const { error } = await db.from("matches")
+    .update({ match_time: timeVal, court: courtVal, referee: refVal }).eq("id", id);
+  if (error) { setStatus("Info error: " + error.message, "err"); return; }
+  setStatus("Info saved ✓", "ok");
+}
+
+// ── Reset single match ────────────────────────────────────────
+async function resetMatch(id) {
+  if (!confirm("Reset trận này về not_started?")) return;
+
+  const payload = {
+    scoreA:0, scoreB:0, status:"not_started",
+    s1A:0,s1B:0,s2A:0,s2B:0,s3A:0,s3B:0,
+    s1a:0,s1b:0,s2a:0,s2b:0,s3a:0,s3b:0,
+    updated_at: new Date().toISOString()
+  };
+
+  if (!db) {
+    const stored = localStorage.getItem("pb_matches");
+    localMatches = stored ? JSON.parse(stored) : [];
+    const m = localMatches.find(x => x.id === id);
+    if (m) Object.assign(m, payload);
+    saveLocal(localMatches);
+    fetchMatches();
+    setStatus("Match reset ✓", "ok");
+    return;
+  }
+  const { error } = await db.from("matches").update(payload).eq("id", id);
+  if (error) { setStatus("Reset error: " + error.message, "err"); return; }
+  setStatus("Match reset ✓", "ok");
+  fetchMatches();
+}
+
+// ── Re-generate bracket (delete old + create new) ─────────────
+async function regenSemifinals() {
+  if (!confirm("Xóa bán kết cũ và gen lại?")) return;
+  if (!db) {
+    localMatches = (localMatches||[]).filter(m => m.stage !== "semi");
+    saveLocal(localMatches);
+    await generateSemifinals(true);
+    return;
+  }
+  await db.from("matches").delete().eq("stage","semi");
+  await generateSemifinals(true);
+}
+
+async function regenFinal() {
+  if (!confirm("Xóa chung kết cũ và gen lại?")) return;
+  if (!db) {
+    localMatches = (localMatches||[]).filter(m => m.stage !== "final");
+    saveLocal(localMatches);
+    await generateFinal(true);
+    return;
+  }
+  await db.from("matches").delete().eq("stage","final");
+  await generateFinal(true);
+}
+
+// ── Bracket generation ────────────────────────────────────────
 function getTopTeamsByGroup(matches) {
-  // Only group-stage done matches
-  const groupDone = matches.filter(m => (!m.stage || m.stage === "group") && m.status === "done");
+  const groupDone = matches.filter(m => (!m.stage||m.stage==="group") && m.status==="done");
   const groups = {};
-
-  // Register all group teams
-  matches.filter(m => !m.stage || m.stage === "group").forEach(m => {
-    ["A","B"].includes(m.group_name) || true; // accept any group
+  matches.filter(m => !m.stage||m.stage==="group").forEach(m => {
     if (!groups[m.group_name]) groups[m.group_name] = {};
-    [m.teamA, m.teamB].forEach(t => {
-      if (!groups[m.group_name][t]) groups[m.group_name][t] = { wins:0, losses:0, diff:0 };
+    [m.teamA,m.teamB].forEach(t => {
+      if (!groups[m.group_name][t]) groups[m.group_name][t] = {wins:0,losses:0,diff:0};
     });
   });
-
   groupDone.forEach(m => {
     const g = m.group_name;
     if (!groups[g]) groups[g] = {};
-    [m.teamA, m.teamB].forEach(t => {
-      if (!groups[g][t]) groups[g][t] = { wins:0, losses:0, diff:0 };
-    });
-    const a = groups[g][m.teamA], b = groups[g][m.teamB];
-    if (m.scoreA > m.scoreB)      { a.wins++; b.losses++; }
-    else if (m.scoreB > m.scoreA) { b.wins++; a.losses++; }
-    a.diff += (m.scoreA - m.scoreB);
-    b.diff += (m.scoreB - m.scoreA);
+    [m.teamA,m.teamB].forEach(t => { if(!groups[g][t]) groups[g][t]={wins:0,losses:0,diff:0}; });
+    const a=groups[g][m.teamA], b=groups[g][m.teamB];
+    if (m.scoreA>m.scoreB){a.wins++;b.losses++;}
+    else if(m.scoreB>m.scoreA){b.wins++;a.losses++;}
+    a.diff+=(m.scoreA-m.scoreB); b.diff+=(m.scoreB-m.scoreA);
   });
-
-  const result = {};
-  Object.keys(groups).forEach(g => {
-    result[g] = Object.entries(groups[g])
-      .map(([name, s]) => ({ name, ...s }))
-      .sort((a, b) => b.wins - a.wins || b.diff - a.diff);
+  const result={};
+  Object.keys(groups).forEach(g=>{
+    result[g]=Object.entries(groups[g])
+      .map(([name,s])=>({name,...s}))
+      .sort((a,b)=>b.wins-a.wins||b.diff-a.diff);
   });
   return result;
 }
 
-async function generateSemifinals() {
-  const matches = db ? await fetchAllMatches() : (localMatches || []);
-  const existing = matches.filter(m => m.stage === "semi");
-  if (existing.length > 0) {
-    alert("Semifinals already exist!");
-    return;
-  }
+async function generateSemifinals(silent=false) {
+  const matches = db ? await fetchAllMatches() : (localMatches||[]);
+  const existing = matches.filter(m=>m.stage==="semi");
+  if (existing.length>0 && !silent) { alert("Bán kết đã tồn tại! Dùng nút Re-gen."); return; }
+  if (existing.length>0) return;
 
   const tops = getTopTeamsByGroup(matches);
   const groupKeys = Object.keys(tops).sort();
-  if (groupKeys.length < 2) {
-    alert("Need at least 2 groups to generate semifinals.");
-    return;
-  }
+  if (groupKeys.length<2) { if(!silent) alert("Cần ít nhất 2 bảng."); return; }
 
-  const [g1, g2] = groupKeys;
-  const A1 = tops[g1][0]?.name || "TBD";
-  const A2 = tops[g1][1]?.name || "TBD";
-  const B1 = tops[g2][0]?.name || "TBD";
-  const B2 = tops[g2][1]?.name || "TBD";
+  const [g1,g2] = groupKeys;
+  const A1=tops[g1][0]?.name||"TBD", A2=tops[g1][1]?.name||"TBD";
+  const B1=tops[g2][0]?.name||"TBD", B2=tops[g2][1]?.name||"TBD";
 
   const semis = [
-    { teamA: A1, teamB: B2, scoreA: 0, scoreB: 0, group_name: "SF", stage: "semi", status: "not_started" },
-    { teamA: B1, teamB: A2, scoreA: 0, scoreB: 0, group_name: "SF", stage: "semi", status: "not_started" },
+    {teamA:A1,teamB:B2,scoreA:0,scoreB:0,group_name:"SF",stage:"semi",status:"not_started"},
+    {teamA:B1,teamB:A2,scoreA:0,scoreB:0,group_name:"SF",stage:"semi",status:"not_started"},
   ];
 
   if (!db) {
-    const ids = ["semi1", "semi2"];
-    semis.forEach((s, i) => { s.id = ids[i]; });
-    localMatches = [...(localMatches || []), ...semis];
-    saveLocal(localMatches);
-    fetchMatches();
-    return;
+    semis.forEach((s,i)=>{ s.id="semi"+(i+1); });
+    localMatches=[...(localMatches||[]),...semis];
+    saveLocal(localMatches); fetchMatches(); return;
   }
-
-  const { error } = await db.from("matches").insert(semis);
-  if (error) { setStatus("Semifinal error: " + error.message, "err"); return; }
-  setStatus("Semifinals generated!", "ok");
+  const {error}=await db.from("matches").insert(semis);
+  if(error){setStatus("Semi error: "+error.message,"err");return;}
+  if(!silent) setStatus("Bán kết đã tạo!","ok");
   fetchMatches();
 }
 
-async function generateFinal() {
-  const matches = db ? await fetchAllMatches() : (localMatches || []);
-  const semis   = matches.filter(m => m.stage === "semi" && m.status === "done");
-  const finals  = matches.filter(m => m.stage === "final");
+async function generateFinal(silent=false) {
+  const matches = db ? await fetchAllMatches() : (localMatches||[]);
+  const semis   = matches.filter(m=>m.stage==="semi"&&m.status==="done");
+  const finals  = matches.filter(m=>m.stage==="final");
 
-  if (finals.length > 0) { alert("Final already exists!"); return; }
-  if (semis.length < 2)  { alert("Both semifinals must be completed first."); return; }
+  if (finals.length>0 && !silent) { alert("Chung kết đã tồn tại! Dùng nút Re-gen."); return; }
+  if (finals.length>0) return;
+  if (semis.length<2) { if(!silent) alert("Cần hoàn thành cả 2 bán kết."); return; }
 
-  const getWinner = m => m.scoreA >= m.scoreB ? m.teamA : m.teamB;
-  const w1 = getWinner(semis[0]);
-  const w2 = getWinner(semis[1]);
-
+  const getWinner = m => m.scoreA>=m.scoreB ? m.teamA : m.teamB;
   const finalMatch = {
-    teamA: w1, teamB: w2, scoreA: 0, scoreB: 0,
-    group_name: "F", stage: "final", status: "not_started"
+    teamA:getWinner(semis[0]), teamB:getWinner(semis[1]),
+    scoreA:0, scoreB:0, group_name:"F", stage:"final", status:"not_started"
   };
 
   if (!db) {
-    finalMatch.id = "final1";
-    localMatches = [...(localMatches || []), finalMatch];
-    saveLocal(localMatches);
-    fetchMatches();
-    return;
+    finalMatch.id="final1";
+    localMatches=[...(localMatches||[]),finalMatch];
+    saveLocal(localMatches); fetchMatches(); return;
   }
-
-  const { error } = await db.from("matches").insert([finalMatch]);
-  if (error) { setStatus("Final error: " + error.message, "err"); return; }
-  setStatus("Final generated!", "ok");
+  const {error}=await db.from("matches").insert([finalMatch]);
+  if(error){setStatus("Final error: "+error.message,"err");return;}
+  if(!silent) setStatus("Chung kết đã tạo!","ok");
   fetchMatches();
 }
 
-// Helper: fetch all matches from Supabase
 async function fetchAllMatches() {
-  if (!db) return localMatches || [];
-  const { data } = await db.from("matches").select("*");
-  return data || [];
+  if (!db) return localMatches||[];
+  const {data}=await db.from("matches").select("*");
+  return data||[];
 }
 
 // ── Bracket visual ────────────────────────────────────────────
 function updateBracketUI(matches) {
-  // No separate bracket container on admin page — bracket is shown inline per stage.
-  // This function is a hook for index.html's bracket section if present.
   const bc = document.getElementById("bracket-container");
   if (!bc) return;
   renderBracketVisual(bc, matches);
 }
 
 function renderBracketVisual(container, matches) {
-  const semis  = matches.filter(m => m.stage === "semi");
-  const finals = matches.filter(m => m.stage === "final");
-
-  if (!semis.length && !finals.length) {
-    container.innerHTML = '<p class="empty-state">Bracket not yet generated.</p>';
-    return;
+  const semis  = matches.filter(m=>m.stage==="semi");
+  const finals = matches.filter(m=>m.stage==="final");
+  if (!semis.length&&!finals.length) {
+    container.innerHTML='<p class="empty-state">Bracket chưa có.</p>'; return;
   }
-
-  const getWinner = m => m.status === "done"
-    ? (m.scoreA >= m.scoreB ? m.teamA : m.teamB) : null;
-
-  let html = '<div class="bracket-wrap">';
-
-  // Semis column
-  html += '<div class="bracket-col"><div class="bracket-col-title">Semifinals</div>';
-  semis.forEach(m => {
-    const wA = m.status === "done" && m.scoreA > m.scoreB;
-    const wB = m.status === "done" && m.scoreB > m.scoreA;
-    html += `
-      <div class="bracket-match-card">
-        <div class="bracket-team-row ${wA ? "winner" : ""}">
-          <span>${esc(m.teamA)}</span>
-          <span class="bracket-score-val">${m.status === "done" ? m.scoreA : "-"}</span>
-        </div>
-        <div class="bracket-team-row ${wB ? "winner" : ""}">
-          <span>${esc(m.teamB)}</span>
-          <span class="bracket-score-val">${m.status === "done" ? m.scoreB : "-"}</span>
-        </div>
-      </div>`;
+  const getWinner = m => m.status==="done" ? (m.scoreA>=m.scoreB?m.teamA:m.teamB) : null;
+  let html='<div class="bracket-wrap">';
+  html+='<div class="bracket-col"><div class="bracket-col-title">Bán Kết</div>';
+  semis.forEach(m=>{
+    const wA=m.status==="done"&&m.scoreA>m.scoreB, wB=m.status==="done"&&m.scoreB>m.scoreA;
+    html+=`<div class="bracket-match-card">
+      <div class="bracket-team-row ${wA?"winner":""}"><span>${esc(m.teamA)}</span><span class="bracket-score-val">${m.status==="done"?m.scoreA:"-"}</span></div>
+      <div class="bracket-team-row ${wB?"winner":""}"><span>${esc(m.teamB)}</span><span class="bracket-score-val">${m.status==="done"?m.scoreB:"-"}</span></div>
+    </div>`;
   });
-  html += '</div>';
-
-  html += '<div class="bracket-arrow">→</div>';
-
-  // Final column
-  html += '<div class="bracket-col"><div class="bracket-col-title">Final</div>';
+  html+='</div><div class="bracket-arrow">→</div>';
+  html+='<div class="bracket-col"><div class="bracket-col-title">Chung Kết</div>';
   if (finals.length) {
-    finals.forEach(m => {
-      const wA = m.status === "done" && m.scoreA > m.scoreB;
-      const wB = m.status === "done" && m.scoreB > m.scoreA;
-      html += `
-        <div class="bracket-match-card">
-          <div class="bracket-team-row ${wA ? "winner" : ""}">
-            <span>${esc(m.teamA)}</span>
-            <span class="bracket-score-val">${m.status === "done" ? m.scoreA : "-"}</span>
-          </div>
-          <div class="bracket-team-row ${wB ? "winner" : ""}">
-            <span>${esc(m.teamB)}</span>
-            <span class="bracket-score-val">${m.status === "done" ? m.scoreB : "-"}</span>
-          </div>
-        </div>`;
+    finals.forEach(m=>{
+      const wA=m.status==="done"&&m.scoreA>m.scoreB, wB=m.status==="done"&&m.scoreB>m.scoreA;
+      html+=`<div class="bracket-match-card">
+        <div class="bracket-team-row ${wA?"winner":""}"><span>${esc(m.teamA)}</span><span class="bracket-score-val">${m.status==="done"?m.scoreA:"-"}</span></div>
+        <div class="bracket-team-row ${wB?"winner":""}"><span>${esc(m.teamB)}</span><span class="bracket-score-val">${m.status==="done"?m.scoreB:"-"}</span></div>
+      </div>`;
     });
   } else {
-    const w1 = semis[0] ? getWinner(semis[0]) : null;
-    const w2 = semis[1] ? getWinner(semis[1]) : null;
-    html += `
-      <div class="bracket-match-card">
-        <div class="bracket-team-row ${w1 ? "" : "tbd"}"><span>${w1 || "Winner SF1"}</span></div>
-        <div class="bracket-team-row ${w2 ? "" : "tbd"}"><span>${w2 || "Winner SF2"}</span></div>
-      </div>`;
+    const w1=semis[0]?getWinner(semis[0]):null, w2=semis[1]?getWinner(semis[1]):null;
+    html+=`<div class="bracket-match-card">
+      <div class="bracket-team-row ${w1?"":"tbd"}"><span>${w1||"Winner SF1"}</span></div>
+      <div class="bracket-team-row ${w2?"":"tbd"}"><span>${w2||"Winner SF2"}</span></div>
+    </div>`;
   }
-  html += '</div>';
-
-  // Champion
-  if (finals.length && finals[0].status === "done") {
-    const champ = finals[0].scoreA >= finals[0].scoreB ? finals[0].teamA : finals[0].teamB;
-    html += `
-      <div class="bracket-arrow">→</div>
-      <div class="bracket-col">
-        <div class="bracket-col-title">Champion</div>
-        <div class="champion-card">
-          <div class="champion-label">🏆 Champion</div>
-          <div class="champion-name">${esc(champ)}</div>
-        </div>
-      </div>`;
+  html+='</div>';
+  if (finals.length&&finals[0].status==="done") {
+    const champ=finals[0].scoreA>=finals[0].scoreB?finals[0].teamA:finals[0].teamB;
+    html+=`<div class="bracket-arrow">→</div>
+      <div class="bracket-col"><div class="bracket-col-title">Champion</div>
+        <div class="champion-card"><div class="champion-label">🏆 Champion</div>
+          <div class="champion-name">${esc(champ)}</div></div></div>`;
   }
-
-  html += '</div>';
-  container.innerHTML = html;
+  html+='</div>';
+  container.innerHTML=html;
 }
