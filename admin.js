@@ -7,9 +7,7 @@ const ADMIN_PASSWORD = "admin123";
 const ADMIN_KEY      = "pb_admin_auth";
 
 // ── Auth ──────────────────────────────────────────────────────
-function isAdmin() {
-  return localStorage.getItem(ADMIN_KEY) === "true";
-}
+// isAdmin() is defined in app.js (loaded first) — no redeclaration needed here.
 
 function doLogin() {
   const pw  = document.getElementById("pw-input").value;

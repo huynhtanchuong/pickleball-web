@@ -10,10 +10,11 @@ const SUPABASE_ANON_KEY = "REPLACE_ME";
 let db = null;
 let realtimeChannel = null;
 
-// ── Admin check (used by public page to enforce read-only) ───
-const ADMIN_KEY = "pb_admin_auth";
+// ── Admin check ───────────────────────────────────────────────
+// Inlined string — no const, avoids duplicate-declaration crash
+// when admin.js (which owns ADMIN_KEY) is also loaded on admin.html.
 function isAdmin() {
-  return localStorage.getItem(ADMIN_KEY) === "true";
+  return localStorage.getItem("pb_admin_auth") === "true";
 }
 
 function initSupabase() {
@@ -332,9 +333,9 @@ function resetDemo() {
   fetchMatches();
 }
 
-// ── Boot (public page) ────────────────────────────────────────
-// admin.html boots via admin.js instead.
-if (!document.getElementById("admin-panel")) {
+// ── Boot (public page only) ───────────────────────────────────
+// admin.html boots via admin.js instead — we detect by filename.
+if (!window.location.pathname.includes("admin")) {
   document.addEventListener("DOMContentLoaded", () => {
     const connected = initSupabase();
     fetchMatches();
