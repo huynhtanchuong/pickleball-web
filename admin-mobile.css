@@ -1,0 +1,270 @@
+/* ============================================================
+   ADMIN MOBILE UI — admin-mobile.css
+   Touch-first, large tap targets, +1/-1 score controls
+   ============================================================ */
+
+:root {
+  --adm-bg:      #0a0f1e;
+  --adm-card:    #111827;
+  --adm-card2:   #1a2235;
+  --adm-border:  #1e2d45;
+  --adm-green:   #22c55e;
+  --adm-blue:    #3b82f6;
+  --adm-purple:  #7c3aed;
+  --adm-red:     #ef4444;
+  --adm-gray:    #334155;
+  --adm-text:    #f1f5f9;
+  --adm-muted:   #64748b;
+}
+
+/* ── BASE ── */
+body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI', system-ui, sans-serif; }
+
+/* ── HEADER ── */
+.adm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #0d1b3e, #1a0a3e);
+  border-bottom: 1px solid var(--adm-border);
+  gap: 10px;
+  flex-wrap: wrap;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+.adm-header-left  { display: flex; align-items: center; gap: 10px; font-size: 1.5rem; }
+.adm-header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.adm-title  { font-size: 1rem; font-weight: 800; line-height: 1.2; }
+.adm-sub    { font-size: 0.68rem; color: var(--adm-muted); }
+
+.adm-btn-sm {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  background: var(--adm-card2);
+  color: var(--adm-text);
+  border: 1px solid var(--adm-border);
+  white-space: nowrap;
+}
+.adm-btn-red { background: var(--adm-red); border-color: var(--adm-red); color: #fff; }
+
+/* ── SECTIONS ── */
+.adm-section {
+  padding: 16px;
+  border-bottom: 1px solid var(--adm-border);
+}
+.adm-section-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--adm-muted);
+  margin-bottom: 12px;
+}
+
+/* ── BRACKET BUTTONS ── */
+.adm-btn-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.adm-btn {
+  flex: 1;
+  min-width: 120px;
+  padding: 14px 10px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  text-align: center;
+}
+.adm-btn:active { transform: scale(0.97); opacity: 0.85; }
+.adm-btn-blue   { background: var(--adm-blue);   color: #fff; }
+.adm-btn-purple { background: var(--adm-purple); color: #fff; }
+.adm-btn-gray   { background: var(--adm-gray);   color: var(--adm-text); }
+
+/* ── MATCH CARD (admin mobile) ── */
+.adm-match-card {
+  background: var(--adm-card);
+  border: 1px solid var(--adm-border);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 12px;
+  transition: border-color 0.2s;
+}
+.adm-match-card.is-done { opacity: 0.55; }
+.adm-match-card.is-live { border-color: rgba(34,197,94,0.4); }
+.adm-match-card.is-semi { border-top: 3px solid var(--adm-purple); }
+.adm-match-card.is-final{ border-top: 3px solid #f97316; }
+
+/* Team names row */
+.adm-teams {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.adm-team-name {
+  font-size: 1rem;
+  font-weight: 800;
+  flex: 1;
+  line-height: 1.2;
+}
+.adm-team-name.right { text-align: right; }
+.adm-team-name.winner { color: var(--adm-green); }
+.adm-vs {
+  font-size: 0.75rem;
+  color: var(--adm-muted);
+  font-weight: 700;
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+
+/* Score controls row */
+.adm-score-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.adm-score-ctrl {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+/* +1 / -1 buttons */
+.adm-inc-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  font-size: 1.4rem;
+  font-weight: 900;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s, opacity 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.adm-inc-btn:active { transform: scale(0.9); }
+.adm-inc-btn.plus  { background: rgba(34,197,94,0.15); color: var(--adm-green); border: 2px solid rgba(34,197,94,0.3); }
+.adm-inc-btn.minus { background: rgba(239,68,68,0.1);  color: #f87171;          border: 2px solid rgba(239,68,68,0.2); }
+.adm-inc-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+
+/* Score number input */
+.adm-score-input {
+  width: 72px;
+  height: 72px;
+  text-align: center;
+  font-size: 2.2rem;
+  font-weight: 900;
+  background: var(--adm-card2);
+  border: 2px solid var(--adm-border);
+  color: var(--adm-text);
+  border-radius: 12px;
+  -moz-appearance: textfield;
+  appearance: textfield;
+  font-variant-numeric: tabular-nums;
+}
+.adm-score-input::-webkit-inner-spin-button,
+.adm-score-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+.adm-score-input:focus { outline: 2px solid var(--adm-blue); border-color: transparent; }
+.adm-score-input:disabled { opacity: 0.4; }
+
+.adm-score-sep {
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--adm-border);
+  line-height: 1;
+  align-self: center;
+  padding-top: 20px; /* align with number, not buttons */
+}
+
+/* Action buttons row */
+.adm-actions {
+  display: flex;
+  gap: 10px;
+}
+.adm-save-btn {
+  flex: 1;
+  padding: 14px;
+  font-size: 1rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  background: var(--adm-blue);
+  color: #fff;
+  transition: opacity 0.15s, transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.adm-save-btn:active  { transform: scale(0.97); }
+.adm-save-btn:disabled{ opacity: 0.35; cursor: not-allowed; transform: none; }
+
+.adm-done-btn {
+  flex: 1;
+  padding: 14px;
+  font-size: 1rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  background: var(--adm-green);
+  color: #fff;
+  transition: opacity 0.15s, transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.adm-done-btn.is-done { background: var(--adm-gray); }
+.adm-done-btn:active  { transform: scale(0.97); }
+.adm-done-btn:disabled{ opacity: 0.35; cursor: not-allowed; transform: none; }
+
+/* Stage group divider */
+.adm-group-divider {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--adm-blue);
+  background: rgba(59,130,246,0.08);
+  border: 1px solid rgba(59,130,246,0.15);
+  padding: 5px 12px;
+  border-radius: 20px;
+  display: inline-block;
+  margin: 8px 0 10px;
+}
+
+/* Flash feedback */
+.adm-match-card.flash-ok {
+  animation: admFlash 0.5s ease-out;
+}
+@keyframes admFlash {
+  0%   { border-color: var(--adm-green); box-shadow: 0 0 16px rgba(34,197,94,0.4); }
+  100% { border-color: var(--adm-border); box-shadow: none; }
+}
+
+/* Standings inside admin */
+.standings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 500px) { .standings-grid { grid-template-columns: 1fr; } }
+
+/* ── MOBILE OVERRIDES ── */
+@media (max-width: 480px) {
+  .adm-team-name { font-size: 0.88rem; }
+  .adm-score-input { width: 64px; height: 64px; font-size: 1.8rem; }
+  .adm-inc-btn { width: 44px; height: 44px; font-size: 1.2rem; }
+  .adm-save-btn, .adm-done-btn { padding: 12px; font-size: 0.9rem; }
+}

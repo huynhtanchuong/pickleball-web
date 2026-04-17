@@ -381,23 +381,53 @@ function renderStandings(groups) {
   container.innerHTML = html;
 }
 
-// ── Realtime subscription ─────────────────────────────────────
+// ── Realtime subscription + polling fallback ─────────────────
+let _pollTimer    = null;
+let _rtConnected  = false;
+const POLL_MS     = 5000; // fallback poll every 5s
+
 function subscribeRealtime() {
-  if (!db) return;
+  if (!db) {
+    // No Supabase — start polling demo mode (localStorage changes from admin tab)
+    startPolling();
+    return;
+  }
 
   realtimeChannel = db
-    .channel("matches-changes")
+    .channel("matches-channel")
     .on("postgres_changes",
       { event: "*", schema: "public", table: "matches" },
       () => { fetchMatches(); }
     )
     .subscribe(status => {
       if (status === "SUBSCRIBED") {
+        _rtConnected = true;
+        stopPolling(); // realtime is live — no need to poll
         const ri = document.getElementById("realtime-indicator");
         if (ri) ri.style.display = "inline-block";
         setStatus("🟢 Realtime active", "ok");
       }
+      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+        _rtConnected = false;
+        const ri = document.getElementById("realtime-indicator");
+        if (ri) ri.style.display = "none";
+        setStatus("⚠️ Realtime lost — polling", "err");
+        startPolling(); // fallback: poll until reconnected
+      }
     });
+}
+
+function startPolling() {
+  if (_pollTimer) return; // already running
+  _pollTimer = setInterval(() => {
+    fetchMatches();
+    // If realtime reconnects, stop polling
+    if (_rtConnected) stopPolling();
+  }, POLL_MS);
+}
+
+function stopPolling() {
+  if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
 }
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -412,10 +442,11 @@ function getInput(id, field) {
 }
 
 function flashSaved(id) {
-  const row = document.querySelector(`.match-item[data-id="${id}"]`);
+  // Works for both public match-item and admin adm-match-card
+  const row = document.querySelector(`.match-item[data-id="${id}"], .adm-match-card[data-id="${id}"]`);
   if (!row) return;
-  row.style.outline = "2px solid #22c55e";
-  setTimeout(() => row.style.outline = "", 800);
+  row.classList.add("flash-ok");
+  setTimeout(() => row.classList.remove("flash-ok"), 600);
 }
 
 // ── Reset demo data ───────────────────────────────────────────
@@ -431,6 +462,6 @@ if (!window.location.pathname.includes("admin")) {
   document.addEventListener("DOMContentLoaded", () => {
     const connected = initSupabase();
     fetchMatches();
-    if (connected) subscribeRealtime();
+    subscribeRealtime(); // always — handles both realtime + polling fallback
   });
 }

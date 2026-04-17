@@ -2,96 +2,95 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>🏓 Admin — Pickleball Tournament</title>
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="admin-mobile.css" />
 </head>
 <body>
 
-  <!-- ── LOGIN SCREEN ── -->
+  <!-- ══════════════════════════════════════════
+       LOGIN SCREEN
+  ══════════════════════════════════════════ -->
   <div class="login-wrap" id="login-screen">
     <div class="login-card">
-      <h1>🏓 Admin Login</h1>
-      <p>Pickleball Tournament Management</p>
+      <div style="font-size:2.5rem;margin-bottom:8px;">🏓</div>
+      <h1>Admin Login</h1>
+      <p>Pickleball Tournament</p>
       <div class="form-group">
         <label for="pw-input">Password</label>
-        <input type="password" id="pw-input" placeholder="Enter admin password"
-          onkeydown="if(event.key==='Enter') doLogin()" autofocus />
+        <input type="password" id="pw-input"
+          placeholder="Enter password"
+          onkeydown="if(event.key==='Enter') doLogin()"
+          autocomplete="current-password"
+          autofocus />
       </div>
       <button class="login-btn" onclick="doLogin()">Sign In</button>
       <div class="login-error" id="login-error"></div>
-      <p style="margin-top:20px;font-size:0.75rem;color:#475569;">
-        <a href="index.html" style="color:#64748b;">← Back to public view</a>
+      <p style="margin-top:20px;font-size:0.75rem;">
+        <a href="index.html" style="color:#64748b;">← Public scoreboard</a>
       </p>
     </div>
   </div>
 
-  <!-- ── ADMIN PANEL ── -->
+  <!-- ══════════════════════════════════════════
+       ADMIN PANEL
+  ══════════════════════════════════════════ -->
   <div id="admin-panel" style="display:none;">
 
-    <header>
-      <h1>🏓 Pickleball Tournament</h1>
-      <p>Admin Panel</p>
-      <div class="header-nav">
-        <span class="admin-badge">🔑 Admin</span>
-        <span id="status-bar">Initializing…</span>
-        <span id="realtime-indicator" class="pulse" style="display:none;" title="Realtime connected"></span>
-        <a href="index.html">Public View</a>
-        <button class="btn-logout" onclick="doLogout()">Logout</button>
+    <!-- Header -->
+    <div class="adm-header">
+      <div class="adm-header-left">
+        <span>🏓</span>
+        <div>
+          <div class="adm-title">Admin Panel</div>
+          <div class="adm-sub">Pickleball Tournament</div>
+        </div>
       </div>
-    </header>
+      <div class="adm-header-right">
+        <span id="realtime-indicator" class="pulse" style="display:none;"></span>
+        <span id="status-bar" class="status-chip">…</span>
+        <a href="index.html" class="adm-btn-sm">👁 View</a>
+        <button class="adm-btn-sm adm-btn-red" onclick="doLogout()">Logout</button>
+      </div>
+    </div>
 
-    <main>
+    <!-- Bracket controls -->
+    <div class="adm-section">
+      <div class="adm-section-title">⚙️ Bracket</div>
+      <div class="adm-btn-row">
+        <button class="adm-btn adm-btn-blue" onclick="generateSemifinals()">⚡ Gen Semifinals</button>
+        <button class="adm-btn adm-btn-purple" onclick="generateFinal()">🏆 Gen Final</button>
+        <button class="adm-btn adm-btn-gray" onclick="resetDemo()">↺ Reset</button>
+      </div>
+    </div>
 
-      <!-- ── BRACKET ACTIONS ── -->
-      <section class="card">
-        <h2>⚙️ Bracket Management</h2>
-        <div class="bracket-actions">
-          <button class="btn btn-save" onclick="generateSemifinals()">Generate Semifinals</button>
-          <button class="btn btn-secondary" onclick="generateFinal()">Generate Final</button>
-          <button class="btn btn-danger" onclick="resetDemo()" id="reset-btn">↺ Reset Demo Data</button>
-        </div>
-        <p style="font-size:0.78rem;color:#64748b;">
-          Semifinals auto-seed from top 2 teams per group. Final seeds from semifinal winners.
-        </p>
-      </section>
+    <!-- Group Stage -->
+    <div class="adm-section">
+      <div class="adm-section-title">📋 Group Stage</div>
+      <div id="match-list-group"><p class="empty">Loading…</p></div>
+    </div>
 
-      <!-- ── GROUP STAGE ── -->
-      <section class="card">
-        <h2>📋 Group Stage</h2>
-        <div id="match-list-group">
-          <p class="empty">Loading…</p>
-        </div>
-      </section>
+    <!-- Semifinals -->
+    <div class="adm-section">
+      <div class="adm-section-title">⚡ Semifinals</div>
+      <div id="match-list-semi"><p class="empty">No semifinals yet.</p></div>
+    </div>
 
-      <!-- ── SEMIFINALS ── -->
-      <section class="card">
-        <h2>⚡ Semifinals</h2>
-        <div id="match-list-semi">
-          <p class="empty">No semifinals yet. Generate them above once group stage is complete.</p>
-        </div>
-      </section>
+    <!-- Final -->
+    <div class="adm-section">
+      <div class="adm-section-title">🏆 Final</div>
+      <div id="match-list-final"><p class="empty">No final yet.</p></div>
+    </div>
 
-      <!-- ── FINAL ── -->
-      <section class="card">
-        <h2>🏆 Final</h2>
-        <div id="match-list-final">
-          <p class="empty">No final yet. Generate it once both semifinals are done.</p>
-        </div>
-      </section>
+    <!-- Standings -->
+    <div class="adm-section">
+      <div class="adm-section-title">📊 Standings</div>
+      <div id="standings-container"><p class="empty">Loading…</p></div>
+    </div>
 
-      <!-- ── STANDINGS ── -->
-      <section class="card">
-        <h2>📊 Standings</h2>
-        <div id="standings-container">
-          <p class="empty">Loading standings…</p>
-        </div>
-      </section>
+  </div><!-- /admin-panel -->
 
-    </main>
-  </div>
-
-  <!-- Supabase CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="app.js"></script>
   <script src="admin.js"></script>

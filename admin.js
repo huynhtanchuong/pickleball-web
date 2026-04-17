@@ -32,7 +32,7 @@ function showAdminPanel() {
   document.getElementById("admin-panel").style.display  = "block";
   const connected = initSupabase();
   fetchMatches();
-  if (connected) subscribeRealtime();
+  subscribeRealtime(); // always — handles both realtime + polling fallback
 }
 
 // ── Boot: check existing session ─────────────────────────────
@@ -81,9 +81,7 @@ function renderStageList(containerId, matches, stage) {
     });
     let html = "";
     Object.keys(groups).sort().forEach(g => {
-      html += `<div class="stage-header">
-        <span class="stage-label group">Group ${esc(g)}</span>
-      </div>`;
+      html += `<span class="adm-group-divider">Group ${esc(g)}</span>`;
       groups[g].forEach(m => { html += matchHTML(m, stage); });
     });
     container.innerHTML = html;
@@ -95,29 +93,68 @@ function renderStageList(containerId, matches, stage) {
 }
 
 function matchHTML(m, stage) {
-  const done   = m.status === "done";
-  const stageClass = stage === "semi" ? "stage-semi" : stage === "final" ? "stage-final" : "";
+  const done    = m.status === "done";
   const winnerA = done && m.scoreA > m.scoreB;
   const winnerB = done && m.scoreB > m.scoreA;
+  const dis     = done ? "disabled" : "";
+
+  let cardCls = done ? "is-done" : "is-live";
+  if (stage === "semi")  cardCls += " is-semi";
+  if (stage === "final") cardCls += " is-final";
 
   return `
-    <div class="match-item ${done ? "done" : "active-match"} ${stageClass}" data-id="${m.id}">
-      <span class="team-name ${winnerA ? "winner" : ""}">${esc(m.teamA)}</span>
-      <div class="score-display">
-        <input class="score-input" type="number" min="0" value="${m.scoreA}"
-          data-field="scoreA" data-id="${m.id}" ${done ? "disabled" : ""}>
-        <span class="score-sep">:</span>
-        <input class="score-input" type="number" min="0" value="${m.scoreB}"
-          data-field="scoreB" data-id="${m.id}" ${done ? "disabled" : ""}>
+    <div class="adm-match-card ${cardCls}" data-id="${m.id}">
+
+      <div class="adm-teams">
+        <span class="adm-team-name ${winnerA ? "winner" : ""}">${esc(m.teamA)}</span>
+        <span class="adm-vs">vs</span>
+        <span class="adm-team-name right ${winnerB ? "winner" : ""}">${esc(m.teamB)}</span>
       </div>
-      <span class="team-name right ${winnerB ? "winner" : ""}">${esc(m.teamB)}</span>
-      <button class="btn btn-save" ${done ? "disabled" : ""}
-        onclick="updateScore('${m.id}')">Save</button>
-      <button class="btn btn-done ${done ? "done-state" : ""}"
-        ${done ? "disabled" : ""} onclick="markDone('${m.id}')">
-        ${done ? "✓ Done" : "Mark Done"}
-      </button>
+
+      <div class="adm-score-row">
+        <!-- Team A score -->
+        <div class="adm-score-ctrl">
+          <button class="adm-inc-btn plus" ${dis}
+            onclick="adjustScore('${m.id}','scoreA',1)">+</button>
+          <input class="adm-score-input" type="number" min="0"
+            value="${m.scoreA}" data-field="scoreA" data-id="${m.id}" ${dis}>
+          <button class="adm-inc-btn minus" ${dis}
+            onclick="adjustScore('${m.id}','scoreA',-1)">−</button>
+        </div>
+
+        <span class="adm-score-sep">:</span>
+
+        <!-- Team B score -->
+        <div class="adm-score-ctrl">
+          <button class="adm-inc-btn plus" ${dis}
+            onclick="adjustScore('${m.id}','scoreB',1)">+</button>
+          <input class="adm-score-input" type="number" min="0"
+            value="${m.scoreB}" data-field="scoreB" data-id="${m.id}" ${dis}>
+          <button class="adm-inc-btn minus" ${dis}
+            onclick="adjustScore('${m.id}','scoreB',-1)">−</button>
+        </div>
+      </div>
+
+      <div class="adm-actions">
+        <button class="adm-save-btn" ${dis}
+          onclick="updateScore('${m.id}')">💾 Save</button>
+        <button class="adm-done-btn ${done ? "is-done" : ""}" ${dis}
+          onclick="markDone('${m.id}')">
+          ${done ? "✓ Done" : "✅ Mark Done"}
+        </button>
+      </div>
+
     </div>`;
+}
+
+// ── +1 / -1 score adjustment ──────────────────────────────────
+function adjustScore(id, field, delta) {
+  const input = document.querySelector(`input[data-id="${id}"][data-field="${field}"]`);
+  if (!input) return;
+  const newVal = Math.max(0, (parseInt(input.value, 10) || 0) + delta);
+  input.value = newVal;
+  // Immediately save to keep things in sync
+  updateScore(id);
 }
 
 // ── Bracket logic ─────────────────────────────────────────────
