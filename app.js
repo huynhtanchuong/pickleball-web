@@ -239,10 +239,16 @@ function renderPublicStage(containerId, matches, stage) {
     return;
   }
 
+  // Sort: playing → not_started → done (same as admin view)
+  const statusOrder = { playing: 0, not_started: 1, pending: 1, done: 2 };
+  const sorted = [...matches].sort((a, b) =>
+    (statusOrder[a.status] ?? 1) - (statusOrder[b.status] ?? 1)
+  );
+
   if (stage === "group") {
     // Sub-group by group_name with collapsible headers
     const groups = {};
-    matches.forEach(m => {
+    sorted.forEach(m => {
       if (!groups[m.group_name]) groups[m.group_name] = [];
       groups[m.group_name].push(m);
     });
@@ -260,7 +266,7 @@ function renderPublicStage(containerId, matches, stage) {
     });
     container.innerHTML = html;
   } else {
-    container.innerHTML = matches.map(m => publicMatchHTML(m, stage)).join("");
+    container.innerHTML = sorted.map(m => publicMatchHTML(m, stage)).join("");
   }
 }
 
@@ -560,6 +566,7 @@ async function finishMatch(id) {
     saveLocal(localMatches);
     renderMatches(localMatches);
     calculateStandings(localMatches);
+    collapseCard(id); // collapse after finish
     setStatus("Match finished ✓", "ok");
     return;
   }
@@ -571,6 +578,7 @@ async function finishMatch(id) {
   if (error) { setStatus("Finish error: " + error.message, "err"); return; }
 
   _knownUpdatedAt[id] = payload.updated_at;
+  collapseCard(id); // collapse after finish
   setStatus("Match finished ✓", "ok");
 }
 
@@ -817,6 +825,18 @@ async function resetDemo() {
 
   setStatus("Reset xong ✓", "ok");
   fetchMatches();
+}
+
+// ── Collapse a card (used after finishMatch) ─────────────────
+// collapseCard is called from app.js but acts on admin.js's _openCards
+function collapseCard(id) {
+  if (typeof _openCards !== "undefined") {
+    _openCards.delete(id);
+  }
+  const body = document.getElementById(`body-${id}`);
+  const icon = document.getElementById(`icon-${id}`);
+  if (body) body.style.display = "none";
+  if (icon) icon.textContent = "▶";
 }
 
 // ── Toggle public group collapse ──────────────────────────────

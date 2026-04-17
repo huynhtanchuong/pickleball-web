@@ -300,24 +300,37 @@ function toggleCard(id) {
   const icon = document.getElementById(`icon-${id}`);
   if (!body) return;
   const open = body.style.display !== "none";
+
   if (open) {
+    // Close this card
     body.style.display = "none";
     if (icon) icon.textContent = "▶";
     _openCards.delete(id);
   } else {
+    // Close ALL other open cards first (accordion behaviour)
+    _openCards.forEach(otherId => {
+      if (otherId === id) return;
+      const ob = document.getElementById(`body-${otherId}`);
+      const oi = document.getElementById(`icon-${otherId}`);
+      if (ob) ob.style.display = "none";
+      if (oi) oi.textContent = "▶";
+    });
+    _openCards.clear();
+
+    // Open this card
     body.style.display = "block";
     if (icon) icon.textContent = "▼";
     _openCards.add(id);
   }
 }
 
-// Restore open state after re-render
+// Restore open state after re-render (at most 1 card open)
 function restoreOpenCards() {
   _openCards.forEach(id => {
     const body = document.getElementById(`body-${id}`);
     const icon = document.getElementById(`icon-${id}`);
-    if (body) { body.style.display = "block"; }
-    if (icon) { icon.textContent = "▼"; }
+    if (body) body.style.display = "block";
+    if (icon) icon.textContent = "▼";
   });
 }
 
@@ -418,10 +431,18 @@ async function resetMatch(id) {
   const { error } = await db.from("matches").update(payload).eq("id", id);
   if (error) { setStatus("Reset error: " + error.message, "err"); return; }
 
-  // 2. Check if it was a group match — if so, wipe bracket so it regens
+  // 2. Check stage and wipe appropriate bracket rows
   const { data: m } = await db.from("matches").select("stage").eq("id", id).single();
-  if (!m || m.stage === "group" || !m.stage) {
+  if (!m) {
+    // fallback: wipe all bracket
     await db.from("matches").delete().eq("stage", "semi");
+    await db.from("matches").delete().eq("stage", "final");
+  } else if (m.stage === "group" || !m.stage) {
+    // Group match reset → wipe semi + final
+    await db.from("matches").delete().eq("stage", "semi");
+    await db.from("matches").delete().eq("stage", "final");
+  } else if (m.stage === "semi") {
+    // Semi reset → wipe final only (semi stays, just reset)
     await db.from("matches").delete().eq("stage", "final");
   }
 
