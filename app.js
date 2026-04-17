@@ -3,8 +3,8 @@
 //  Replace SUPABASE_URL and SUPABASE_ANON_KEY before use.
 // ============================================================
 
-const SUPABASE_URL      = "REPLACE_ME";
-const SUPABASE_ANON_KEY = "REPLACE_ME";
+const SUPABASE_URL      = "https://negwxhrkdypiopmmrxkf.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_O6NUgE8jBmjw-ZeNPNPaeA_uw3BViAP";
 
 // ── Supabase client ──────────────────────────────────────────
 let db = null;
@@ -52,16 +52,30 @@ function setStatus(msg, type = "") {
   }
 }
 
-// ── Sample data ───────────────────────────────────────────────
+// ── Sample data — tên đội thật ───────────────────────────────
 const SAMPLE_MATCHES = [
-  { id:"s1", teamA:"Dink Masters",  teamB:"Net Ninjas",    scoreA:0, scoreB:0, group_name:"A", stage:"group", status:"not_started", updated_at: null },
-  { id:"s2", teamA:"Smash Bros",    teamB:"Lob Stars",     scoreA:0, scoreB:0, group_name:"A", stage:"group", status:"not_started", updated_at: null },
-  { id:"s3", teamA:"Dink Masters",  teamB:"Lob Stars",     scoreA:0, scoreB:0, group_name:"A", stage:"group", status:"not_started", updated_at: null },
-  { id:"s4", teamA:"Smash Bros",    teamB:"Net Ninjas",    scoreA:0, scoreB:0, group_name:"A", stage:"group", status:"not_started", updated_at: null },
-  { id:"s5", teamA:"Spin Doctors",  teamB:"Drop Shots",    scoreA:0, scoreB:0, group_name:"B", stage:"group", status:"not_started", updated_at: null },
-  { id:"s6", teamA:"Ace Patrol",    teamB:"Kitchen Kings", scoreA:0, scoreB:0, group_name:"B", stage:"group", status:"not_started", updated_at: null },
-  { id:"s7", teamA:"Spin Doctors",  teamB:"Kitchen Kings", scoreA:0, scoreB:0, group_name:"B", stage:"group", status:"not_started", updated_at: null },
-  { id:"s8", teamA:"Ace Patrol",    teamB:"Drop Shots",    scoreA:0, scoreB:0, group_name:"B", stage:"group", status:"not_started", updated_at: null },
+  // ── BẢNG A (10 trận) ──
+  { id:"a1",  teamA:"Tuấn Anh & Hang Dang",    teamB:"Khoa Hoang & Phan Nguyen", scoreA:0, scoreB:0, group_name:"A", stage:"group", status:"not_started", updated_at:null },
+  { id:"a2",  teamA:"Quoc Le & Thảo",           teamB:"Tai Tran & vk Dũng",       scoreA:0, scoreB:0, group_name:"A", stage:"group", status:"not_started", updated_at:null },
+  { id:"a3",  teamA:"Khoa Hoang & Phan Nguyen", teamB:"Tai Tran & vk Dũng",       scoreA:0, scoreB:0, group_name:"A", stage:"group", status:"not_started", updated_at:null },
+  { id:"a4",  teamA:"Tuấn Anh & Hang Dang",    teamB:"Dung Vo & Thư",            scoreA:0, scoreB:0, group_name:"A", stage:"group", status:"not_started", updated_at:null },
+  { id:"a5",  teamA:"Tai Tran & vk Dũng",       teamB:"Dung Vo & Thư",            scoreA:0, scoreB:0, group_name:"A", stage:"group", status:"not_started", updated_at:null },
+  { id:"a6",  teamA:"Khoa Hoang & Phan Nguyen", teamB:"Quoc Le & Thảo",           scoreA:0, scoreB:0, group_name:"A", stage:"group", status:"not_started", updated_at:null },
+  { id:"a7",  teamA:"Dung Vo & Thư",            teamB:"Quoc Le & Thảo",           scoreA:0, scoreB:0, group_name:"A", stage:"group", status:"not_started", updated_at:null },
+  { id:"a8",  teamA:"Tai Tran & vk Dũng",       teamB:"Tuấn Anh & Hang Dang",    scoreA:0, scoreB:0, group_name:"A", stage:"group", status:"not_started", updated_at:null },
+  { id:"a9",  teamA:"Quoc Le & Thảo",           teamB:"Tuấn Anh & Hang Dang",    scoreA:0, scoreB:0, group_name:"A", stage:"group", status:"not_started", updated_at:null },
+  { id:"a10", teamA:"Dung Vo & Thư",            teamB:"Khoa Hoang & Phan Nguyen", scoreA:0, scoreB:0, group_name:"A", stage:"group", status:"not_started", updated_at:null },
+  // ── BẢNG B (10 trận) ──
+  { id:"b1",  teamA:"Dũng Nguyễn & Minh Ngọc", teamB:"chú Cường & Alix Su",      scoreA:0, scoreB:0, group_name:"B", stage:"group", status:"not_started", updated_at:null },
+  { id:"b2",  teamA:"Chuong Huynh & Uyên",      teamB:"Tien Tran & Vu Phan",      scoreA:0, scoreB:0, group_name:"B", stage:"group", status:"not_started", updated_at:null },
+  { id:"b3",  teamA:"chú Cường & Alix Su",      teamB:"Tien Tran & Vu Phan",      scoreA:0, scoreB:0, group_name:"B", stage:"group", status:"not_started", updated_at:null },
+  { id:"b4",  teamA:"Dũng Nguyễn & Minh Ngọc", teamB:"Hoc Truong & Linh Ngo",    scoreA:0, scoreB:0, group_name:"B", stage:"group", status:"not_started", updated_at:null },
+  { id:"b5",  teamA:"Tien Tran & Vu Phan",      teamB:"Hoc Truong & Linh Ngo",    scoreA:0, scoreB:0, group_name:"B", stage:"group", status:"not_started", updated_at:null },
+  { id:"b6",  teamA:"chú Cường & Alix Su",      teamB:"Chuong Huynh & Uyên",      scoreA:0, scoreB:0, group_name:"B", stage:"group", status:"not_started", updated_at:null },
+  { id:"b7",  teamA:"Hoc Truong & Linh Ngo",    teamB:"Chuong Huynh & Uyên",      scoreA:0, scoreB:0, group_name:"B", stage:"group", status:"not_started", updated_at:null },
+  { id:"b8",  teamA:"Tien Tran & Vu Phan",      teamB:"Dũng Nguyễn & Minh Ngọc", scoreA:0, scoreB:0, group_name:"B", stage:"group", status:"not_started", updated_at:null },
+  { id:"b9",  teamA:"Chuong Huynh & Uyên",      teamB:"Dũng Nguyễn & Minh Ngọc", scoreA:0, scoreB:0, group_name:"B", stage:"group", status:"not_started", updated_at:null },
+  { id:"b10", teamA:"Hoc Truong & Linh Ngo",    teamB:"chú Cường & Alix Su",      scoreA:0, scoreB:0, group_name:"B", stage:"group", status:"not_started", updated_at:null },
 ];
 
 // In-memory store (demo mode)
