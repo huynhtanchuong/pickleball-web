@@ -798,7 +798,7 @@ function flashSaved(id) {
 
 // ── Reset all data ────────────────────────────────────────────
 async function resetDemo() {
-  if (!confirm(t("confirmResetAll"))) return;
+  if (!confirm("Reset toàn bộ dữ liệu?\nTất cả điểm số, bán kết và chung kết sẽ bị xóa.")) return;
 
   if (!db) {
     localStorage.removeItem("pb_matches");

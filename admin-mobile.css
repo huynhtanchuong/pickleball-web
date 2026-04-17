@@ -627,3 +627,21 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
 .adm-fab-reset:hover,
 .adm-fab-reset:focus { opacity: 1; background: rgba(239,68,68,0.18); border-color: var(--adm-red); }
 .adm-fab-reset:active { transform: scale(0.9); }
+
+/* ── Reset all data — small footer link ── */
+.adm-reset-all-link {
+  display: inline-block;
+  margin-top: 10px;
+  background: none;
+  border: none;
+  color: rgba(239,68,68,0.4);
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: color 0.2s;
+  letter-spacing: 0.04em;
+}
+.adm-reset-all-link:hover { color: var(--adm-red); }
+.adm-reset-all-link:active { opacity: 0.7; }
