@@ -132,6 +132,13 @@ function renderMatches(matches) {
 
   renderPublicStage("match-list-group", groupMatches, "group");
 
+  // Auto-collapse group sections when all group matches are done
+  const allGroupDone = groupMatches.length > 0 && groupMatches.every(m => m.status === "done");
+  if (allGroupDone && (semiMatches.length > 0 || finalMatches.length > 0)) {
+    // Defer so DOM is built first
+    setTimeout(collapseAllPubGroups, 50);
+  }
+
   // Show/hide semi section
   const semiSec = document.getElementById("section-semi");
   if (semiSec) {
@@ -152,8 +159,13 @@ function renderMatches(matches) {
     const hasBracket = semiMatches.length > 0 || finalMatches.length > 0;
     bracketSec.style.display = hasBracket ? "block" : "none";
     const bc = document.getElementById("bracket-container");
-    if (bc && typeof renderBracketVisual === "function") {
-      renderBracketVisual(bc, matches);
+    if (bc && hasBracket) {
+      // Use admin.js renderBracketVisual if available, else use built-in
+      if (typeof renderBracketVisual === "function") {
+        renderBracketVisual(bc, matches);
+      } else {
+        renderPublicBracket(bc, matches);
+      }
     }
   }
 
@@ -842,6 +854,61 @@ function collapseCard(id) {
   if (icon) icon.textContent = "▶";
 }
 
+// ── Public bracket renderer (used on index.html — admin.js not loaded) ──
+function renderPublicBracket(container, matches) {
+  const semis  = matches.filter(m => m.stage === "semi");
+  const finals = matches.filter(m => m.stage === "final");
+  if (!semis.length && !finals.length) {
+    container.innerHTML = `<p class="empty-state">${t("bracketNone")}</p>`; return;
+  }
+  const getWinner = m => m.status === "done" ? (m.scoreA >= m.scoreB ? m.teamA : m.teamB) : null;
+  let html = '<div class="bracket-wrap">';
+
+  html += `<div class="bracket-col"><div class="bracket-col-title">${t("bracketSemi")}</div>`;
+  semis.forEach(m => {
+    const wA = m.status === "done" && m.scoreA > m.scoreB;
+    const wB = m.status === "done" && m.scoreB > m.scoreA;
+    html += `<div class="bracket-match-card">
+      <div class="bracket-team-row ${wA?"winner":""}"><span>${esc(m.teamA)}</span><span class="bracket-score-val">${m.status==="done"?m.scoreA:"-"}</span></div>
+      <div class="bracket-team-row ${wB?"winner":""}"><span>${esc(m.teamB)}</span><span class="bracket-score-val">${m.status==="done"?m.scoreB:"-"}</span></div>
+    </div>`;
+  });
+  html += '</div><div class="bracket-arrow">→</div>';
+
+  html += `<div class="bracket-col"><div class="bracket-col-title">${t("bracketFinal")}</div>`;
+  if (finals.length) {
+    finals.forEach(m => {
+      const wA = m.status === "done" && m.scoreA > m.scoreB;
+      const wB = m.status === "done" && m.scoreB > m.scoreA;
+      html += `<div class="bracket-match-card">
+        <div class="bracket-team-row ${wA?"winner":""}"><span>${esc(m.teamA)}</span><span class="bracket-score-val">${m.status==="done"?m.scoreA:"-"}</span></div>
+        <div class="bracket-team-row ${wB?"winner":""}"><span>${esc(m.teamB)}</span><span class="bracket-score-val">${m.status==="done"?m.scoreB:"-"}</span></div>
+      </div>`;
+    });
+  } else {
+    const w1 = semis[0] ? getWinner(semis[0]) : null;
+    const w2 = semis[1] ? getWinner(semis[1]) : null;
+    html += `<div class="bracket-match-card">
+      <div class="bracket-team-row ${w1?"":"tbd"}"><span>${w1 || "Winner SF1"}</span></div>
+      <div class="bracket-team-row ${w2?"":"tbd"}"><span>${w2 || "Winner SF2"}</span></div>
+    </div>`;
+  }
+  html += '</div>';
+
+  if (finals.length && finals[0].status === "done") {
+    const champ = finals[0].scoreA >= finals[0].scoreB ? finals[0].teamA : finals[0].teamB;
+    html += `<div class="bracket-arrow">→</div>
+      <div class="bracket-col"><div class="bracket-col-title">Champion</div>
+        <div class="champion-card">
+          <div class="champion-label">${t("bracketChamp")}</div>
+          <div class="champion-name">${esc(champ)}</div>
+        </div>
+      </div>`;
+  }
+  html += '</div>';
+  container.innerHTML = html;
+}
+
 // ── Toggle public group collapse ──────────────────────────────
 function togglePubGroup(g) {
   const grp  = document.getElementById(`pub-grp-${g}`);
@@ -850,6 +917,16 @@ function togglePubGroup(g) {
   const hidden = grp.style.display === "none";
   grp.style.display = hidden ? "contents" : "none";
   if (icon) icon.textContent = hidden ? "▼" : "▶";
+}
+
+// Auto-collapse all public groups (called when all group matches are done)
+function collapseAllPubGroups() {
+  document.querySelectorAll("[id^='pub-grp-']").forEach(grp => {
+    const g = grp.id.replace("pub-grp-", "");
+    grp.style.display = "none";
+    const icon = document.getElementById(`pub-icon-${g}`);
+    if (icon) icon.textContent = "▶";
+  });
 }
 
 // ── Boot (public page only) ───────────────────────────────────
