@@ -137,8 +137,61 @@ function renderMatches(matches) {
     }
   }
 
+  // Featured match (public scoreboard only)
+  updateFeatured(matches);
+
   // Update bracket UI hook (used by admin.js if loaded)
   if (typeof updateBracketUI === "function") updateBracketUI(matches);
+}
+
+// ── Featured match ────────────────────────────────────────────
+function updateFeatured(matches) {
+  const sec = document.getElementById("featured-section");
+  const box = document.getElementById("featured-match");
+  if (!sec || !box) return; // not on public page
+
+  // Pick highest-priority active match: final > semi > group
+  const priority = ["final", "semi", "group"];
+  let featured = null;
+  for (const stage of priority) {
+    featured = matches.find(m => m.status === "pending" && m.stage === stage);
+    if (featured) break;
+  }
+  // Fallback: most recently completed match
+  if (!featured) {
+    const done = matches.filter(m => m.status === "done");
+    featured = done[done.length - 1] || null;
+  }
+
+  if (!featured) { sec.style.display = "none"; return; }
+
+  sec.style.display = "block";
+  const isLive = featured.status === "pending";
+  const wA = featured.status === "done" && featured.scoreA > featured.scoreB;
+  const wB = featured.status === "done" && featured.scoreB > featured.scoreA;
+
+  const stageLabel = featured.stage === "final" ? "Championship Final"
+                   : featured.stage === "semi"  ? "Semifinal"
+                   : "Group " + (featured.group_name || "");
+
+  box.innerHTML = `
+    <div class="feat-team ${wA ? "feat-winner" : ""}">
+      <span class="feat-name">${esc(featured.teamA)}</span>
+    </div>
+    <div class="feat-scores">
+      <span class="feat-score ${wA ? "feat-score-win" : ""}">${featured.scoreA}</span>
+      <span class="feat-divider">:</span>
+      <span class="feat-score ${wB ? "feat-score-win" : ""}">${featured.scoreB}</span>
+    </div>
+    <div class="feat-team ${wB ? "feat-winner" : ""}">
+      <span class="feat-name">${esc(featured.teamB)}</span>
+    </div>
+    <div class="feat-status">
+      ${isLive
+        ? '<span class="badge-live">● LIVE</span>'
+        : '<span class="badge-done">✓ FINAL</span>'}
+      <span class="feat-stage-label">${esc(stageLabel)}</span>
+    </div>`;
 }
 
 function renderPublicStage(containerId, matches, stage) {
