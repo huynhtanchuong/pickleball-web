@@ -362,17 +362,31 @@ async function updateScore(id) {
   const autoStatus = (scoreA > 0 || scoreB > 0) ? "playing" : null;
 
   if (!db) {
-    if (!localMatches) localMatches = JSON.parse(localStorage.getItem("pb_matches") || "[]");
+    // Re-read fresh from localStorage before mutating (avoid stale in-memory data)
+    const stored = localStorage.getItem("pb_matches");
+    localMatches = stored ? JSON.parse(stored) : JSON.parse(JSON.stringify(SAMPLE_MATCHES));
+
     const m = localMatches.find(x => x.id === id);
     if (!m) { console.warn("updateScore: match not found", id); return; }
     m.scoreA = scoreA;
     m.scoreB = scoreB;
-    if (autoStatus && m.status === "not_started") m.status = autoStatus;
+    if (autoStatus && (m.status === "not_started" || m.status === "pending")) {
+      m.status = autoStatus;
+    }
     m.updated_at = new Date().toISOString();
     saveLocal(localMatches);
-    renderMatches(localMatches);
-    calculateStandings(localMatches);
-    flashSaved(id);
+
+    // On admin page: update badge in-place, don't re-render (would destroy inputs)
+    // On public page: full re-render is fine (no inputs to lose)
+    const isAdminPage = window.location.pathname.includes("admin");
+    if (isAdminPage) {
+      updateStatusBadgeInPlace(id, m.status);
+      flashSaved(id);
+    } else {
+      renderMatches(localMatches);
+      calculateStandings(localMatches);
+      flashSaved(id);
+    }
     setStatus("Score saved ✓", "ok");
     return;
   }
@@ -387,7 +401,7 @@ async function updateScore(id) {
   // Fetch current status to decide auto-transition
   const { data: current } = await db
     .from("matches").select("status").eq("id", id).single();
-  if (current && current.status === "not_started" && autoStatus) {
+  if (current && (current.status === "not_started" || current.status === "pending") && autoStatus) {
     payload.status = autoStatus;
   }
 
@@ -399,13 +413,36 @@ async function updateScore(id) {
   flashSaved(id);
 }
 
+// ── Update status badge in-place (admin page only) ────────────
+// Avoids full re-render which would destroy score inputs mid-edit.
+function updateStatusBadgeInPlace(id, status) {
+  const card = document.querySelector(`.adm-match-card[data-id="${id}"]`);
+  if (!card) return;
+
+  const badge = card.querySelector(".adm-status-badge");
+  if (!badge) return;
+
+  if (status === "playing") {
+    badge.className = "adm-status-badge adm-status-playing";
+    badge.textContent = "● PLAYING";
+  } else if (status === "done") {
+    badge.className = "adm-status-badge adm-status-done";
+    badge.textContent = "✓ DONE";
+  } else {
+    badge.className = "adm-status-badge adm-status-ns";
+    badge.textContent = "◌ NOT STARTED";
+  }
+}
+
 // ── Finish match (sets status = done) ─────────────────────────
 async function finishMatch(id) {
   const scoreA = parseInt(getInput(id, "scoreA"), 10) || 0;
   const scoreB = parseInt(getInput(id, "scoreB"), 10) || 0;
 
   if (!db) {
-    if (!localMatches) localMatches = JSON.parse(localStorage.getItem("pb_matches") || "[]");
+    const stored = localStorage.getItem("pb_matches");
+    localMatches = stored ? JSON.parse(stored) : JSON.parse(JSON.stringify(SAMPLE_MATCHES));
+
     const m = localMatches.find(x => x.id === id);
     if (!m) return;
     m.scoreA = scoreA;
@@ -413,6 +450,8 @@ async function finishMatch(id) {
     m.status = "done";
     m.updated_at = new Date().toISOString();
     saveLocal(localMatches);
+
+    // Full re-render is safe here — "done" disables all inputs anyway
     renderMatches(localMatches);
     calculateStandings(localMatches);
     setStatus("Match finished ✓", "ok");
@@ -514,8 +553,12 @@ const POLL_MS_RT   = 5000; // realtime fallback: poll every 5s
 
 function subscribeRealtime() {
   if (!db) {
-    // Demo mode — poll localStorage every 1s so public page sees admin changes instantly
-    startPolling(POLL_MS_DEMO);
+    // Demo mode — only the PUBLIC page polls localStorage (to pick up admin's saves).
+    // The admin page writes directly to localStorage, so it never needs to poll itself.
+    const isAdminPage = window.location.pathname.includes("admin");
+    if (!isAdminPage) {
+      startPolling(POLL_MS_DEMO);
+    }
     return;
   }
 
