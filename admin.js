@@ -124,6 +124,7 @@ function renderStageList(containerId, matches, stage) {
         </div>`;
     });
     container.innerHTML = html;
+    restoreGroupCollapse(); // keep collapsed state across re-renders
   } else {
     container.innerHTML = sorted.map(m => matchHTML(m, stage)).join("");
   }
@@ -132,13 +133,32 @@ function renderStageList(containerId, matches, stage) {
   restoreOpenCards();
 }
 
+// ── Track collapsed groups (survive re-renders) ──────────────
+const _collapsedGroups = new Set(); // groups that are collapsed
+
 function toggleGroup(g) {
   const body = document.getElementById(`grp-${g}`);
   const icon = document.getElementById(`icon-grp-${g}`);
   if (!body) return;
   const collapsed = body.style.display === "none";
-  body.style.display = collapsed ? "block" : "none";
-  if (icon) icon.textContent = collapsed ? "▼" : "▶";
+  if (collapsed) {
+    body.style.display = "block";
+    if (icon) icon.textContent = "▼";
+    _collapsedGroups.delete(g);
+  } else {
+    body.style.display = "none";
+    if (icon) icon.textContent = "▶";
+    _collapsedGroups.add(g);
+  }
+}
+
+function restoreGroupCollapse() {
+  _collapsedGroups.forEach(g => {
+    const body = document.getElementById(`grp-${g}`);
+    const icon = document.getElementById(`icon-grp-${g}`);
+    if (body) body.style.display = "none";
+    if (icon) icon.textContent = "▶";
+  });
 }
 
 // ── Match card HTML ───────────────────────────────────────────
