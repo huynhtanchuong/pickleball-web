@@ -1,6 +1,8 @@
-# 🏓 Pickleball Tournament — Live Scoreboard
+# 🏓 Giải Pickleball Tolo Pikaboo lần 3 - 2026
 
 Hệ thống tính điểm pickleball realtime, xây dựng bằng HTML + CSS + Vanilla JS + Supabase.
+
+**🌐 Live Site:** https://pickleball-web-dusky.vercel.app
 
 ---
 
@@ -8,18 +10,20 @@ Hệ thống tính điểm pickleball realtime, xây dựng bằng HTML + CSS + 
 
 | Service | URL |
 |---------|-----|
-| 🌐 **Public Site** | https://pickleball-5ii7p94au-huynhtanchuongdtu-9871s-projects.vercel.app |
-| 🔑 **Admin Panel** | https://pickleball-5ii7p94au-huynhtanchuongdtu-9871s-projects.vercel.app/admin.html |
-| ▲ **Vercel Dashboard** | https://vercel.com/huynhtanchuongdtu-9871s-projects/pickleball-web |
+| 🌐 **Public Site** | https://pickleball-web-dusky.vercel.app |
+| 🔑 **Admin Panel** | https://pickleball-web-dusky.vercel.app/admin.html |
+| 👥 **Team Management** | https://pickleball-web-dusky.vercel.app/teams.html |
+| ▲ **Vercel Dashboard** | https://vercel.com/huynhtanchuongdu-9871s-projects/pickleball-web |
 | 🗄️ **Supabase Dashboard** | https://supabase.com/dashboard/project/negwxhrkdypiopmmrxkf |
 | 📦 **GitHub Repo** | https://github.com/huynhtanchuong/pickleball-web |
 
 ---
 
-## 🔐 Admin
+## 🔐 Admin Credentials
 
-- **URL:** `/admin.html`
-- **Password:** `admin123`
+- **Admin Panel:** `/admin.html`
+- **Password:** `ToloPickleball2026!`
+- **Team Management:** `/teams.html` (requires admin login)
 
 ---
 
@@ -115,8 +119,11 @@ git push origin master
 pick-web/
 ├── index.html        — Public scoreboard (read-only)
 ├── admin.html        — Admin panel (score editing)
+├── teams.html        — Team management (NEW)
 ├── app.js            — Core logic: fetch, render, realtime, standings
 ├── admin.js          — Admin: login, bracket gen, reset, match info
+├── teams.js          — Team management logic (NEW)
+├── i18n.js           — Internationalization (VI/EN)
 ├── styles.css        — Public UI styles
 ├── admin-mobile.css  — Admin mobile-first styles
 ├── vercel.json       — Vercel static config
@@ -128,13 +135,15 @@ pick-web/
 ## ⚡ Tính năng
 
 ### Public Scoreboard
-- Featured match hero (trận đang diễn ra)
+- **Featured match rotation** - Tự động xoay vòng trận đang đấu mỗi 5 giây
+- **Click to expand** - Tap vào trận đấu để phóng to, hiển thị full tên đội
 - Group Stage với collapse bảng A/B
 - Semifinals & Final tự hiện khi có data
 - Bracket visual
 - Standings với 🥇🥈🥉
 - Realtime updates (Supabase Postgres Changes)
 - Hiển thị giờ, sân, trọng tài
+- Responsive mobile-first design
 
 ### Admin Panel
 - Login bằng password
@@ -145,8 +154,17 @@ pick-web/
 - **Reset 1 trận** về not_started
 - **Re-gen bán kết/chung kết** (xóa cũ, tính lại)
 - **Auto-gen bracket**: tự tạo bán kết khi vòng bảng xong, tự tạo chung kết khi bán kết xong
-- Nhập giờ / sân / trọng tài cho từng trận
+- Nhập giờ / sân / trọng tài cho từng trận (có thể sửa ngay cả khi trận đã done)
 - Conflict detection (nhiều admin cùng edit)
+- **Link to Team Management** - Nút "📋 Quản lý đội" ở header
+
+### Team Management (NEW) 🆕
+- **View all teams** - Xem danh sách tất cả đội, phân nhóm theo bảng
+- **Team statistics** - Số trận đã đấu, thắng, thua
+- **Edit team names** - Sửa tên đội với giao diện thân thiện
+- **Auto-update all matches** - Khi đổi tên đội, tất cả trận đấu (vòng bảng, bán kết, chung kết) tự động cập nhật
+- **Realtime sync** - Thay đổi hiện ngay trên user view
+- **Mobile responsive** - Hoạt động tốt trên mọi thiết bị
 
 ### Realtime
 - Supabase Postgres Changes subscription
