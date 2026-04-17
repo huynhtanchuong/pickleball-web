@@ -786,10 +786,41 @@ function flashSaved(id) {
   setTimeout(() => row.classList.remove("flash-ok"), 600);
 }
 
-// ── Reset demo data ───────────────────────────────────────────
-function resetDemo() {
-  localStorage.removeItem("pb_matches");
-  localMatches = null;
+// ── Reset all data ────────────────────────────────────────────
+async function resetDemo() {
+  if (!confirm("Reset toàn bộ dữ liệu? Tất cả điểm số và bán kết/chung kết sẽ bị xóa.")) return;
+
+  if (!db) {
+    // Demo mode: clear localStorage and reload sample data
+    localStorage.removeItem("pb_matches");
+    localMatches = null;
+    fetchMatches();
+    setStatus("Data reset ✓", "ok");
+    return;
+  }
+
+  // Supabase: reset all group matches to not_started, delete semi/final
+  const resetPayload = {
+    scoreA: 0, scoreB: 0, status: "not_started",
+    s1a: 0, s1b: 0, s2a: 0, s2b: 0, s3a: 0, s3b: 0,
+    updated_at: new Date().toISOString()
+  };
+
+  // 1. Reset all group matches
+  const { error: e1 } = await db.from("matches")
+    .update(resetPayload)
+    .eq("stage", "group");
+  if (e1) { setStatus("Reset error: " + e1.message, "err"); return; }
+
+  // 2. Delete semi matches
+  const { error: e2 } = await db.from("matches").delete().eq("stage", "semi");
+  if (e2) { setStatus("Reset error: " + e2.message, "err"); return; }
+
+  // 3. Delete final match
+  const { error: e3 } = await db.from("matches").delete().eq("stage", "final");
+  if (e3) { setStatus("Reset error: " + e3.message, "err"); return; }
+
+  setStatus("Reset xong ✓", "ok");
   fetchMatches();
 }
 
