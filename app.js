@@ -314,11 +314,25 @@ function renderPublicStage(containerId, matches, stage) {
     return;
   }
 
-  // Sort: playing → not_started → done (same as admin view)
+  // Sort: playing → not_started → done, then by time
   const statusOrder = { playing: 0, not_started: 1, pending: 1, done: 2 };
-  const sorted = [...matches].sort((a, b) =>
-    (statusOrder[a.status] ?? 1) - (statusOrder[b.status] ?? 1)
-  );
+  const sorted = [...matches].sort((a, b) => {
+    // First: sort by status
+    const statusDiff = (statusOrder[a.status] ?? 1) - (statusOrder[b.status] ?? 1);
+    if (statusDiff !== 0) return statusDiff;
+    
+    // Second: sort by match_time (if available)
+    const timeA = a.match_time || "";
+    const timeB = b.match_time || "";
+    if (timeA && timeB) {
+      return timeA.localeCompare(timeB);
+    }
+    if (timeA) return -1; // Has time comes first
+    if (timeB) return 1;
+    
+    // Third: keep original order
+    return 0;
+  });
 
   if (stage === "group") {
     // Sub-group by group_name with collapsible headers
