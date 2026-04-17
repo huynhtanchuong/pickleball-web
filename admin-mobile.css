@@ -594,3 +594,9 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
   font-style: italic;
   font-size: 0.8rem !important;
 }
+
+/* ── Live score in summary ── */
+.adm-summary-score-live {
+  color: var(--adm-green) !important;
+  animation: livePulse 1.5s ease-in-out infinite;
+}

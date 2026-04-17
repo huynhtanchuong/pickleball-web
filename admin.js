@@ -86,20 +86,30 @@ function renderStageList(containerId, matches, stage) {
     return;
   }
 
+  // Sort: playing → not_started → done
+  const statusOrder = { playing: 0, not_started: 1, pending: 1, done: 2 };
+  const sorted = [...matches].sort((a, b) =>
+    (statusOrder[a.status] ?? 1) - (statusOrder[b.status] ?? 1)
+  );
+
   if (stage === "group") {
     const groups = {};
-    matches.forEach(m => {
+    sorted.forEach(m => {
       if (!groups[m.group_name]) groups[m.group_name] = [];
       groups[m.group_name].push(m);
     });
     let html = "";
     Object.keys(groups).sort().forEach(g => {
-      const allDone = groups[g].every(m => m.status === "done");
+      const doneCount = groups[g].filter(m => m.status === "done").length;
+      const playingCount = groups[g].filter(m => m.status === "playing").length;
+      const progressLabel = playingCount > 0
+        ? `<span style="color:var(--adm-green)">${playingCount} playing</span> · ${doneCount}/${groups[g].length} done`
+        : `${doneCount}/${groups[g].length} done`;
       html += `
         <div class="adm-group-section">
           <div class="adm-group-header" onclick="toggleGroup('${g}')">
             <span class="adm-group-divider">Bảng ${esc(g)}</span>
-            <span class="adm-group-progress">${groups[g].filter(m=>m.status==="done").length}/${groups[g].length} done</span>
+            <span class="adm-group-progress">${progressLabel}</span>
             <span class="adm-collapse-icon" id="icon-grp-${g}">▼</span>
           </div>
           <div class="adm-group-body" id="grp-${g}">
@@ -109,8 +119,11 @@ function renderStageList(containerId, matches, stage) {
     });
     container.innerHTML = html;
   } else {
-    container.innerHTML = matches.map(m => matchHTML(m, stage)).join("");
+    container.innerHTML = sorted.map(m => matchHTML(m, stage)).join("");
   }
+
+  // Restore previously open cards
+  restoreOpenCards();
 }
 
 function toggleGroup(g) {
@@ -185,6 +198,10 @@ function matchHTML(m, stage) {
   }
 
   // Collapsed summary (shown when card is collapsed)
+  const scoreInSummary = (done || playing)
+    ? `<span class="adm-summary-score ${playing ? "adm-summary-score-live" : ""}">${m.scoreA}:${m.scoreB}</span>`
+    : "";
+
   const summary = `
     <div class="adm-card-summary" onclick="toggleCard('${m.id}')">
       <div class="adm-summary-left">
@@ -192,7 +209,7 @@ function matchHTML(m, stage) {
         <span class="adm-summary-teams">${esc(m.teamA)} <span style="color:var(--adm-muted)">vs</span> ${esc(m.teamB)}</span>
       </div>
       <div class="adm-summary-right">
-        ${done ? `<span class="adm-summary-score">${m.scoreA}:${m.scoreB}</span>` : ""}
+        ${scoreInSummary}
         ${m.match_time ? `<span class="adm-summary-time">${esc(m.match_time)}</span>` : ""}
         <span class="adm-collapse-icon" id="icon-${m.id}">▶</span>
       </div>
@@ -226,13 +243,33 @@ function matchHTML(m, stage) {
   return `<div class="adm-match-card ${cardCls}" data-id="${m.id}" data-updated="${m.updated_at||''}">${summary}${body}</div>`;
 }
 
+// ── Track which cards are open (survive re-renders) ──────────
+const _openCards = new Set();
+
 function toggleCard(id) {
   const body = document.getElementById(`body-${id}`);
   const icon = document.getElementById(`icon-${id}`);
   if (!body) return;
   const open = body.style.display !== "none";
-  body.style.display = open ? "none" : "block";
-  if (icon) icon.textContent = open ? "▶" : "▼";
+  if (open) {
+    body.style.display = "none";
+    if (icon) icon.textContent = "▶";
+    _openCards.delete(id);
+  } else {
+    body.style.display = "block";
+    if (icon) icon.textContent = "▼";
+    _openCards.add(id);
+  }
+}
+
+// Restore open state after re-render
+function restoreOpenCards() {
+  _openCards.forEach(id => {
+    const body = document.getElementById(`body-${id}`);
+    const icon = document.getElementById(`icon-${id}`);
+    if (body) { body.style.display = "block"; }
+    if (icon) { icon.textContent = "▼"; }
+  });
 }
 
 // ── Set row HTML ──────────────────────────────────────────────
@@ -304,10 +341,10 @@ async function saveMatchInfo(id) {
 async function resetMatch(id) {
   if (!confirm("Reset trận này về not_started?")) return;
 
+  // Only send lowercase columns (matching actual DB schema)
   const payload = {
-    scoreA:0, scoreB:0, status:"not_started",
-    s1A:0,s1B:0,s2A:0,s2B:0,s3A:0,s3B:0,
-    s1a:0,s1b:0,s2a:0,s2b:0,s3a:0,s3b:0,
+    scoreA: 0, scoreB: 0, status: "not_started",
+    s1a: 0, s1b: 0, s2a: 0, s2b: 0, s3a: 0, s3b: 0,
     updated_at: new Date().toISOString()
   };
 
