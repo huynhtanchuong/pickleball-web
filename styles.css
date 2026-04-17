@@ -778,3 +778,20 @@ main {
   0%   { border-color: var(--green); box-shadow: 0 0 20px rgba(34,197,94,0.4); }
   100% { border-color: var(--border); box-shadow: none; }
 }
+
+/* ── Not-started badge + card (public) ── */
+.badge-ns {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: rgba(100,116,139,0.1);
+  border: 1px solid rgba(100,116,139,0.2);
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+.match-card.card-ns {
+  opacity: 0.75;
+}
+.match-card.card-ns::before { background: var(--text-muted); }

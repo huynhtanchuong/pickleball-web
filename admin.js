@@ -93,17 +93,31 @@ function renderStageList(containerId, matches, stage) {
 }
 
 function matchHTML(m, stage) {
-  const done    = m.status === "done";
-  const winnerA = done && m.scoreA > m.scoreB;
-  const winnerB = done && m.scoreB > m.scoreA;
-  const dis     = done ? "disabled" : "";
+  const done       = m.status === "done";
+  const playing    = m.status === "playing";
+  const notStarted = m.status === "not_started" || m.status === "pending";
+  const winnerA    = done && m.scoreA > m.scoreB;
+  const winnerB    = done && m.scoreB > m.scoreA;
+  const dis        = done ? "disabled" : "";
 
-  let cardCls = done ? "is-done" : "is-live";
+  let cardCls = done ? "is-done" : playing ? "is-playing is-live" : "is-ns";
   if (stage === "semi")  cardCls += " is-semi";
   if (stage === "final") cardCls += " is-final";
 
+  // Status badge
+  const statusBadge = done
+    ? '<span class="adm-status-badge adm-status-done">✓ DONE</span>'
+    : playing
+    ? '<span class="adm-status-badge adm-status-playing">● PLAYING</span>'
+    : '<span class="adm-status-badge adm-status-ns">◌ NOT STARTED</span>';
+
   return `
-    <div class="adm-match-card ${cardCls}" data-id="${m.id}">
+    <div class="adm-match-card ${cardCls}" data-id="${m.id}" data-updated="${m.updated_at || ''}">
+
+      <div class="adm-card-header">
+        ${statusBadge}
+        <span class="adm-match-meta">${stage === "group" ? "" : stage === "semi" ? "Semifinal" : "Final"}</span>
+      </div>
 
       <div class="adm-teams">
         <span class="adm-team-name ${winnerA ? "winner" : ""}">${esc(m.teamA)}</span>
@@ -112,7 +126,6 @@ function matchHTML(m, stage) {
       </div>
 
       <div class="adm-score-row">
-        <!-- Team A score -->
         <div class="adm-score-ctrl">
           <button class="adm-inc-btn plus" ${dis}
             onclick="adjustScore('${m.id}','scoreA',1)">+</button>
@@ -124,7 +137,6 @@ function matchHTML(m, stage) {
 
         <span class="adm-score-sep">:</span>
 
-        <!-- Team B score -->
         <div class="adm-score-ctrl">
           <button class="adm-inc-btn plus" ${dis}
             onclick="adjustScore('${m.id}','scoreB',1)">+</button>
@@ -138,9 +150,9 @@ function matchHTML(m, stage) {
       <div class="adm-actions">
         <button class="adm-save-btn" ${dis}
           onclick="updateScore('${m.id}')">💾 Save</button>
-        <button class="adm-done-btn ${done ? "is-done" : ""}" ${dis}
-          onclick="markDone('${m.id}')">
-          ${done ? "✓ Done" : "✅ Mark Done"}
+        <button class="adm-finish-btn ${done ? "is-done" : ""}" ${dis}
+          onclick="finishMatch('${m.id}')">
+          ${done ? "✓ Finished" : "🏁 Finish Match"}
         </button>
       </div>
 
@@ -217,8 +229,8 @@ async function generateSemifinals() {
   const B2 = tops[g2][1]?.name || "TBD";
 
   const semis = [
-    { teamA: A1, teamB: B2, scoreA: 0, scoreB: 0, group_name: "SF", stage: "semi", status: "pending" },
-    { teamA: B1, teamB: A2, scoreA: 0, scoreB: 0, group_name: "SF", stage: "semi", status: "pending" },
+    { teamA: A1, teamB: B2, scoreA: 0, scoreB: 0, group_name: "SF", stage: "semi", status: "not_started" },
+    { teamA: B1, teamB: A2, scoreA: 0, scoreB: 0, group_name: "SF", stage: "semi", status: "not_started" },
   ];
 
   if (!db) {
@@ -250,7 +262,7 @@ async function generateFinal() {
 
   const finalMatch = {
     teamA: w1, teamB: w2, scoreA: 0, scoreB: 0,
-    group_name: "F", stage: "final", status: "pending"
+    group_name: "F", stage: "final", status: "not_started"
   };
 
   if (!db) {

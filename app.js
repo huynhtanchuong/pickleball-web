@@ -54,14 +54,14 @@ function setStatus(msg, type = "") {
 
 // ── Sample data ───────────────────────────────────────────────
 const SAMPLE_MATCHES = [
-  { id:"s1", teamA:"Dink Masters",  teamB:"Net Ninjas",    scoreA:0, scoreB:0, group_name:"A", stage:"group", status:"pending" },
-  { id:"s2", teamA:"Smash Bros",    teamB:"Lob Stars",     scoreA:0, scoreB:0, group_name:"A", stage:"group", status:"pending" },
-  { id:"s3", teamA:"Dink Masters",  teamB:"Lob Stars",     scoreA:0, scoreB:0, group_name:"A", stage:"group", status:"pending" },
-  { id:"s4", teamA:"Smash Bros",    teamB:"Net Ninjas",    scoreA:0, scoreB:0, group_name:"A", stage:"group", status:"pending" },
-  { id:"s5", teamA:"Spin Doctors",  teamB:"Drop Shots",    scoreA:0, scoreB:0, group_name:"B", stage:"group", status:"pending" },
-  { id:"s6", teamA:"Ace Patrol",    teamB:"Kitchen Kings", scoreA:0, scoreB:0, group_name:"B", stage:"group", status:"pending" },
-  { id:"s7", teamA:"Spin Doctors",  teamB:"Kitchen Kings", scoreA:0, scoreB:0, group_name:"B", stage:"group", status:"pending" },
-  { id:"s8", teamA:"Ace Patrol",    teamB:"Drop Shots",    scoreA:0, scoreB:0, group_name:"B", stage:"group", status:"pending" },
+  { id:"s1", teamA:"Dink Masters",  teamB:"Net Ninjas",    scoreA:0, scoreB:0, group_name:"A", stage:"group", status:"not_started", updated_at: null },
+  { id:"s2", teamA:"Smash Bros",    teamB:"Lob Stars",     scoreA:0, scoreB:0, group_name:"A", stage:"group", status:"not_started", updated_at: null },
+  { id:"s3", teamA:"Dink Masters",  teamB:"Lob Stars",     scoreA:0, scoreB:0, group_name:"A", stage:"group", status:"not_started", updated_at: null },
+  { id:"s4", teamA:"Smash Bros",    teamB:"Net Ninjas",    scoreA:0, scoreB:0, group_name:"A", stage:"group", status:"not_started", updated_at: null },
+  { id:"s5", teamA:"Spin Doctors",  teamB:"Drop Shots",    scoreA:0, scoreB:0, group_name:"B", stage:"group", status:"not_started", updated_at: null },
+  { id:"s6", teamA:"Ace Patrol",    teamB:"Kitchen Kings", scoreA:0, scoreB:0, group_name:"B", stage:"group", status:"not_started", updated_at: null },
+  { id:"s7", teamA:"Spin Doctors",  teamB:"Kitchen Kings", scoreA:0, scoreB:0, group_name:"B", stage:"group", status:"not_started", updated_at: null },
+  { id:"s8", teamA:"Ace Patrol",    teamB:"Drop Shots",    scoreA:0, scoreB:0, group_name:"B", stage:"group", status:"not_started", updated_at: null },
 ];
 
 // In-memory store (demo mode)
@@ -80,6 +80,7 @@ async function fetchMatches() {
     }
     renderMatches(localMatches);
     calculateStandings(localMatches);
+    storeUpdatedAt(localMatches);
     return;
   }
 
@@ -93,7 +94,9 @@ async function fetchMatches() {
 
   renderMatches(data);
   calculateStandings(data);
+  storeUpdatedAt(data); // track timestamps for conflict detection
 }
+
 async function seedMatches() {
   if (!db) return;
   const rows = SAMPLE_MATCHES.map(({ id, ...rest }) => rest);
@@ -151,11 +154,25 @@ function updateFeatured(matches) {
   if (!sec || !box) return; // not on public page
 
   // Pick highest-priority active match: final > semi > group
+  // "playing" first, then "not_started", then fallback to last done
   const priority = ["final", "semi", "group"];
   let featured = null;
   for (const stage of priority) {
-    featured = matches.find(m => m.status === "pending" && m.stage === stage);
+    featured = matches.find(m => m.status === "playing" && m.stage === stage);
     if (featured) break;
+  }
+  if (!featured) {
+    for (const stage of priority) {
+      featured = matches.find(m => m.status === "not_started" && m.stage === stage);
+      if (featured) break;
+    }
+  }
+  // legacy "pending" support
+  if (!featured) {
+    for (const stage of priority) {
+      featured = matches.find(m => m.status === "pending" && m.stage === stage);
+      if (featured) break;
+    }
   }
   // Fallback: most recently completed match
   if (!featured) {
@@ -166,9 +183,11 @@ function updateFeatured(matches) {
   if (!featured) { sec.style.display = "none"; return; }
 
   sec.style.display = "block";
-  const isLive = featured.status === "pending";
-  const wA = featured.status === "done" && featured.scoreA > featured.scoreB;
-  const wB = featured.status === "done" && featured.scoreB > featured.scoreA;
+  const isPlaying    = featured.status === "playing";
+  const isNotStarted = featured.status === "not_started" || featured.status === "pending";
+  const isDone       = featured.status === "done";
+  const wA = isDone && featured.scoreA > featured.scoreB;
+  const wB = isDone && featured.scoreB > featured.scoreA;
 
   const stageLabel = featured.stage === "final" ? "Championship Final"
                    : featured.stage === "semi"  ? "Semifinal"
@@ -187,9 +206,9 @@ function updateFeatured(matches) {
       <span class="feat-name">${esc(featured.teamB)}</span>
     </div>
     <div class="feat-status">
-      ${isLive
-        ? '<span class="badge-live">● LIVE</span>'
-        : '<span class="badge-done">✓ FINAL</span>'}
+      ${isPlaying    ? '<span class="badge-live">● PLAYING</span>'
+      : isNotStarted ? '<span class="badge-ns">◌ NOT STARTED</span>'
+      :                '<span class="badge-done">✓ FINAL</span>'}
       <span class="feat-stage-label">${esc(stageLabel)}</span>
     </div>`;
 }
@@ -225,18 +244,23 @@ function renderPublicStage(containerId, matches, stage) {
 }
 
 function publicMatchHTML(m, stage) {
-  const done    = m.status === "done";
-  const winnerA = done && m.scoreA > m.scoreB;
-  const winnerB = done && m.scoreB > m.scoreA;
+  const done       = m.status === "done";
+  const playing    = m.status === "playing";
+  const notStarted = m.status === "not_started" || m.status === "pending";
+  const winnerA    = done && m.scoreA > m.scoreB;
+  const winnerB    = done && m.scoreB > m.scoreA;
 
-  // Card modifier classes
-  let cardMod = done ? "card-done" : "card-live";
+  let cardMod = done ? "card-done" : playing ? "card-live" : "card-ns";
   if (stage === "semi")  cardMod += " card-semi";
   if (stage === "final") cardMod += " card-final";
 
   const groupTag = stage === "group"
     ? `Group ${esc(m.group_name)}`
     : stage === "semi" ? "Semifinal" : "Final";
+
+  const badge = done       ? '<span class="badge-done">✓ Final Score</span>'
+              : playing    ? '<span class="badge-live">● Playing</span>'
+              :              '<span class="badge-ns">◌ Not Started</span>';
 
   return `
     <div class="match-card ${cardMod}" data-id="${m.id}">
@@ -251,11 +275,77 @@ function publicMatchHTML(m, stage) {
       </div>
       <div class="mc-footer">
         <span class="mc-group-tag">${groupTag}</span>
-        ${done
-          ? '<span class="badge-done">✓ Final Score</span>'
-          : '<span class="badge-live">● Live</span>'}
+        ${badge}
       </div>
     </div>`;
+}
+
+// ── Conflict tracking ─────────────────────────────────────────
+// Maps matchId → updated_at string seen at last render.
+// Used to detect concurrent edits by multiple admins.
+const _knownUpdatedAt = {};
+
+function storeUpdatedAt(matches) {
+  matches.forEach(m => {
+    if (m.updated_at !== undefined) _knownUpdatedAt[m.id] = m.updated_at;
+  });
+}
+
+async function checkConflict(id) {
+  // Demo mode — no conflict possible (single localStorage)
+  if (!db) return false;
+
+  const { data, error } = await db
+    .from("matches").select("updated_at").eq("id", id).single();
+  if (error || !data) return false; // can't check → allow save
+
+  const knownTs  = _knownUpdatedAt[id];
+  const latestTs = data.updated_at;
+
+  // If we never stored a timestamp, allow save
+  if (!knownTs) return false;
+
+  // Conflict if DB timestamp differs from what we loaded
+  return latestTs !== knownTs;
+}
+
+function handleConflict(id) {
+  setStatus("⚠️ Conflict — match updated by another admin", "err");
+
+  // Show inline conflict banner on the card
+  const card = document.querySelector(`.adm-match-card[data-id="${id}"]`);
+  if (card) {
+    // Remove any existing banner
+    const old = card.querySelector(".conflict-banner");
+    if (old) old.remove();
+
+    const banner = document.createElement("div");
+    banner.className = "conflict-banner";
+    banner.innerHTML = `
+      ⚠️ Updated by another admin.
+      <button class="conflict-reload-btn" onclick="reloadMatch('${id}')">↺ Reload</button>`;
+    card.prepend(banner);
+  }
+}
+
+async function reloadMatch(id) {
+  if (!db) { fetchMatches(); return; }
+
+  const { data, error } = await db
+    .from("matches").select("*").eq("id", id).single();
+  if (error || !data) { fetchMatches(); return; }
+
+  // Update local cache and re-render just this card
+  if (localMatches) {
+    const idx = localMatches.findIndex(m => m.id === id);
+    if (idx !== -1) localMatches[idx] = data;
+    else localMatches.push(data);
+  }
+  _knownUpdatedAt[id] = data.updated_at;
+
+  // Full re-render to reflect fresh data
+  fetchMatches();
+  setStatus("Match reloaded ✓", "ok");
 }
 
 // ── Update score ──────────────────────────────────────────────
@@ -263,15 +353,18 @@ async function updateScore(id) {
   const scoreA = parseInt(getInput(id, "scoreA"), 10) || 0;
   const scoreB = parseInt(getInput(id, "scoreB"), 10) || 0;
 
+  // Auto-status: not_started → playing when any score > 0
+  const autoStatus = (scoreA > 0 || scoreB > 0) ? "playing" : null;
+
   if (!db) {
-    // Demo mode: update in-memory, persist, refresh UI
     if (!localMatches) localMatches = JSON.parse(localStorage.getItem("pb_matches") || "[]");
     const m = localMatches.find(x => x.id === id);
     if (!m) { console.warn("updateScore: match not found", id); return; }
     m.scoreA = scoreA;
     m.scoreB = scoreB;
+    if (autoStatus && m.status === "not_started") m.status = autoStatus;
+    m.updated_at = new Date().toISOString();
     saveLocal(localMatches);
-    // Re-render then flash (row is recreated so query after render)
     renderMatches(localMatches);
     calculateStandings(localMatches);
     flashSaved(id);
@@ -279,35 +372,62 @@ async function updateScore(id) {
     return;
   }
 
-  const { error } = await db.from("matches").update({ scoreA, scoreB }).eq("id", id);
+  // Conflict check before writing
+  const conflict = await checkConflict(id);
+  if (conflict) { handleConflict(id); return; }
+
+  // Build update payload
+  const payload = { scoreA, scoreB, updated_at: new Date().toISOString() };
+
+  // Fetch current status to decide auto-transition
+  const { data: current } = await db
+    .from("matches").select("status").eq("id", id).single();
+  if (current && current.status === "not_started" && autoStatus) {
+    payload.status = autoStatus;
+  }
+
+  const { error } = await db.from("matches").update(payload).eq("id", id);
   if (error) { setStatus("Update error: " + error.message, "err"); return; }
+
+  _knownUpdatedAt[id] = payload.updated_at;
   setStatus("Score saved ✓", "ok");
   flashSaved(id);
 }
 
-// ── Mark done ─────────────────────────────────────────────────
-async function markDone(id) {
+// ── Finish match (sets status = done) ─────────────────────────
+async function finishMatch(id) {
   const scoreA = parseInt(getInput(id, "scoreA"), 10) || 0;
   const scoreB = parseInt(getInput(id, "scoreB"), 10) || 0;
 
   if (!db) {
     if (!localMatches) localMatches = JSON.parse(localStorage.getItem("pb_matches") || "[]");
     const m = localMatches.find(x => x.id === id);
-    if (!m) { console.warn("markDone: match not found", id); return; }
+    if (!m) return;
     m.scoreA = scoreA;
     m.scoreB = scoreB;
     m.status = "done";
+    m.updated_at = new Date().toISOString();
     saveLocal(localMatches);
     renderMatches(localMatches);
     calculateStandings(localMatches);
-    setStatus("Match marked done ✓", "ok");
+    setStatus("Match finished ✓", "ok");
     return;
   }
 
-  const { error } = await db.from("matches")
-    .update({ scoreA, scoreB, status: "done" }).eq("id", id);
-  if (error) { setStatus("Mark done error: " + error.message, "err"); return; }
-  setStatus("Match marked done ✓", "ok");
+  const conflict = await checkConflict(id);
+  if (conflict) { handleConflict(id); return; }
+
+  const payload = { scoreA, scoreB, status: "done", updated_at: new Date().toISOString() };
+  const { error } = await db.from("matches").update(payload).eq("id", id);
+  if (error) { setStatus("Finish error: " + error.message, "err"); return; }
+
+  _knownUpdatedAt[id] = payload.updated_at;
+  setStatus("Match finished ✓", "ok");
+}
+
+// ── Mark done (legacy alias → finishMatch) ────────────────────
+async function markDone(id) {
+  return finishMatch(id);
 }
 
 // ── Calculate standings (group stage only) ────────────────────

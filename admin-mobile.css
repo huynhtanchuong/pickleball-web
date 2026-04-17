@@ -268,3 +268,101 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
   .adm-inc-btn { width: 44px; height: 44px; font-size: 1.2rem; }
   .adm-save-btn, .adm-done-btn { padding: 12px; font-size: 0.9rem; }
 }
+
+/* ── STATUS BADGES ── */
+.adm-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.adm-match-meta {
+  font-size: 0.65rem;
+  color: var(--adm-muted);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.adm-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+.adm-status-ns {
+  background: rgba(100,116,139,0.15);
+  color: #94a3b8;
+  border: 1px solid rgba(100,116,139,0.3);
+}
+.adm-status-playing {
+  background: rgba(34,197,94,0.12);
+  color: var(--adm-green);
+  border: 1px solid rgba(34,197,94,0.3);
+  animation: livePulse 1.5s ease-in-out infinite;
+}
+.adm-status-done {
+  background: rgba(100,116,139,0.1);
+  color: #64748b;
+  border: 1px solid rgba(100,116,139,0.2);
+}
+@keyframes livePulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+/* ── MATCH CARD STATES ── */
+.adm-match-card.is-ns     { border-color: rgba(100,116,139,0.3); }
+.adm-match-card.is-playing { border-color: rgba(34,197,94,0.5);
+  box-shadow: 0 0 12px rgba(34,197,94,0.1); }
+
+/* ── FINISH MATCH BUTTON ── */
+.adm-finish-btn {
+  flex: 1;
+  padding: 14px;
+  font-size: 1rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  background: #f97316;
+  color: #fff;
+  transition: opacity 0.15s, transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.adm-finish-btn.is-done   { background: var(--adm-gray); }
+.adm-finish-btn:active    { transform: scale(0.97); }
+.adm-finish-btn:disabled  { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+/* ── CONFLICT BANNER ── */
+.conflict-banner {
+  background: rgba(239,68,68,0.12);
+  border: 1px solid rgba(239,68,68,0.4);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  color: #fca5a5;
+  font-weight: 600;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.conflict-reload-btn {
+  background: var(--adm-blue);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.conflict-reload-btn:active { opacity: 0.8; }
+
+/* ── NOT-STARTED card style on public scoreboard ── */
