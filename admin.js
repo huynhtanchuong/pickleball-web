@@ -2,7 +2,7 @@
 //  admin.js — Admin panel logic
 // ============================================================
 
-const ADMIN_PASSWORD = "ToloPickleball2026!"; // Đổi password này thành password bạn muốn
+const ADMIN_PASSWORD = "admin123";
 const ADMIN_KEY      = "pb_admin_auth";
 
 // ── Auth ──────────────────────────────────────────────────────

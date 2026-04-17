@@ -22,7 +22,7 @@ Hệ thống tính điểm pickleball realtime, xây dựng bằng HTML + CSS + 
 ## 🔐 Admin Credentials
 
 - **Admin Panel:** `/admin.html`
-- **Password:** `ToloPickleball2026!`
+- **Password:** `admin123`
 - **Team Management:** `/teams.html` (requires admin login)
 
 ---
