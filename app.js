@@ -74,7 +74,12 @@ function saveLocal(matches) {
 // ── Fetch matches ─────────────────────────────────────────────
 async function fetchMatches() {
   if (!db) {
-    if (!localMatches) {
+    // Always re-read from localStorage so cross-tab updates (admin → public) are picked up.
+    // The in-memory localMatches is only used as a write buffer; source of truth is localStorage.
+    const stored = localStorage.getItem("pb_matches");
+    if (stored) {
+      localMatches = JSON.parse(stored);
+    } else {
       localMatches = JSON.parse(JSON.stringify(SAMPLE_MATCHES));
       saveLocal(localMatches);
     }
@@ -504,12 +509,13 @@ function renderStandings(groups) {
 // ── Realtime subscription + polling fallback ─────────────────
 let _pollTimer    = null;
 let _rtConnected  = false;
-const POLL_MS     = 5000; // fallback poll every 5s
+const POLL_MS_DEMO = 1000; // demo mode: poll every 1s (cross-tab localStorage sync)
+const POLL_MS_RT   = 5000; // realtime fallback: poll every 5s
 
 function subscribeRealtime() {
   if (!db) {
-    // No Supabase — start polling demo mode (localStorage changes from admin tab)
-    startPolling();
+    // Demo mode — poll localStorage every 1s so public page sees admin changes instantly
+    startPolling(POLL_MS_DEMO);
     return;
   }
 
@@ -522,7 +528,7 @@ function subscribeRealtime() {
     .subscribe(status => {
       if (status === "SUBSCRIBED") {
         _rtConnected = true;
-        stopPolling(); // realtime is live — no need to poll
+        stopPolling();
         const ri = document.getElementById("realtime-indicator");
         if (ri) ri.style.display = "inline-block";
         setStatus("🟢 Realtime active", "ok");
@@ -532,18 +538,17 @@ function subscribeRealtime() {
         const ri = document.getElementById("realtime-indicator");
         if (ri) ri.style.display = "none";
         setStatus("⚠️ Realtime lost — polling", "err");
-        startPolling(); // fallback: poll until reconnected
+        startPolling(POLL_MS_RT);
       }
     });
 }
 
-function startPolling() {
+function startPolling(intervalMs) {
   if (_pollTimer) return; // already running
   _pollTimer = setInterval(() => {
     fetchMatches();
-    // If realtime reconnects, stop polling
     if (_rtConnected) stopPolling();
-  }, POLL_MS);
+  }, intervalMs || POLL_MS_RT);
 }
 
 function stopPolling() {

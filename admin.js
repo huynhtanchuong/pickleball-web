@@ -160,13 +160,19 @@ function matchHTML(m, stage) {
 }
 
 // ── +1 / -1 score adjustment ──────────────────────────────────
+// Updates the input value only — does NOT auto-save.
+// User taps Save or the debounced auto-save fires after 800ms of inactivity.
+const _saveDebounce = {};
+
 function adjustScore(id, field, delta) {
   const input = document.querySelector(`input[data-id="${id}"][data-field="${field}"]`);
   if (!input) return;
   const newVal = Math.max(0, (parseInt(input.value, 10) || 0) + delta);
   input.value = newVal;
-  // Immediately save to keep things in sync
-  updateScore(id);
+
+  // Debounced auto-save: fires 800ms after last tap
+  clearTimeout(_saveDebounce[id]);
+  _saveDebounce[id] = setTimeout(() => { updateScore(id); }, 800);
 }
 
 // ── Bracket logic ─────────────────────────────────────────────
