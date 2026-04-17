@@ -52,22 +52,28 @@ function renderMatches(matches) {
 }
 
 // ── Auto-generate bracket ─────────────────────────────────────
+let _bracketGenerating = false; // prevent concurrent auto-gen
+
 async function autoGenerateBracket(matches) {
+  if (_bracketGenerating) return;
+
   const groupMatches = matches.filter(m => !m.stage || m.stage === "group");
   const semiMatches  = matches.filter(m => m.stage === "semi");
   const finalMatches = matches.filter(m => m.stage === "final");
 
-  // Auto-gen semis: all group matches done AND no semis yet
   const allGroupDone = groupMatches.length > 0 && groupMatches.every(m => m.status === "done");
   if (allGroupDone && semiMatches.length === 0) {
-    await generateSemifinals(true); // silent=true
+    _bracketGenerating = true;
+    await generateSemifinals(true);
+    _bracketGenerating = false;
     return;
   }
 
-  // Auto-gen final: both semis done AND no final yet
   const allSemiDone = semiMatches.length >= 2 && semiMatches.every(m => m.status === "done");
   if (allSemiDone && finalMatches.length === 0) {
-    await generateFinal(true); // silent=true
+    _bracketGenerating = true;
+    await generateFinal(true);
+    _bracketGenerating = false;
   }
 }
 
@@ -367,25 +373,42 @@ async function resetMatch(id) {
 // ── Re-generate bracket (delete old + create new) ─────────────
 async function regenSemifinals() {
   if (!confirm("Xóa bán kết cũ và gen lại?")) return;
+
   if (!db) {
     localMatches = (localMatches||[]).filter(m => m.stage !== "semi");
     saveLocal(localMatches);
+    // Force re-read so generateSemifinals sees fresh data
+    const stored = localStorage.getItem("pb_matches");
+    localMatches = stored ? JSON.parse(stored) : [];
     await generateSemifinals(true);
     return;
   }
-  await db.from("matches").delete().eq("stage","semi");
+
+  // Delete existing semis and wait for confirmation
+  const { error: delErr } = await db.from("matches").delete().eq("stage", "semi");
+  if (delErr) { setStatus("Delete error: " + delErr.message, "err"); return; }
+
+  // Small delay to ensure DB consistency before re-fetching
+  await new Promise(r => setTimeout(r, 300));
   await generateSemifinals(true);
 }
 
 async function regenFinal() {
   if (!confirm("Xóa chung kết cũ và gen lại?")) return;
+
   if (!db) {
     localMatches = (localMatches||[]).filter(m => m.stage !== "final");
     saveLocal(localMatches);
+    const stored = localStorage.getItem("pb_matches");
+    localMatches = stored ? JSON.parse(stored) : [];
     await generateFinal(true);
     return;
   }
-  await db.from("matches").delete().eq("stage","final");
+
+  const { error: delErr } = await db.from("matches").delete().eq("stage", "final");
+  if (delErr) { setStatus("Delete error: " + delErr.message, "err"); return; }
+
+  await new Promise(r => setTimeout(r, 300));
   await generateFinal(true);
 }
 
@@ -418,58 +441,77 @@ function getTopTeamsByGroup(matches) {
 }
 
 async function generateSemifinals(silent=false) {
+  // Always fetch fresh from DB to get accurate state after any deletes
   const matches = db ? await fetchAllMatches() : (localMatches||[]);
-  const existing = matches.filter(m=>m.stage==="semi");
-  if (existing.length>0 && !silent) { alert("Bán kết đã tồn tại! Dùng nút Re-gen."); return; }
-  if (existing.length>0) return;
+  const existing = matches.filter(m => m.stage === "semi");
+
+  if (existing.length > 0) {
+    if (!silent) alert("Bán kết đã tồn tại! Dùng nút Re-gen.");
+    return;
+  }
 
   const tops = getTopTeamsByGroup(matches);
   const groupKeys = Object.keys(tops).sort();
-  if (groupKeys.length<2) { if(!silent) alert("Cần ít nhất 2 bảng."); return; }
+  if (groupKeys.length < 2) {
+    if (!silent) alert("Cần ít nhất 2 bảng.");
+    return;
+  }
 
-  const [g1,g2] = groupKeys;
-  const A1=tops[g1][0]?.name||"TBD", A2=tops[g1][1]?.name||"TBD";
-  const B1=tops[g2][0]?.name||"TBD", B2=tops[g2][1]?.name||"TBD";
+  const [g1, g2] = groupKeys;
+  const A1 = tops[g1][0]?.name || "TBD", A2 = tops[g1][1]?.name || "TBD";
+  const B1 = tops[g2][0]?.name || "TBD", B2 = tops[g2][1]?.name || "TBD";
 
   const semis = [
-    {teamA:A1,teamB:B2,scoreA:0,scoreB:0,group_name:"SF",stage:"semi",status:"not_started"},
-    {teamA:B1,teamB:A2,scoreA:0,scoreB:0,group_name:"SF",stage:"semi",status:"not_started"},
+    { teamA:A1, teamB:B2, scoreA:0, scoreB:0, group_name:"SF", stage:"semi", status:"not_started" },
+    { teamA:B1, teamB:A2, scoreA:0, scoreB:0, group_name:"SF", stage:"semi", status:"not_started" },
   ];
 
   if (!db) {
-    semis.forEach((s,i)=>{ s.id="semi"+(i+1); });
-    localMatches=[...(localMatches||[]),...semis];
-    saveLocal(localMatches); fetchMatches(); return;
+    semis.forEach((s,i) => { s.id = "semi"+(i+1); });
+    localMatches = [...(localMatches||[]).filter(m => m.stage !== "semi"), ...semis];
+    saveLocal(localMatches);
+    fetchMatches();
+    return;
   }
-  const {error}=await db.from("matches").insert(semis);
-  if(error){setStatus("Semi error: "+error.message,"err");return;}
-  if(!silent) setStatus("Bán kết đã tạo!","ok");
+
+  const { error } = await db.from("matches").insert(semis);
+  if (error) { setStatus("Semi error: " + error.message, "err"); return; }
+  if (!silent) setStatus("Bán kết đã tạo!", "ok");
   fetchMatches();
 }
 
 async function generateFinal(silent=false) {
+  // Always fetch fresh from DB
   const matches = db ? await fetchAllMatches() : (localMatches||[]);
-  const semis   = matches.filter(m=>m.stage==="semi"&&m.status==="done");
-  const finals  = matches.filter(m=>m.stage==="final");
+  const semis  = matches.filter(m => m.stage === "semi" && m.status === "done");
+  const finals = matches.filter(m => m.stage === "final");
 
-  if (finals.length>0 && !silent) { alert("Chung kết đã tồn tại! Dùng nút Re-gen."); return; }
-  if (finals.length>0) return;
-  if (semis.length<2) { if(!silent) alert("Cần hoàn thành cả 2 bán kết."); return; }
+  if (finals.length > 0) {
+    if (!silent) alert("Chung kết đã tồn tại! Dùng nút Re-gen.");
+    return;
+  }
+  if (semis.length < 2) {
+    if (!silent) alert("Cần hoàn thành cả 2 bán kết.");
+    return;
+  }
 
-  const getWinner = m => m.scoreA>=m.scoreB ? m.teamA : m.teamB;
+  const getWinner = m => m.scoreA >= m.scoreB ? m.teamA : m.teamB;
   const finalMatch = {
-    teamA:getWinner(semis[0]), teamB:getWinner(semis[1]),
-    scoreA:0, scoreB:0, group_name:"F", stage:"final", status:"not_started"
+    teamA: getWinner(semis[0]), teamB: getWinner(semis[1]),
+    scoreA: 0, scoreB: 0, group_name: "F", stage: "final", status: "not_started"
   };
 
   if (!db) {
-    finalMatch.id="final1";
-    localMatches=[...(localMatches||[]),finalMatch];
-    saveLocal(localMatches); fetchMatches(); return;
+    finalMatch.id = "final1";
+    localMatches = [...(localMatches||[]).filter(m => m.stage !== "final"), finalMatch];
+    saveLocal(localMatches);
+    fetchMatches();
+    return;
   }
-  const {error}=await db.from("matches").insert([finalMatch]);
-  if(error){setStatus("Final error: "+error.message,"err");return;}
-  if(!silent) setStatus("Chung kết đã tạo!","ok");
+
+  const { error } = await db.from("matches").insert([finalMatch]);
+  if (error) { setStatus("Final error: " + error.message, "err"); return; }
+  if (!silent) setStatus("Chung kết đã tạo!", "ok");
   fetchMatches();
 }
 
