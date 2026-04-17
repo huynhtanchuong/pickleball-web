@@ -564,9 +564,10 @@ async function finishMatch(id) {
     if (!m) return;
     Object.assign(m, payload);
     saveLocal(localMatches);
+    // Remove from open set BEFORE re-render so restoreOpenCards doesn't re-open it
+    if (typeof _openCards !== "undefined") _openCards.delete(id);
     renderMatches(localMatches);
     calculateStandings(localMatches);
-    collapseCard(id); // collapse after finish
     setStatus("Match finished ✓", "ok");
     return;
   }
@@ -578,7 +579,9 @@ async function finishMatch(id) {
   if (error) { setStatus("Finish error: " + error.message, "err"); return; }
 
   _knownUpdatedAt[id] = payload.updated_at;
-  collapseCard(id); // collapse after finish
+  // Remove from open set so when realtime triggers fetchMatches → re-render,
+  // the card stays collapsed in its new sorted position
+  if (typeof _openCards !== "undefined") _openCards.delete(id);
   setStatus("Match finished ✓", "ok");
 }
 
