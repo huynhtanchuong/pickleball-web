@@ -251,52 +251,51 @@ function renderBracketVisual(container, matches) {
   const finals = matches.filter(m => m.stage === "final");
 
   if (!semis.length && !finals.length) {
-    container.innerHTML = '<p class="empty">Bracket not yet generated.</p>';
+    container.innerHTML = '<p class="empty-state">Bracket not yet generated.</p>';
     return;
   }
 
   const getWinner = m => m.status === "done"
     ? (m.scoreA >= m.scoreB ? m.teamA : m.teamB) : null;
 
-  let html = '<div class="bracket-container">';
+  let html = '<div class="bracket-wrap">';
 
   // Semis column
-  html += '<div class="bracket-round"><div class="bracket-round-title">Semifinals</div>';
+  html += '<div class="bracket-col"><div class="bracket-col-title">Semifinals</div>';
   semis.forEach(m => {
     const wA = m.status === "done" && m.scoreA > m.scoreB;
     const wB = m.status === "done" && m.scoreB > m.scoreA;
     html += `
-      <div class="bracket-match">
-        <div class="bracket-team ${wA ? "winner" : ""}">
+      <div class="bracket-match-card">
+        <div class="bracket-team-row ${wA ? "winner" : ""}">
           <span>${esc(m.teamA)}</span>
-          <span class="bracket-score">${m.status === "done" ? m.scoreA : "-"}</span>
+          <span class="bracket-score-val">${m.status === "done" ? m.scoreA : "-"}</span>
         </div>
-        <div class="bracket-team ${wB ? "winner" : ""}">
+        <div class="bracket-team-row ${wB ? "winner" : ""}">
           <span>${esc(m.teamB)}</span>
-          <span class="bracket-score">${m.status === "done" ? m.scoreB : "-"}</span>
+          <span class="bracket-score-val">${m.status === "done" ? m.scoreB : "-"}</span>
         </div>
       </div>`;
   });
   html += '</div>';
 
-  // Arrow
-  html += '<div class="bracket-connector">→</div>';
+  html += '<div class="bracket-arrow">→</div>';
 
   // Final column
-  html += '<div class="bracket-round"><div class="bracket-round-title">Final</div>';
+  html += '<div class="bracket-col"><div class="bracket-col-title">Final</div>';
   if (finals.length) {
     finals.forEach(m => {
       const wA = m.status === "done" && m.scoreA > m.scoreB;
       const wB = m.status === "done" && m.scoreB > m.scoreA;
       html += `
-        <div class="bracket-match">
-          <div class="bracket-team ${wA ? "winner" : ""}">
+        <div class="bracket-match-card">
+          <div class="bracket-team-row ${wA ? "winner" : ""}">
             <span>${esc(m.teamA)}</span>
-            <span class="bracket-score">${m.status === "done" ? m.scoreA : "-"}</span>
+            <span class="bracket-score-val">${m.status === "done" ? m.scoreA : "-"}</span>
           </div>
-          <div class="bracket-team ${wB ? "winner" : ""}">
+          <div class="bracket-team-row ${wB ? "winner" : ""}">
             <span>${esc(m.teamB)}</span>
-            <span class="bracket-score">${m.status === "done" ? m.scoreB : "-"}</span>
+            <span class="bracket-score-val">${m.status === "done" ? m.scoreB : "-"}</span>
           </div>
         </div>`;
     });
@@ -304,9 +303,9 @@ function renderBracketVisual(container, matches) {
     const w1 = semis[0] ? getWinner(semis[0]) : null;
     const w2 = semis[1] ? getWinner(semis[1]) : null;
     html += `
-      <div class="bracket-match">
-        <div class="bracket-team ${w1 ? "" : "tbd"}"><span>${w1 || "Winner SF1"}</span></div>
-        <div class="bracket-team ${w2 ? "" : "tbd"}"><span>${w2 || "Winner SF2"}</span></div>
+      <div class="bracket-match-card">
+        <div class="bracket-team-row ${w1 ? "" : "tbd"}"><span>${w1 || "Winner SF1"}</span></div>
+        <div class="bracket-team-row ${w2 ? "" : "tbd"}"><span>${w2 || "Winner SF2"}</span></div>
       </div>`;
   }
   html += '</div>';
@@ -315,13 +314,12 @@ function renderBracketVisual(container, matches) {
   if (finals.length && finals[0].status === "done") {
     const champ = finals[0].scoreA >= finals[0].scoreB ? finals[0].teamA : finals[0].teamB;
     html += `
-      <div class="bracket-connector">→</div>
-      <div class="bracket-round">
-        <div class="bracket-round-title">Champion</div>
-        <div class="bracket-match">
-          <div class="bracket-team winner" style="font-size:1rem;padding:16px 14px;">
-            🏆 ${esc(champ)}
-          </div>
+      <div class="bracket-arrow">→</div>
+      <div class="bracket-col">
+        <div class="bracket-col-title">Champion</div>
+        <div class="champion-card">
+          <div class="champion-label">🏆 Champion</div>
+          <div class="champion-name">${esc(champ)}</div>
         </div>
       </div>`;
   }

@@ -146,15 +146,12 @@ function renderPublicStage(containerId, matches, stage) {
   if (!container) return;
 
   if (!matches || matches.length === 0) {
-    container.innerHTML = '<p class="empty">No matches.</p>';
+    container.innerHTML = '<p class="empty-state">No matches.</p>';
     return;
   }
 
-  // Determine if we're on admin page (admin.js loaded) — if so, skip public render
-  // admin.js overrides renderMatches entirely, so this only runs on index.html
-  const admin = isAdmin() && window.location.pathname.includes("admin");
-
   if (stage === "group") {
+    // Sub-group by group_name with divider headers
     const groups = {};
     matches.forEach(m => {
       if (!groups[m.group_name]) groups[m.group_name] = [];
@@ -162,8 +159,9 @@ function renderPublicStage(containerId, matches, stage) {
     });
     let html = "";
     Object.keys(groups).sort().forEach(g => {
-      html += `<div class="stage-header">
-        <span class="stage-label group">Group ${esc(g)}</span>
+      html += `<div class="group-divider" style="grid-column:1/-1;">
+        <span class="group-divider-label">Group ${esc(g)}</span>
+        <span class="group-divider-line"></span>
       </div>`;
       groups[g].forEach(m => { html += publicMatchHTML(m, stage); });
     });
@@ -175,20 +173,35 @@ function renderPublicStage(containerId, matches, stage) {
 
 function publicMatchHTML(m, stage) {
   const done    = m.status === "done";
-  const stageClass = stage === "semi" ? "stage-semi" : stage === "final" ? "stage-final" : "";
   const winnerA = done && m.scoreA > m.scoreB;
   const winnerB = done && m.scoreB > m.scoreA;
 
+  // Card modifier classes
+  let cardMod = done ? "card-done" : "card-live";
+  if (stage === "semi")  cardMod += " card-semi";
+  if (stage === "final") cardMod += " card-final";
+
+  const groupTag = stage === "group"
+    ? `Group ${esc(m.group_name)}`
+    : stage === "semi" ? "Semifinal" : "Final";
+
   return `
-    <div class="match-item ${done ? "done" : "active-match"} ${stageClass}" data-id="${m.id}">
-      <span class="team-name ${winnerA ? "winner" : ""}">${esc(m.teamA)}</span>
-      <div class="score-display">
-        <span class="score-readonly">${m.scoreA}</span>
-        <span class="score-sep">:</span>
-        <span class="score-readonly">${m.scoreB}</span>
+    <div class="match-card ${cardMod}" data-id="${m.id}">
+      <div class="mc-row">
+        <span class="mc-team ${winnerA ? "winner" : ""}">${esc(m.teamA)}</span>
+        <div class="mc-scores">
+          <span class="mc-score ${winnerA ? "winner" : ""}">${m.scoreA}</span>
+          <span class="mc-sep">:</span>
+          <span class="mc-score ${winnerB ? "winner" : ""}">${m.scoreB}</span>
+        </div>
+        <span class="mc-team right ${winnerB ? "winner" : ""}">${esc(m.teamB)}</span>
       </div>
-      <span class="team-name right ${winnerB ? "winner" : ""}">${esc(m.teamB)}</span>
-      ${done ? '<span class="group-badge">✓ Final</span>' : '<span class="group-badge" style="background:#14532d;color:#86efac;">Live</span>'}
+      <div class="mc-footer">
+        <span class="mc-group-tag">${groupTag}</span>
+        ${done
+          ? '<span class="badge-done">✓ Final Score</span>'
+          : '<span class="badge-live">● Live</span>'}
+      </div>
     </div>`;
 }
 
@@ -276,9 +289,11 @@ function renderStandings(groups) {
   if (!container) return;
 
   if (!Object.keys(groups).length) {
-    container.innerHTML = '<p class="empty">No standings yet.</p>';
+    container.innerHTML = '<p class="empty-state">No standings yet.</p>';
     return;
   }
+
+  const medals = ["🥇","🥈","🥉"];
 
   let html = '<div class="standings-grid">';
   Object.keys(groups).sort().forEach(g => {
@@ -287,17 +302,21 @@ function renderStandings(groups) {
       .sort((a, b) => b.wins - a.wins || b.diff - a.diff);
 
     html += `
-      <div>
-        <h3 style="color:#7dd3fc;margin-bottom:10px;font-size:0.9rem;">Group ${esc(g)}</h3>
+      <div class="standings-group-card">
+        <div class="standings-group-title">Group ${esc(g)}</div>
         <table class="standings-table">
-          <thead><tr><th>Team</th><th>W</th><th>L</th><th>+/-</th></tr></thead>
+          <thead><tr>
+            <th>Team</th><th>W</th><th>L</th><th>+/-</th>
+          </tr></thead>
           <tbody>`;
 
     teams.forEach((t, i) => {
-      const cls = i === 0 ? "top-1 top-2" : i === 1 ? "top-2" : "";
-      html += `<tr class="${cls}">
-        <td>${esc(t.name)}</td>
-        <td>${t.wins}</td><td>${t.losses}</td>
+      const rankCls = i === 0 ? "rank-1" : i === 1 ? "rank-2" : "";
+      const medal   = medals[i] ? `<span class="rank-medal">${medals[i]}</span>` : `<span class="rank-medal" style="opacity:0">·</span>`;
+      html += `<tr class="${rankCls}">
+        <td>${medal}${esc(t.name)}</td>
+        <td>${t.wins}</td>
+        <td>${t.losses}</td>
         <td>${t.diff > 0 ? "+" : ""}${t.diff}</td>
       </tr>`;
     });

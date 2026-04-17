@@ -3,71 +3,187 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🏓 Pickleball Tournament</title>
+  <title>🏓 Pickleball Tournament — Live Scoreboard</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
-  <header>
-    <h1>🏓 Pickleball Tournament</h1>
-    <p>Live Scoring &amp; Standings</p>
-    <div class="header-nav">
-      <span id="status-bar">Initializing…</span>
-      <span id="realtime-indicator" class="pulse" style="display:none;" title="Realtime connected"></span>
-      <a href="admin.html">Admin</a>
+  <!-- ══════════════════════════════════════════
+       HEADER
+  ══════════════════════════════════════════ -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="header-brand">
+        <span class="header-icon">🏓</span>
+        <div>
+          <h1 class="header-title">Pickleball Tournament</h1>
+          <p class="header-sub">Live Scoreboard</p>
+        </div>
+      </div>
+      <div class="header-meta">
+        <span id="realtime-indicator" class="pulse-dot" style="display:none;" title="Realtime connected"></span>
+        <span id="status-bar" class="status-chip">Initializing…</span>
+        <a href="admin.html" class="header-link">Admin ›</a>
+      </div>
     </div>
   </header>
 
-  <main>
+  <main class="scoreboard-main">
 
-    <!-- ── GROUP STAGE ── -->
-    <section class="card">
-      <h2>📋 Group Stage</h2>
-      <div id="match-list-group">
-        <p class="empty">Loading matches…</p>
+    <!-- ══════════════════════════════════════════
+         FEATURED MATCH
+    ══════════════════════════════════════════ -->
+    <section id="featured-section" style="display:none;">
+      <div class="featured-label">
+        <span class="live-badge">● LIVE</span>
+        <span class="featured-title">Featured Match</span>
+      </div>
+      <div id="featured-match" class="featured-card"></div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         GROUP STAGE
+    ══════════════════════════════════════════ -->
+    <section class="sb-section">
+      <div class="section-header">
+        <span class="section-icon">📋</span>
+        <h2 class="section-title">Group Stage</h2>
+      </div>
+      <div id="match-list-group" class="match-grid">
+        <p class="empty-state">Loading matches…</p>
       </div>
     </section>
 
-    <!-- ── SEMIFINALS ── -->
-    <section class="card" id="section-semi" style="display:none;">
-      <h2>⚡ Semifinals</h2>
-      <div id="match-list-semi"></div>
+    <!-- ══════════════════════════════════════════
+         SEMIFINALS
+    ══════════════════════════════════════════ -->
+    <section class="sb-section" id="section-semi" style="display:none;">
+      <div class="section-header">
+        <span class="section-icon">⚡</span>
+        <h2 class="section-title">Semifinals</h2>
+        <span class="section-badge semi">Knockout</span>
+      </div>
+      <div id="match-list-semi" class="match-grid"></div>
     </section>
 
-    <!-- ── FINAL ── -->
-    <section class="card" id="section-final" style="display:none;">
-      <h2>🏆 Final</h2>
-      <div id="match-list-final"></div>
+    <!-- ══════════════════════════════════════════
+         FINAL
+    ══════════════════════════════════════════ -->
+    <section class="sb-section" id="section-final" style="display:none;">
+      <div class="section-header">
+        <span class="section-icon">🏆</span>
+        <h2 class="section-title">Final</h2>
+        <span class="section-badge final">Championship</span>
+      </div>
+      <div id="match-list-final" class="match-grid"></div>
     </section>
 
-    <!-- ── BRACKET VISUAL ── -->
-    <section class="card" id="section-bracket" style="display:none;">
-      <h2>🗂 Bracket</h2>
+    <!-- ══════════════════════════════════════════
+         BRACKET
+    ══════════════════════════════════════════ -->
+    <section class="sb-section" id="section-bracket" style="display:none;">
+      <div class="section-header">
+        <span class="section-icon">🗂</span>
+        <h2 class="section-title">Bracket</h2>
+      </div>
       <div id="bracket-container"></div>
     </section>
 
-    <!-- ── STANDINGS ── -->
-    <section class="card">
-      <h2>📊 Standings</h2>
+    <!-- ══════════════════════════════════════════
+         STANDINGS
+    ══════════════════════════════════════════ -->
+    <section class="sb-section">
+      <div class="section-header">
+        <span class="section-icon">📊</span>
+        <h2 class="section-title">Standings</h2>
+      </div>
       <div id="standings-container">
-        <p class="empty">Loading standings…</p>
+        <p class="empty-state">Loading standings…</p>
       </div>
     </section>
 
-    <!-- ── DEMO CONTROLS ── -->
-    <section class="card" id="demo-controls" style="display:none;">
-      <h2>🔧 Demo Controls</h2>
-      <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:12px;">
-        Running in demo mode (localStorage). Connect Supabase to enable realtime sync.
-      </p>
+    <!-- ══════════════════════════════════════════
+         DEMO CONTROLS
+    ══════════════════════════════════════════ -->
+    <section class="sb-section demo-section" id="demo-controls" style="display:none;">
+      <p class="demo-note">⚠️ Demo mode — data stored locally. Connect Supabase for realtime sync.</p>
       <button class="btn btn-secondary" onclick="resetDemo()">↺ Reset Demo Data</button>
     </section>
 
   </main>
 
+  <footer class="site-footer">
+    <span>🏓 Pickleball Tournament</span>
+    <span class="footer-sep">·</span>
+    <span>Live Scoreboard</span>
+  </footer>
+
   <!-- Supabase CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="app.js"></script>
+
+  <!-- Featured match + score flash logic -->
+  <script>
+    // Patch renderMatches to also update featured match
+    const _origRender = renderMatches;
+    function renderMatches(matches) {
+      _origRender(matches);
+      updateFeatured(matches);
+    }
+
+    function updateFeatured(matches) {
+      // Pick first active (pending) match, prefer semi/final
+      const priority = ['final','semi','group'];
+      let featured = null;
+      for (const stage of priority) {
+        featured = matches.find(m => m.status === 'pending' && m.stage === stage);
+        if (featured) break;
+      }
+      // Fallback: last played match
+      if (!featured) {
+        const done = matches.filter(m => m.status === 'done');
+        featured = done[done.length - 1] || null;
+      }
+
+      const sec = document.getElementById('featured-section');
+      const box = document.getElementById('featured-match');
+      if (!featured || !sec || !box) return;
+
+      sec.style.display = 'block';
+      const isLive = featured.status === 'pending';
+      const wA = featured.status === 'done' && featured.scoreA > featured.scoreB;
+      const wB = featured.status === 'done' && featured.scoreB > featured.scoreA;
+
+      box.innerHTML = `
+        <div class="feat-team ${wA ? 'feat-winner' : ''}">
+          <span class="feat-name">${esc(featured.teamA)}</span>
+        </div>
+        <div class="feat-scores">
+          <span class="feat-score ${wA ? 'feat-score-win' : ''}" id="feat-scoreA">${featured.scoreA}</span>
+          <span class="feat-divider">:</span>
+          <span class="feat-score ${wB ? 'feat-score-win' : ''}" id="feat-scoreB">${featured.scoreB}</span>
+        </div>
+        <div class="feat-team ${wB ? 'feat-winner' : ''}">
+          <span class="feat-name">${esc(featured.teamB)}</span>
+        </div>
+        <div class="feat-status">
+          ${isLive
+            ? '<span class="badge-live">● LIVE</span>'
+            : '<span class="badge-done">✓ FINAL</span>'}
+          <span class="feat-stage-label">${stageLabel(featured.stage, featured.group_name)}</span>
+        </div>`;
+    }
+
+    function stageLabel(stage, group) {
+      if (stage === 'final') return 'Championship Final';
+      if (stage === 'semi')  return 'Semifinal';
+      return 'Group ' + (group || '');
+    }
+
+    function esc(s) {
+      return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+  </script>
 
 </body>
 </html>
