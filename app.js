@@ -19,15 +19,14 @@ function isAdmin() {
 
 function initSupabase() {
   if (SUPABASE_URL === "REPLACE_ME" || SUPABASE_ANON_KEY === "REPLACE_ME") {
-    setStatus("⚠️ Demo mode — Supabase not configured", "err");
-    // Show demo controls on public page
+    setStatus(t("demoMode"), "err");
     const dc = document.getElementById("demo-controls");
     if (dc) dc.style.display = "block";
     return false;
   }
   try {
     db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    setStatus("Connected to Supabase", "ok");
+    setStatus(t("connected"), "ok");
     return true;
   } catch (e) {
     setStatus("Supabase init failed: " + e.message, "err");
@@ -42,11 +41,10 @@ function setStatus(msg, type = "") {
   if (!el) return;
   el.textContent = msg;
   el.className = type;
-  // Auto-clear success messages after 3s
   if (_statusTimer) clearTimeout(_statusTimer);
   if (type === "ok") {
     _statusTimer = setTimeout(() => {
-      el.textContent = db ? "🟢 Connected" : "⚠️ Demo mode";
+      el.textContent = db ? t("connected") : t("demoMode");
       el.className = db ? "ok" : "err";
     }, 3000);
   }
@@ -208,9 +206,9 @@ function updateFeatured(matches) {
   const wA = isDone && featured.scoreA > featured.scoreB;
   const wB = isDone && featured.scoreB > featured.scoreA;
 
-  const stageLabel = featured.stage === "final" ? "Championship Final"
-                   : featured.stage === "semi"  ? "Semifinal"
-                   : "Group " + (featured.group_name || "");
+  const stageLabel = featured.stage === "final" ? t("champFinal")
+                   : featured.stage === "semi"  ? t("semifinal")
+                   : t("groupLabel") + " " + (featured.group_name || "");
 
   box.innerHTML = `
     <div class="feat-team ${wA ? "feat-winner" : ""}">
@@ -225,9 +223,9 @@ function updateFeatured(matches) {
       <span class="feat-name">${esc(featured.teamB)}</span>
     </div>
     <div class="feat-status">
-      ${isPlaying    ? '<span class="badge-live">● PLAYING</span>'
-      : isNotStarted ? '<span class="badge-ns">◌ NOT STARTED</span>'
-      :                '<span class="badge-done">✓ FINAL</span>'}
+      ${isPlaying    ? `<span class="badge-live">${t("badgePlaying")}</span>`
+      : isNotStarted ? `<span class="badge-ns">${t("badgeNotStarted")}</span>`
+      :                `<span class="badge-done">${t("badgeFinal")}</span>`}
       <span class="feat-stage-label">${esc(stageLabel)}</span>
     </div>`;
 }
@@ -252,7 +250,7 @@ function renderPublicStage(containerId, matches, stage) {
     Object.keys(groups).sort().forEach(g => {
       html += `
         <div class="pub-group-header" onclick="togglePubGroup('${g}')" style="grid-column:1/-1;">
-          <span class="group-divider-label">Bảng ${esc(g)}</span>
+          <span class="group-divider-label">${t("groupLabel")} ${esc(g)}</span>
           <span class="group-divider-line"></span>
           <span class="pub-collapse-icon" id="pub-icon-${g}">▼</span>
         </div>
@@ -278,12 +276,12 @@ function publicMatchHTML(m, stage) {
   if (stage === "final") cardMod += " card-final";
 
   const groupTag = stage === "group"
-    ? `Group ${esc(m.group_name)}`
-    : stage === "semi" ? "Semifinal" : "Final";
+    ? `${t("groupLabel")} ${esc(m.group_name)}`
+    : stage === "semi" ? t("semifinal") : t("final");
 
-  const badge = done    ? '<span class="badge-done">✓ Final</span>'
-              : playing ? '<span class="badge-live">● Playing</span>'
-              :           '<span class="badge-ns">◌ Not Started</span>';
+  const badge = done    ? `<span class="badge-done">${t("badgeDone")}</span>`
+              : playing ? `<span class="badge-live">${t("badgeLive")}</span>`
+              :           `<span class="badge-ns">${t("badgeNs")}</span>`;
 
   // For semi/final: show set scores (handle both uppercase and lowercase DB fields)
   let setsHtml = "";
@@ -684,10 +682,14 @@ function renderStandings(groups) {
 
     html += `
       <div class="standings-group-card">
-        <div class="standings-group-title">Bảng ${esc(g)}</div>
+        <div class="standings-group-title">${t("groupLabel")} ${esc(g)}</div>
         <table class="standings-table">
           <thead><tr>
-            <th>Đội</th><th>Đ</th><th>T</th><th>B</th><th>+/-</th>
+            <th>${t("standingsTeam")}</th>
+            <th>${t("standingsPts")}</th>
+            <th>${t("standingsW")}</th>
+            <th>${t("standingsL")}</th>
+            <th>${t("standingsDiff")}</th>
           </tr></thead>
           <tbody>`;
 
@@ -706,7 +708,7 @@ function renderStandings(groups) {
     });
 
     html += `</tbody></table>
-      <div class="standings-note">Đ=Điểm · T=Thắng · B=Thua · +/-=Hiệu số</div>
+      <div class="standings-note">${t("standingsNote")}</div>
     </div>`;
   });
 
@@ -743,13 +745,13 @@ function subscribeRealtime() {
         stopPolling();
         const ri = document.getElementById("realtime-indicator");
         if (ri) ri.style.display = "inline-block";
-        setStatus("🟢 Realtime active", "ok");
+        setStatus(t("realtimeActive"), "ok");
       }
       if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
         _rtConnected = false;
         const ri = document.getElementById("realtime-indicator");
         if (ri) ri.style.display = "none";
-        setStatus("⚠️ Realtime lost — polling", "err");
+        setStatus(t("realtimeLost"), "err");
         startPolling(POLL_MS_RT);
       }
     });
@@ -788,7 +790,7 @@ function flashSaved(id) {
 
 // ── Reset all data ────────────────────────────────────────────
 async function resetDemo() {
-  if (!confirm("Reset toàn bộ dữ liệu? Tất cả điểm số và bán kết/chung kết sẽ bị xóa.")) return;
+  if (!confirm(t("confirmResetAll"))) return;
 
   if (!db) {
     localStorage.removeItem("pb_matches");

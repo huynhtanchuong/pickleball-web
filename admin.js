@@ -132,12 +132,12 @@ function renderStageList(containerId, matches, stage) {
       const doneCount = groups[g].filter(m => m.status === "done").length;
       const playingCount = groups[g].filter(m => m.status === "playing").length;
       const progressLabel = playingCount > 0
-        ? `<span style="color:var(--adm-green)">${playingCount} playing</span> · ${doneCount}/${groups[g].length} done`
-        : `${doneCount}/${groups[g].length} done`;
+        ? `<span style="color:var(--adm-green)">${playingCount} ${t("playing")}</span> · ${doneCount}/${groups[g].length} ${t("done")}`
+        : `${doneCount}/${groups[g].length} ${t("done")}`;
       html += `
         <div class="adm-group-section">
           <div class="adm-group-header" onclick="toggleGroup('${g}')">
-            <span class="adm-group-divider">Bảng ${esc(g)}</span>
+            <span class="adm-group-divider">${t("groupLabel")} ${esc(g)}</span>
             <span class="adm-group-progress">${progressLabel}</span>
             <span class="adm-collapse-icon" id="icon-grp-${g}">▼</span>
           </div>
@@ -197,12 +197,12 @@ function matchHTML(m, stage) {
   if (stage === "final") cardCls += " is-final";
 
   const statusBadge = done
-    ? '<span class="adm-status-badge adm-status-done">✓ DONE</span>'
+    ? `<span class="adm-status-badge adm-status-done">${t("statusDone")}</span>`
     : playing
-    ? '<span class="adm-status-badge adm-status-playing">● PLAYING</span>'
-    : '<span class="adm-status-badge adm-status-ns">◌ NOT STARTED</span>';
+    ? `<span class="adm-status-badge adm-status-playing">${t("statusPlaying")}</span>`
+    : `<span class="adm-status-badge adm-status-ns">${t("statusNs")}</span>`;
 
-  const stageLabel = stage === "semi" ? "Bán Kết" : stage === "final" ? "Chung Kết" : "";
+  const stageLabel = stage === "semi" ? t("semifinal") : stage === "final" ? t("final") : "";
 
   // Meta info: time, court, referee
   const metaHtml = (m.match_time || m.court || m.referee) ? `
@@ -219,13 +219,13 @@ function matchHTML(m, stage) {
     const { winsA, winsB } = computeSetWins(m);
     const showSet3 = winsA >= 1 && winsB >= 1;
     scoreSection = `
-      <div class="adm-set-wins" data-id="${m.id}">Sets: ${winsA} — ${winsB}</div>
+      <div class="adm-set-wins" data-id="${m.id}">${t("sets")} ${winsA} — ${winsB}</div>
       ${setRowHTML(m, 1, dis)}
       ${setRowHTML(m, 2, dis)}
       ${showSet3 || m.s3a || m.s3b || m.s3A || m.s3B
         ? setRowHTML(m, 3, dis)
         : `<div id="set3-${m.id}">
-             <button class="adm-add-set-btn" onclick="showSet3('${m.id}')" ${dis}>+ Set 3</button>
+             <button class="adm-add-set-btn" onclick="showSet3('${m.id}')" ${dis}>${t("addSet3")}</button>
            </div>`}`;
   } else {
     scoreSection = `
@@ -275,17 +275,17 @@ function matchHTML(m, stage) {
       </div>
       ${scoreSection}
       <div class="adm-actions">
-        <button class="adm-save-btn" ${dis} onclick="updateScore('${m.id}')">💾 Save</button>
+        <button class="adm-save-btn" ${dis} onclick="updateScore('${m.id}')">${t("save")}</button>
         <button class="adm-finish-btn ${done?"is-done":""}" ${dis} onclick="finishMatch('${m.id}')">
-          ${done ? "✓ Finished" : "🏁 Finish"}
+          ${done ? t("finished") : t("finish")}
         </button>
-        ${done ? `<button class="adm-reset-btn" onclick="resetMatch('${m.id}')">↺ Reset</button>` : ""}
+        ${done ? `<button class="adm-reset-btn" onclick="resetMatch('${m.id}')">${t("resetMatch")}</button>` : ""}
       </div>
       <div class="adm-info-edit">
-        <input class="adm-info-input" placeholder="🕐 Giờ (vd: 7h20)" data-field="match_time" data-id="${m.id}" value="${esc(m.match_time||'')}">
-        <input class="adm-info-input" placeholder="🏟 Sân (vd: Sân 1)" data-field="court" data-id="${m.id}" value="${esc(m.court||'')}">
-        <input class="adm-info-input" placeholder="👤 Trọng tài" data-field="referee" data-id="${m.id}" value="${esc(m.referee||'')}">
-        <button class="adm-info-save-btn" onclick="saveMatchInfo('${m.id}')">Lưu thông tin</button>
+        <input class="adm-info-input" placeholder="${t("timePlaceholder")}" data-field="match_time" data-id="${m.id}" value="${esc(m.match_time||'')}">
+        <input class="adm-info-input" placeholder="${t("courtPlaceholder")}" data-field="court" data-id="${m.id}" value="${esc(m.court||'')}">
+        <input class="adm-info-input" placeholder="${t("refPlaceholder")}" data-field="referee" data-id="${m.id}" value="${esc(m.referee||'')}">
+        <button class="adm-info-save-btn" onclick="saveMatchInfo('${m.id}')">${t("saveInfo")}</button>
       </div>
     </div>`;
 
@@ -390,7 +390,7 @@ async function saveMatchInfo(id) {
 // After resetting a group match, also wipe semi/final so bracket
 // auto-regenerates with fresh standings when all group matches finish.
 async function resetMatch(id) {
-  if (!confirm("Reset trận này về not_started?\nBán kết và chung kết sẽ bị xóa để tạo lại.")) return;
+  if (!confirm(t("confirmResetMatch"))) return;
 
   const payload = {
     scoreA: 0, scoreB: 0, status: "not_started",
@@ -591,11 +591,11 @@ function renderBracketVisual(container, matches) {
   const semis  = matches.filter(m=>m.stage==="semi");
   const finals = matches.filter(m=>m.stage==="final");
   if (!semis.length&&!finals.length) {
-    container.innerHTML='<p class="empty-state">Bracket chưa có.</p>'; return;
+    container.innerHTML=`<p class="empty-state">${t("bracketNone")}</p>`; return;
   }
   const getWinner = m => m.status==="done" ? (m.scoreA>=m.scoreB?m.teamA:m.teamB) : null;
   let html='<div class="bracket-wrap">';
-  html+='<div class="bracket-col"><div class="bracket-col-title">Bán Kết</div>';
+  html+=`<div class="bracket-col"><div class="bracket-col-title">${t("bracketSemi")}</div>`;
   semis.forEach(m=>{
     const wA=m.status==="done"&&m.scoreA>m.scoreB, wB=m.status==="done"&&m.scoreB>m.scoreA;
     html+=`<div class="bracket-match-card">
@@ -603,8 +603,8 @@ function renderBracketVisual(container, matches) {
       <div class="bracket-team-row ${wB?"winner":""}"><span>${esc(m.teamB)}</span><span class="bracket-score-val">${m.status==="done"?m.scoreB:"-"}</span></div>
     </div>`;
   });
-  html+='</div><div class="bracket-arrow">→</div>';
-  html+='<div class="bracket-col"><div class="bracket-col-title">Chung Kết</div>';
+  html+=`</div><div class="bracket-arrow">→</div>`;
+  html+=`<div class="bracket-col"><div class="bracket-col-title">${t("bracketFinal")}</div>`;
   if (finals.length) {
     finals.forEach(m=>{
       const wA=m.status==="done"&&m.scoreA>m.scoreB, wB=m.status==="done"&&m.scoreB>m.scoreA;
@@ -625,7 +625,7 @@ function renderBracketVisual(container, matches) {
     const champ=finals[0].scoreA>=finals[0].scoreB?finals[0].teamA:finals[0].teamB;
     html+=`<div class="bracket-arrow">→</div>
       <div class="bracket-col"><div class="bracket-col-title">Champion</div>
-        <div class="champion-card"><div class="champion-label">🏆 Champion</div>
+        <div class="champion-card"><div class="champion-label">${t("bracketChamp")}</div>
           <div class="champion-name">${esc(champ)}</div></div></div>`;
   }
   html+='</div>';

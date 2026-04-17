@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>🏓 Admin — Pickleball Tournament</title>
+  <title>🏓 Quản Trị — Giải Pickleball</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="admin-mobile.css" />
 </head>
@@ -13,18 +13,20 @@
   <div class="login-wrap" id="login-screen">
     <div class="login-card">
       <div style="font-size:2.5rem;margin-bottom:8px;">🏓</div>
-      <h1>Admin Login</h1>
-      <p>Pickleball Tournament</p>
+      <h1 data-i18n="adminTitle">Đăng Nhập Admin</h1>
+      <p data-i18n="adminSub">Giải Pickleball</p>
       <div class="form-group">
-        <label for="pw-input">Password</label>
-        <input type="password" id="pw-input" placeholder="Enter password"
+        <label for="pw-input" data-i18n="passwordLabel">Mật khẩu</label>
+        <input type="password" id="pw-input"
+          data-i18n="passwordPlaceholder" data-i18n-attr="placeholder"
+          placeholder="Nhập mật khẩu"
           onkeydown="if(event.key==='Enter') doLogin()"
           autocomplete="current-password" autofocus />
       </div>
-      <button class="login-btn" onclick="doLogin()">Sign In</button>
+      <button class="login-btn" onclick="doLogin()" data-i18n="signIn">Đăng Nhập</button>
       <div class="login-error" id="login-error"></div>
       <p style="margin-top:20px;font-size:0.75rem;">
-        <a href="index.html" style="color:#64748b;">← Public scoreboard</a>
+        <a href="index.html" style="color:#64748b;" data-i18n="backToPublic">← Xem bảng điểm</a>
       </p>
     </div>
   </div>
@@ -36,65 +38,74 @@
       <div class="adm-header-left">
         <span>🏓</span>
         <div>
-          <div class="adm-title">Admin Panel</div>
-          <div class="adm-sub">Pickleball Tournament</div>
+          <div class="adm-title" data-i18n="adminPanelTitle">Quản Trị</div>
+          <div class="adm-sub" data-i18n="siteTitle">Giải Pickleball</div>
         </div>
       </div>
       <div class="adm-header-right">
         <span id="realtime-indicator" class="pulse" style="display:none;"></span>
         <span id="status-bar" class="status-chip">…</span>
-        <a href="index.html" class="adm-btn-sm">👁 View</a>
-        <button class="adm-btn-sm adm-btn-red" onclick="doLogout()">Logout</button>
+        <a href="index.html" class="adm-btn-sm" data-i18n="viewPublic">👁 Xem</a>
+        <button class="adm-btn-sm adm-btn-red" onclick="doLogout()" data-i18n="logout">Đăng xuất</button>
       </div>
     </div>
 
-    <!-- Bracket controls -->
+    <!-- Bracket info -->
     <div class="adm-section">
-      <div class="adm-section-title">⚙️ Bracket</div>
+      <div class="adm-section-title" data-i18n="bracketSection">⚙️ Bracket</div>
       <p style="font-size:0.72rem;color:var(--adm-muted);">
-        ⏳ Bán kết &amp; chung kết tự động tạo khi trận cuối hoàn thành.<br>
-        Reset 1 trận sẽ tự xóa bán kết/chung kết để tạo lại đúng cặp đấu.
+        <span data-i18n="bracketNote">⏳ Bán kết & chung kết tự động tạo khi trận cuối hoàn thành.</span><br>
+        <span data-i18n="bracketResetNote">Reset 1 trận sẽ tự xóa bán kết/chung kết để tạo lại đúng cặp đấu.</span>
       </p>
     </div>
 
     <!-- Group Stage -->
     <div class="adm-section">
-      <div class="adm-section-title">📋 Vòng Bảng</div>
-      <div id="match-list-group"><p class="empty">Loading…</p></div>
+      <div class="adm-section-title" data-i18n="groupStageSection">📋 Vòng Bảng</div>
+      <div id="match-list-group"><p class="empty" data-i18n="loading">Đang tải…</p></div>
     </div>
 
     <!-- Semifinals -->
     <div class="adm-section">
-      <div class="adm-section-title">⚡ Bán Kết</div>
-      <div id="match-list-semi"><p class="empty adm-auto-note">⏳ Tự động tạo khi vòng bảng xong.</p></div>
+      <div class="adm-section-title" data-i18n="semiSection">⚡ Bán Kết</div>
+      <div id="match-list-semi"><p class="empty adm-auto-note" data-i18n="autoSemi">⏳ Tự động tạo khi vòng bảng xong.</p></div>
     </div>
 
     <!-- Final -->
     <div class="adm-section">
-      <div class="adm-section-title">🏆 Chung Kết</div>
-      <div id="match-list-final"><p class="empty adm-auto-note">⏳ Tự động tạo khi bán kết xong.</p></div>
+      <div class="adm-section-title" data-i18n="finalSection">🏆 Chung Kết</div>
+      <div id="match-list-final"><p class="empty adm-auto-note" data-i18n="autoFinal">⏳ Tự động tạo khi bán kết xong.</p></div>
     </div>
 
     <!-- Bracket visual -->
     <div class="adm-section">
-      <div class="adm-section-title">🗂 Bracket</div>
+      <div class="adm-section-title" data-i18n="bracketVisual">🗂 Bracket</div>
       <div id="bracket-container"></div>
     </div>
 
     <!-- Standings -->
     <div class="adm-section">
-      <div class="adm-section-title">📊 Standings</div>
-      <div id="standings-container"><p class="empty">Loading…</p></div>
+      <div class="adm-section-title" data-i18n="standingsSection">📊 Bảng Xếp Hạng</div>
+      <div id="standings-container"><p class="empty" data-i18n="loading">Đang tải…</p></div>
+    </div>
+
+    <!-- Language switcher at bottom -->
+    <div class="adm-section" style="text-align:center;padding:12px 16px;">
+      <span class="lang-switcher">
+        <button class="lang-btn lang-btn-active" data-lang="vi" onclick="setLang('vi')">🇻🇳 VI</button>
+        <button class="lang-btn" data-lang="en" onclick="setLang('en')">🇬🇧 EN</button>
+      </span>
     </div>
 
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="i18n.js"></script>
   <script src="app.js"></script>
   <script src="admin.js"></script>
 
-  <!-- Floating reset button — bottom right, small, hard to accidentally tap -->
-  <button class="adm-fab-reset" onclick="resetDemo()" title="Reset toàn bộ dữ liệu">↺</button>
+  <!-- Floating reset button -->
+  <button class="adm-fab-reset" onclick="resetDemo()" data-i18n="confirmResetAll" title="Reset toàn bộ dữ liệu">↺</button>
 
 </body>
 </html>

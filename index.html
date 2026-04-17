@@ -1,125 +1,113 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🏓 Pickleball Tournament — Live Scoreboard</title>
+  <title>🏓 Giải Pickleball — Bảng Điểm Trực Tiếp</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
-  <!-- ══════════════════════════════════════════
-       HEADER
-  ══════════════════════════════════════════ -->
   <header class="site-header">
     <div class="header-inner">
       <div class="header-brand">
         <span class="header-icon">🏓</span>
         <div>
-          <h1 class="header-title">Pickleball Tournament</h1>
-          <p class="header-sub">Live Scoreboard</p>
+          <h1 class="header-title" data-i18n="siteTitle">Giải Pickleball</h1>
+          <p class="header-sub" data-i18n="liveSub">Bảng Điểm Trực Tiếp</p>
         </div>
       </div>
       <div class="header-meta">
-        <span id="realtime-indicator" class="pulse-dot" style="display:none;" title="Realtime connected"></span>
-        <span id="status-bar" class="status-chip">Initializing…</span>
-        <a href="admin.html" class="header-link">Admin ›</a>
+        <span id="realtime-indicator" class="pulse-dot" style="display:none;" title="Realtime"></span>
+        <span id="status-bar" class="status-chip" data-i18n="initializing">Đang khởi động…</span>
+        <a href="admin.html" class="header-link" data-i18n="adminLink">Quản trị ›</a>
       </div>
     </div>
   </header>
 
   <main class="scoreboard-main">
 
-    <!-- ══════════════════════════════════════════
-         FEATURED MATCH
-    ══════════════════════════════════════════ -->
+    <!-- FEATURED MATCH -->
     <section id="featured-section" style="display:none;">
       <div class="featured-label">
-        <span class="live-badge">● LIVE</span>
-        <span class="featured-title">Featured Match</span>
+        <span class="live-badge" data-i18n="liveBadge">● TRỰC TIẾP</span>
+        <span class="featured-title" data-i18n="featuredLabel">Trận Nổi Bật</span>
       </div>
       <div id="featured-match" class="featured-card"></div>
     </section>
 
-    <!-- ══════════════════════════════════════════
-         GROUP STAGE
-    ══════════════════════════════════════════ -->
+    <!-- GROUP STAGE -->
     <section class="sb-section">
       <div class="section-header">
         <span class="section-icon">📋</span>
-        <h2 class="section-title">Group Stage</h2>
+        <h2 class="section-title" data-i18n="groupStage">Vòng Bảng</h2>
       </div>
       <div id="match-list-group" class="match-grid">
-        <p class="empty-state">Loading matches…</p>
+        <p class="empty-state" data-i18n="loadingMatches">Đang tải trận đấu…</p>
       </div>
     </section>
 
-    <!-- ══════════════════════════════════════════
-         SEMIFINALS
-    ══════════════════════════════════════════ -->
+    <!-- SEMIFINALS -->
     <section class="sb-section" id="section-semi" style="display:none;">
       <div class="section-header">
         <span class="section-icon">⚡</span>
-        <h2 class="section-title">Semifinals</h2>
-        <span class="section-badge semi">Knockout</span>
+        <h2 class="section-title" data-i18n="semifinals">Bán Kết</h2>
+        <span class="section-badge semi" data-i18n="knockout">Loại Trực Tiếp</span>
       </div>
       <div id="match-list-semi" class="match-grid"></div>
     </section>
 
-    <!-- ══════════════════════════════════════════
-         FINAL
-    ══════════════════════════════════════════ -->
+    <!-- FINAL -->
     <section class="sb-section" id="section-final" style="display:none;">
       <div class="section-header">
         <span class="section-icon">🏆</span>
-        <h2 class="section-title">Final</h2>
-        <span class="section-badge final">Championship</span>
+        <h2 class="section-title" data-i18n="final">Chung Kết</h2>
+        <span class="section-badge final" data-i18n="championship">Chung Kết</span>
       </div>
       <div id="match-list-final" class="match-grid"></div>
     </section>
 
-    <!-- ══════════════════════════════════════════
-         BRACKET
-    ══════════════════════════════════════════ -->
+    <!-- BRACKET -->
     <section class="sb-section" id="section-bracket" style="display:none;">
       <div class="section-header">
         <span class="section-icon">🗂</span>
-        <h2 class="section-title">Bracket</h2>
+        <h2 class="section-title" data-i18n="bracket">Bracket</h2>
       </div>
       <div id="bracket-container"></div>
     </section>
 
-    <!-- ══════════════════════════════════════════
-         STANDINGS
-    ══════════════════════════════════════════ -->
+    <!-- STANDINGS -->
     <section class="sb-section">
       <div class="section-header">
         <span class="section-icon">📊</span>
-        <h2 class="section-title">Standings</h2>
+        <h2 class="section-title" data-i18n="standings">Bảng Xếp Hạng</h2>
       </div>
       <div id="standings-container">
-        <p class="empty-state">Loading standings…</p>
+        <p class="empty-state" data-i18n="loadingStandings">Đang tải bảng xếp hạng…</p>
       </div>
     </section>
 
-    <!-- ══════════════════════════════════════════
-         DEMO CONTROLS
-    ══════════════════════════════════════════ -->
+    <!-- DEMO CONTROLS -->
     <section class="sb-section demo-section" id="demo-controls" style="display:none;">
-      <p class="demo-note">⚠️ Demo mode — data stored locally. Connect Supabase for realtime sync.</p>
-      <button class="btn btn-secondary" onclick="resetDemo()">↺ Reset Demo Data</button>
+      <p class="demo-note" data-i18n="demoNote">⚠️ Demo — dữ liệu lưu cục bộ.</p>
+      <button class="btn btn-secondary" onclick="resetDemo()" data-i18n="resetDemo">↺ Reset Demo</button>
     </section>
 
   </main>
 
   <footer class="site-footer">
-    <span>🏓 Pickleball Tournament</span>
+    <span>🏓 <span data-i18n="siteTitle">Giải Pickleball</span></span>
     <span class="footer-sep">·</span>
-    <span>Live Scoreboard</span>
+    <span data-i18n="footerSub">Bảng Điểm Trực Tiếp</span>
+    <span class="footer-sep">·</span>
+    <span class="lang-switcher">
+      <button class="lang-btn lang-btn-active" data-lang="vi" onclick="setLang('vi')">🇻🇳 VI</button>
+      <button class="lang-btn" data-lang="en" onclick="setLang('en')">🇬🇧 EN</button>
+    </span>
   </footer>
 
-  <!-- Supabase CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="i18n.js"></script>
   <script src="app.js"></script>
 
 </body>
