@@ -52,7 +52,7 @@ function renderMatches(matches) {
 }
 
 // ── Auto-generate bracket ─────────────────────────────────────
-let _bracketGenerating = false; // prevent concurrent auto-gen
+let _bracketGenerating = false;
 
 async function autoGenerateBracket(matches) {
   if (_bracketGenerating) return;
@@ -62,6 +62,8 @@ async function autoGenerateBracket(matches) {
   const finalMatches = matches.filter(m => m.stage === "final");
 
   const allGroupDone = groupMatches.length > 0 && groupMatches.every(m => m.status === "done");
+
+  // Auto-gen semis when all group done and no semis yet
   if (allGroupDone && semiMatches.length === 0) {
     _bracketGenerating = true;
     await generateSemifinals(true);
@@ -69,6 +71,27 @@ async function autoGenerateBracket(matches) {
     return;
   }
 
+  // If semis exist but some group matches were reset (not all done anymore),
+  // delete stale semis+final so they regen correctly when group finishes again
+  if (!allGroupDone && semiMatches.length > 0) {
+    const hasNotStartedSemi = semiMatches.some(m => m.status === "not_started");
+    if (hasNotStartedSemi) {
+      // Semis haven't started yet — safe to delete and wait for correct standings
+      _bracketGenerating = true;
+      if (db) {
+        await db.from("matches").delete().eq("stage", "semi");
+        await db.from("matches").delete().eq("stage", "final");
+      } else {
+        localMatches = (localMatches||[]).filter(m => m.stage !== "semi" && m.stage !== "final");
+        saveLocal(localMatches);
+      }
+      _bracketGenerating = false;
+      fetchMatches();
+      return;
+    }
+  }
+
+  // Auto-gen final when both semis done and no final yet
   const allSemiDone = semiMatches.length >= 2 && semiMatches.every(m => m.status === "done");
   if (allSemiDone && finalMatches.length === 0) {
     _bracketGenerating = true;
@@ -364,10 +387,11 @@ async function saveMatchInfo(id) {
 }
 
 // ── Reset single match ────────────────────────────────────────
+// After resetting a group match, also wipe semi/final so bracket
+// auto-regenerates with fresh standings when all group matches finish.
 async function resetMatch(id) {
-  if (!confirm("Reset trận này về not_started?")) return;
+  if (!confirm("Reset trận này về not_started?\nBán kết và chung kết sẽ bị xóa để tạo lại.")) return;
 
-  // Only send lowercase columns (matching actual DB schema)
   const payload = {
     scoreA: 0, scoreB: 0, status: "not_started",
     s1a: 0, s1b: 0, s2a: 0, s2b: 0, s3a: 0, s3b: 0,
@@ -378,15 +402,30 @@ async function resetMatch(id) {
     const stored = localStorage.getItem("pb_matches");
     localMatches = stored ? JSON.parse(stored) : [];
     const m = localMatches.find(x => x.id === id);
-    if (m) Object.assign(m, payload);
+    if (!m) return;
+    // Only wipe bracket if it's a group match being reset
+    if (!m.stage || m.stage === "group") {
+      localMatches = localMatches.filter(x => x.stage !== "semi" && x.stage !== "final");
+    }
+    Object.assign(m, payload);
     saveLocal(localMatches);
     fetchMatches();
     setStatus("Match reset ✓", "ok");
     return;
   }
+
+  // 1. Reset the match
   const { error } = await db.from("matches").update(payload).eq("id", id);
   if (error) { setStatus("Reset error: " + error.message, "err"); return; }
-  setStatus("Match reset ✓", "ok");
+
+  // 2. Check if it was a group match — if so, wipe bracket so it regens
+  const { data: m } = await db.from("matches").select("stage").eq("id", id).single();
+  if (!m || m.stage === "group" || !m.stage) {
+    await db.from("matches").delete().eq("stage", "semi");
+    await db.from("matches").delete().eq("stage", "final");
+  }
+
+  setStatus("Match reset ✓ — bracket cleared", "ok");
   fetchMatches();
 }
 

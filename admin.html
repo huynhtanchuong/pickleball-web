@@ -51,11 +51,9 @@
     <!-- Bracket controls -->
     <div class="adm-section">
       <div class="adm-section-title">⚙️ Bracket</div>
-      <div class="adm-btn-row">
-        <button class="adm-btn adm-btn-gray" onclick="resetDemo()">↺ Reset All Data</button>
-      </div>
-      <p style="font-size:0.72rem;color:var(--adm-muted);margin-top:8px;">
-        ⏳ Bán kết &amp; chung kết tự động tạo khi trận cuối hoàn thành.
+      <p style="font-size:0.72rem;color:var(--adm-muted);">
+        ⏳ Bán kết &amp; chung kết tự động tạo khi trận cuối hoàn thành.<br>
+        Reset 1 trận sẽ tự xóa bán kết/chung kết để tạo lại đúng cặp đấu.
       </p>
     </div>
 
@@ -94,5 +92,9 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="app.js"></script>
   <script src="admin.js"></script>
+
+  <!-- Floating reset button — bottom right, small, hard to accidentally tap -->
+  <button class="adm-fab-reset" onclick="resetDemo()" title="Reset toàn bộ dữ liệu">↺</button>
+
 </body>
 </html>
