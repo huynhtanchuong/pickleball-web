@@ -36,11 +36,20 @@ function initSupabase() {
 }
 
 // ── Status bar ───────────────────────────────────────────────
+let _statusTimer = null;
 function setStatus(msg, type = "") {
   const el = document.getElementById("status-bar");
   if (!el) return;
   el.textContent = msg;
   el.className = type;
+  // Auto-clear success messages after 3s
+  if (_statusTimer) clearTimeout(_statusTimer);
+  if (type === "ok") {
+    _statusTimer = setTimeout(() => {
+      el.textContent = db ? "🟢 Connected" : "⚠️ Demo mode";
+      el.className = db ? "ok" : "err";
+    }, 3000);
+  }
 }
 
 // ── Sample data ───────────────────────────────────────────────
@@ -85,8 +94,6 @@ async function fetchMatches() {
   renderMatches(data);
   calculateStandings(data);
 }
-
-// ── Seed sample matches ───────────────────────────────────────
 async function seedMatches() {
   if (!db) return;
   const rows = SAMPLE_MATCHES.map(({ id, ...rest }) => rest);
@@ -191,17 +198,24 @@ async function updateScore(id) {
   const scoreB = parseInt(getInput(id, "scoreB"), 10) || 0;
 
   if (!db) {
+    // Demo mode: update in-memory, persist, refresh UI
+    if (!localMatches) localMatches = JSON.parse(localStorage.getItem("pb_matches") || "[]");
     const m = localMatches.find(x => x.id === id);
-    if (m) { m.scoreA = scoreA; m.scoreB = scoreB; }
+    if (!m) { console.warn("updateScore: match not found", id); return; }
+    m.scoreA = scoreA;
+    m.scoreB = scoreB;
     saveLocal(localMatches);
+    // Re-render then flash (row is recreated so query after render)
     renderMatches(localMatches);
     calculateStandings(localMatches);
     flashSaved(id);
+    setStatus("Score saved ✓", "ok");
     return;
   }
 
   const { error } = await db.from("matches").update({ scoreA, scoreB }).eq("id", id);
   if (error) { setStatus("Update error: " + error.message, "err"); return; }
+  setStatus("Score saved ✓", "ok");
   flashSaved(id);
 }
 
@@ -211,17 +225,23 @@ async function markDone(id) {
   const scoreB = parseInt(getInput(id, "scoreB"), 10) || 0;
 
   if (!db) {
+    if (!localMatches) localMatches = JSON.parse(localStorage.getItem("pb_matches") || "[]");
     const m = localMatches.find(x => x.id === id);
-    if (m) { m.scoreA = scoreA; m.scoreB = scoreB; m.status = "done"; }
+    if (!m) { console.warn("markDone: match not found", id); return; }
+    m.scoreA = scoreA;
+    m.scoreB = scoreB;
+    m.status = "done";
     saveLocal(localMatches);
     renderMatches(localMatches);
     calculateStandings(localMatches);
+    setStatus("Match marked done ✓", "ok");
     return;
   }
 
   const { error } = await db.from("matches")
     .update({ scoreA, scoreB, status: "done" }).eq("id", id);
   if (error) { setStatus("Mark done error: " + error.message, "err"); return; }
+  setStatus("Match marked done ✓", "ok");
 }
 
 // ── Calculate standings (group stage only) ────────────────────
