@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🏓 Pickleball Tournament</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <header>
+    <h1>🏓 Pickleball Tournament</h1>
+    <p>Live Scoring &amp; Standings</p>
+    <div class="header-nav">
+      <span id="status-bar">Initializing…</span>
+      <span id="realtime-indicator" class="pulse" style="display:none;" title="Realtime connected"></span>
+      <a href="admin.html">Admin</a>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ── GROUP STAGE ── -->
+    <section class="card">
+      <h2>📋 Group Stage</h2>
+      <div id="match-list-group">
+        <p class="empty">Loading matches…</p>
+      </div>
+    </section>
+
+    <!-- ── SEMIFINALS ── -->
+    <section class="card" id="section-semi" style="display:none;">
+      <h2>⚡ Semifinals</h2>
+      <div id="match-list-semi"></div>
+    </section>
+
+    <!-- ── FINAL ── -->
+    <section class="card" id="section-final" style="display:none;">
+      <h2>🏆 Final</h2>
+      <div id="match-list-final"></div>
+    </section>
+
+    <!-- ── BRACKET VISUAL ── -->
+    <section class="card" id="section-bracket" style="display:none;">
+      <h2>🗂 Bracket</h2>
+      <div id="bracket-container"></div>
+    </section>
+
+    <!-- ── STANDINGS ── -->
+    <section class="card">
+      <h2>📊 Standings</h2>
+      <div id="standings-container">
+        <p class="empty">Loading standings…</p>
+      </div>
+    </section>
+
+    <!-- ── DEMO CONTROLS ── -->
+    <section class="card" id="demo-controls" style="display:none;">
+      <h2>🔧 Demo Controls</h2>
+      <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:12px;">
+        Running in demo mode (localStorage). Connect Supabase to enable realtime sync.
+      </p>
+      <button class="btn btn-secondary" onclick="resetDemo()">↺ Reset Demo Data</button>
+    </section>
+
+  </main>
+
+  <!-- Supabase CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="app.js"></script>
+
+</body>
+</html>
