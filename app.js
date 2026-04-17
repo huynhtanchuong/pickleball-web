@@ -582,6 +582,11 @@ async function markDone(id) {
 }
 
 // ── Calculate standings (group stage only) ────────────────────
+// Ranking rules:
+// 1. Wins (thắng = 1đ, thua = 0đ)
+// 2. H2H wins (nếu bằng điểm)
+// 3. Point diff tổng
+// 4. H2H point diff
 function calculateStandings(matches) {
   const groupMatches = matches.filter(m => !m.stage || m.stage === "group");
   const groups = {};
@@ -590,21 +595,75 @@ function calculateStandings(matches) {
   groupMatches.forEach(m => {
     if (!groups[m.group_name]) groups[m.group_name] = {};
     [m.teamA, m.teamB].forEach(t => {
-      if (!groups[m.group_name][t]) groups[m.group_name][t] = { wins:0, losses:0, diff:0 };
+      if (!groups[m.group_name][t])
+        groups[m.group_name][t] = { wins:0, losses:0, diff:0, played:0 };
     });
   });
 
   // Tally done matches
-  groupMatches.filter(m => m.status === "done").forEach(m => {
+  const doneMatches = groupMatches.filter(m => m.status === "done");
+  doneMatches.forEach(m => {
     const g = m.group_name;
     const a = groups[g][m.teamA], b = groups[g][m.teamB];
+    a.played++; b.played++;
     if (m.scoreA > m.scoreB)      { a.wins++; b.losses++; }
     else if (m.scoreB > m.scoreA) { b.wins++; a.losses++; }
     a.diff += (m.scoreA - m.scoreB);
     b.diff += (m.scoreB - m.scoreA);
   });
 
-  renderStandings(groups);
+  // Sort with tiebreakers per group
+  const sortedGroups = {};
+  Object.keys(groups).forEach(g => {
+    const teams = Object.entries(groups[g])
+      .map(([name, s]) => ({ name, ...s }));
+
+    // Sort with full tiebreaker chain
+    teams.sort((a, b) => {
+      // 1. Wins DESC
+      if (b.wins !== a.wins) return b.wins - a.wins;
+
+      // Teams are tied on wins — apply tiebreakers
+      // 2. H2H wins between tied teams
+      const h2hA = getH2HWins(a.name, b.name, doneMatches, g);
+      const h2hB = getH2HWins(b.name, a.name, doneMatches, g);
+      if (h2hA !== h2hB) return h2hB - h2hA;
+
+      // 3. Overall point diff
+      if (b.diff !== a.diff) return b.diff - a.diff;
+
+      // 4. H2H point diff
+      const h2hDiffA = getH2HDiff(a.name, b.name, doneMatches, g);
+      const h2hDiffB = getH2HDiff(b.name, a.name, doneMatches, g);
+      return h2hDiffB - h2hDiffA;
+    });
+
+    sortedGroups[g] = teams;
+  });
+
+  renderStandings(sortedGroups);
+}
+
+// H2H: số trận thắng của teamA khi đấu trực tiếp với teamB
+function getH2HWins(teamA, teamB, matches, group) {
+  let wins = 0;
+  matches.forEach(m => {
+    if (m.group_name !== group) return;
+    if (m.teamA === teamA && m.teamB === teamB && m.scoreA > m.scoreB) wins++;
+    if (m.teamA === teamB && m.teamB === teamA && m.scoreB > m.scoreA) wins++;
+  });
+  return wins;
+}
+
+// H2H: hiệu số của teamA khi đấu trực tiếp với teamB
+function getH2HDiff(teamA, teamB, matches, group) {
+  let diff = 0;
+  matches.forEach(m => {
+    if (m.group_name !== group) return;
+    if (m.teamA === teamA && m.teamB === teamB) diff += (m.scoreA - m.scoreB);
+    if (m.teamA === teamB && m.teamB === teamA) diff += (m.scoreB - m.scoreA);
+  });
+  return diff;
 }
 
 // ── Render standings ──────────────────────────────────────────
@@ -621,31 +680,34 @@ function renderStandings(groups) {
 
   let html = '<div class="standings-grid">';
   Object.keys(groups).sort().forEach(g => {
-    const teams = Object.entries(groups[g])
-      .map(([name, s]) => ({ name, ...s }))
-      .sort((a, b) => b.wins - a.wins || b.diff - a.diff);
+    const teams = groups[g]; // already sorted
 
     html += `
       <div class="standings-group-card">
-        <div class="standings-group-title">Group ${esc(g)}</div>
+        <div class="standings-group-title">Bảng ${esc(g)}</div>
         <table class="standings-table">
           <thead><tr>
-            <th>Team</th><th>W</th><th>L</th><th>+/-</th>
+            <th>Đội</th><th>Đ</th><th>T</th><th>B</th><th>+/-</th>
           </tr></thead>
           <tbody>`;
 
     teams.forEach((t, i) => {
       const rankCls = i === 0 ? "rank-1" : i === 1 ? "rank-2" : "";
-      const medal   = medals[i] ? `<span class="rank-medal">${medals[i]}</span>` : `<span class="rank-medal" style="opacity:0">·</span>`;
+      const medal   = medals[i]
+        ? `<span class="rank-medal">${medals[i]}</span>`
+        : `<span class="rank-medal" style="opacity:0">·</span>`;
       html += `<tr class="${rankCls}">
         <td>${medal}${esc(t.name)}</td>
+        <td style="font-weight:800;color:var(--green)">${t.wins}</td>
         <td>${t.wins}</td>
         <td>${t.losses}</td>
         <td>${t.diff > 0 ? "+" : ""}${t.diff}</td>
       </tr>`;
     });
 
-    html += `</tbody></table></div>`;
+    html += `</tbody></table>
+      <div class="standings-note">Đ=Điểm · T=Thắng · B=Thua · +/-=Hiệu số</div>
+    </div>`;
   });
 
   html += "</div>";
