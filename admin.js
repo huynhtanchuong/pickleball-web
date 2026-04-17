@@ -2,7 +2,7 @@
 //  admin.js — Admin panel logic
 // ============================================================
 
-const ADMIN_PASSWORD = "admin123";
+const ADMIN_PASSWORD = "ToloPickleball2026!"; // Đổi password này thành password bạn muốn
 const ADMIN_KEY      = "pb_admin_auth";
 
 // ── Auth ──────────────────────────────────────────────────────
@@ -390,13 +390,13 @@ async function saveMatchInfo(id) {
     const m = localMatches.find(x => x.id === id);
     if (m) { m.match_time = timeVal; m.court = courtVal; m.referee = refVal; }
     saveLocal(localMatches);
-    setStatus("Info saved ✓", "ok");
+    setStatus(t("infoSaved"), "ok");
     return;
   }
   const { error } = await db.from("matches")
     .update({ match_time: timeVal, court: courtVal, referee: refVal }).eq("id", id);
   if (error) { setStatus("Info error: " + error.message, "err"); return; }
-  setStatus("Info saved ✓", "ok");
+  setStatus(t("infoSaved"), "ok");
 }
 
 // ── Reset single match ────────────────────────────────────────
@@ -423,7 +423,7 @@ async function resetMatch(id) {
     Object.assign(m, payload);
     saveLocal(localMatches);
     fetchMatches();
-    setStatus("Match reset ✓", "ok");
+    setStatus(t("matchReset"), "ok");
     return;
   }
 
@@ -446,7 +446,7 @@ async function resetMatch(id) {
     await db.from("matches").delete().eq("stage", "final");
   }
 
-  setStatus("Match reset ✓ — bracket cleared", "ok");
+  setStatus(t("bracketCleared"), "ok");
   fetchMatches();
 }
 
@@ -556,7 +556,7 @@ async function generateSemifinals(silent=false) {
 
   const { error } = await db.from("matches").insert(semis);
   if (error) { setStatus("Semi error: " + error.message, "err"); return; }
-  if (!silent) setStatus("Bán kết đã tạo!", "ok");
+  if (!silent) setStatus(t("semiCreated"), "ok");
   fetchMatches();
 }
 
@@ -591,7 +591,7 @@ async function generateFinal(silent=false) {
 
   const { error } = await db.from("matches").insert([finalMatch]);
   if (error) { setStatus("Final error: " + error.message, "err"); return; }
-  if (!silent) setStatus("Chung kết đã tạo!", "ok");
+  if (!silent) setStatus(t("finalCreated"), "ok");
   fetchMatches();
 }
 

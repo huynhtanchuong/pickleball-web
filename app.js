@@ -174,43 +174,83 @@ function renderMatches(matches) {
 
   // Update bracket UI hook (used by admin.js if loaded)
   if (typeof updateBracketUI === "function") updateBracketUI(matches);
+  
+  // Setup click handlers for match cards (public page only)
+  if (!window.location.pathname.includes("admin") && typeof setupMatchCardHandlers === "function") {
+    setTimeout(setupMatchCardHandlers, 50);
+  }
 }
 
-// ── Featured match ────────────────────────────────────────────
+// ── Featured match with auto-rotation ─────────────────────────
+let _featuredRotationTimer = null;
+let _featuredRotationIndex = 0;
+let _allPlayingMatches = [];
+
 function updateFeatured(matches) {
   const sec = document.getElementById("featured-section");
   const box = document.getElementById("featured-match");
   if (!sec || !box) return; // not on public page
 
-  // Pick highest-priority active match: final > semi > group
-  // "playing" first, then "not_started", then fallback to last done
+  // Get all playing matches (priority order: final → semi → group)
   const priority = ["final", "semi", "group"];
-  let featured = null;
+  const newPlayingMatches = [];
   for (const stage of priority) {
-    featured = matches.find(m => m.status === "playing" && m.stage === stage);
-    if (featured) break;
+    const playing = matches.filter(m => m.status === "playing" && m.stage === stage);
+    newPlayingMatches.push(...playing);
   }
-  if (!featured) {
+
+  // Check if playing matches changed
+  const matchesChanged = newPlayingMatches.length !== _allPlayingMatches.length ||
+    !newPlayingMatches.every((m, i) => m.id === _allPlayingMatches[i]?.id);
+  
+  if (matchesChanged) {
+    _allPlayingMatches = newPlayingMatches;
+    _featuredRotationIndex = 0; // Reset index when matches change
+  }
+
+  // If multiple playing matches, start rotation
+  if (_allPlayingMatches.length > 1) {
+    if (!_featuredRotationTimer) {
+      startFeaturedRotation();
+    }
+    // Only render if matches changed, otherwise let timer handle it
+    if (matchesChanged) {
+      const featured = _allPlayingMatches[_featuredRotationIndex % _allPlayingMatches.length];
+      renderFeaturedMatch(sec, box, featured);
+    }
+    return;
+  }
+
+  // Stop rotation if not needed
+  stopFeaturedRotation();
+
+  // Single match or fallback logic
+  let featured = null;
+  if (_allPlayingMatches.length === 1) {
+    featured = _allPlayingMatches[0];
+  } else {
+    // No playing matches — fallback to not_started or done
     for (const stage of priority) {
       featured = matches.find(m => m.status === "not_started" && m.stage === stage);
       if (featured) break;
     }
-  }
-  // legacy "pending" support
-  if (!featured) {
-    for (const stage of priority) {
-      featured = matches.find(m => m.status === "pending" && m.stage === stage);
-      if (featured) break;
+    if (!featured) {
+      for (const stage of priority) {
+        featured = matches.find(m => m.status === "pending" && m.stage === stage);
+        if (featured) break;
+      }
     }
-  }
-  // Fallback: most recently completed match
-  if (!featured) {
-    const done = matches.filter(m => m.status === "done");
-    featured = done[done.length - 1] || null;
+    if (!featured) {
+      const done = matches.filter(m => m.status === "done");
+      featured = done[done.length - 1] || null;
+    }
   }
 
   if (!featured) { sec.style.display = "none"; return; }
+  renderFeaturedMatch(sec, box, featured);
+}
 
+function renderFeaturedMatch(sec, box, featured) {
   sec.style.display = "block";
   const isPlaying    = featured.status === "playing";
   const isNotStarted = featured.status === "not_started" || featured.status === "pending";
@@ -240,6 +280,29 @@ function updateFeatured(matches) {
       :                `<span class="badge-done">${t("badgeFinal")}</span>`}
       <span class="feat-stage-label">${esc(stageLabel)}</span>
     </div>`;
+}
+
+function startFeaturedRotation() {
+  stopFeaturedRotation();
+  _featuredRotationTimer = setInterval(() => {
+    _featuredRotationIndex++;
+    if (_allPlayingMatches.length > 0) {
+      const sec = document.getElementById("featured-section");
+      const box = document.getElementById("featured-match");
+      if (sec && box) {
+        const featured = _allPlayingMatches[_featuredRotationIndex % _allPlayingMatches.length];
+        renderFeaturedMatch(sec, box, featured);
+      }
+    }
+  }, 5000); // Rotate every 5 seconds
+}
+
+function stopFeaturedRotation() {
+  if (_featuredRotationTimer) {
+    clearInterval(_featuredRotationTimer);
+    _featuredRotationTimer = null;
+  }
+  // Don't reset index here - let it reset only when matches change
 }
 
 function renderPublicStage(containerId, matches, stage) {
@@ -501,7 +564,7 @@ async function updateScore(id) {
       calculateStandings(localMatches);
       flashSaved(id);
     }
-    setStatus("Score saved ✓", "ok");
+    setStatus(t("scoreSaved"), "ok");
     return;
   }
 
@@ -521,7 +584,7 @@ async function updateScore(id) {
   if (error) { setStatus("Update error: " + error.message, "err"); return; }
 
   _knownUpdatedAt[id] = payload.updated_at;
-  setStatus("Score saved ✓", "ok");
+  setStatus(t("scoreSaved"), "ok");
   flashSaved(id);
 }
 
@@ -580,7 +643,7 @@ async function finishMatch(id) {
     if (typeof _openCards !== "undefined") _openCards.delete(id);
     renderMatches(localMatches);
     calculateStandings(localMatches);
-    setStatus("Match finished ✓", "ok");
+    setStatus(t("matchFinished"), "ok");
     return;
   }
 
@@ -594,7 +657,7 @@ async function finishMatch(id) {
   // Remove from open set so when realtime triggers fetchMatches → re-render,
   // the card stays collapsed in its new sorted position
   if (typeof _openCards !== "undefined") _openCards.delete(id);
-  setStatus("Match finished ✓", "ok");
+  setStatus(t("matchFinished"), "ok");
 }
 
 // ── Mark done (legacy alias → finishMatch) ────────────────────
@@ -929,6 +992,51 @@ function collapseAllPubGroups() {
   });
 }
 
+// ── Toggle match expand (click to zoom) ──────────────────────
+function toggleMatchExpand(id) {
+  const clickedCard = document.querySelector(`.match-card[data-id="${id}"]`);
+  if (!clickedCard) return;
+
+  const isExpanded = clickedCard.classList.contains('match-expanded');
+  
+  // Remove expanded class from all cards
+  document.querySelectorAll('.match-card').forEach(card => {
+    card.classList.remove('match-expanded');
+  });
+
+  // If the clicked card wasn't expanded, expand it
+  if (!isExpanded) {
+    clickedCard.classList.add('match-expanded');
+  }
+}
+
+// ── Setup match card click handlers ───────────────────────────
+function setupMatchCardHandlers() {
+  // Use event delegation on match grid containers
+  const containers = ['match-list-group', 'match-list-semi', 'match-list-final'];
+  
+  containers.forEach(containerId => {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    // Remove old listener if exists
+    container.removeEventListener('click', handleMatchCardClick);
+    // Add new listener
+    container.addEventListener('click', handleMatchCardClick);
+  });
+}
+
+function handleMatchCardClick(e) {
+  // Find the closest match-card element
+  const card = e.target.closest('.match-card');
+  if (!card) return;
+  
+  const matchId = card.getAttribute('data-id');
+  if (matchId) {
+    toggleMatchExpand(matchId);
+  }
+}
+
 // ── Boot (public page only) ───────────────────────────────────
 // admin.html boots via admin.js instead — we detect by filename.
 if (!window.location.pathname.includes("admin")) {
@@ -936,5 +1044,8 @@ if (!window.location.pathname.includes("admin")) {
     const connected = initSupabase();
     fetchMatches();
     subscribeRealtime(); // always — handles both realtime + polling fallback
+    
+    // Setup click handlers after initial render
+    setTimeout(setupMatchCardHandlers, 500);
   });
 }

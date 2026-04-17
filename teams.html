@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🏓 Quản Lý Đội — Admin</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="admin-mobile.css" />
+  <style>
+    .teams-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px 20px;
+    }
+    
+    .teams-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    
+    .teams-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .teams-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    
+    .teams-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    
+    .team-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      transition: all 0.2s;
+    }
+    
+    .team-card:hover {
+      border-color: var(--blue);
+      box-shadow: var(--shadow);
+    }
+    
+    .team-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+    
+    .team-name {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text);
+      flex: 1;
+      word-wrap: break-word;
+    }
+    
+    .team-group {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--blue);
+      background: rgba(59,130,246,0.1);
+      border: 1px solid rgba(59,130,246,0.2);
+      padding: 3px 10px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+    
+    .team-stats {
+      display: flex;
+      gap: 16px;
+      margin: 12px 0;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    
+    .team-stat {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    
+    .team-edit-form {
+      display: none;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    
+    .team-edit-form.active {
+      display: block;
+    }
+    
+    .team-input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 0.95rem;
+      margin-bottom: 10px;
+    }
+    
+    .team-input:focus {
+      outline: 2px solid var(--blue);
+      border-color: transparent;
+    }
+    
+    .team-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    
+    .btn-edit {
+      background: var(--blue);
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    
+    .btn-edit:hover {
+      opacity: 0.85;
+    }
+    
+    .btn-save {
+      background: var(--green);
+      color: #fff;
+    }
+    
+    .btn-cancel {
+      background: var(--bg-card2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    
+    .group-section {
+      margin-bottom: 32px;
+    }
+    
+    .group-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--border);
+    }
+    
+    .group-label {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--blue);
+      letter-spacing: 0.05em;
+    }
+    
+    .group-count {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      background: var(--bg-card2);
+      padding: 4px 12px;
+      border-radius: 20px;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+    }
+    
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 8px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      transition: all 0.15s;
+    }
+    
+    .back-link:hover {
+      color: var(--text);
+      border-color: var(--blue);
+    }
+    
+    @media (max-width: 700px) {
+      .teams-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .teams-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header style="background: linear-gradient(135deg, #1e40af, #7c3aed); padding: 18px 24px; text-align: center; box-shadow: 0 2px 12px rgba(0,0,0,0.4);">
+    <h1 style="font-size: 1.8rem; letter-spacing: 1px; margin: 0;">
+      🏓 Quản Lý Đội
+    </h1>
+    <p style="font-size: 0.85rem; opacity: 0.8; margin: 4px 0 0;">
+      Chỉnh sửa tên đội thi đấu
+    </p>
+  </header>
+
+  <div class="teams-container">
+    
+    <div class="teams-header">
+      <div class="teams-title">
+        <span>📋</span>
+        <span>Danh Sách Đội</span>
+      </div>
+      <div class="teams-actions">
+        <a href="admin.html" class="back-link">← Quay lại Admin</a>
+        <button class="btn btn-secondary" onclick="location.reload()">↺ Làm mới</button>
+      </div>
+    </div>
+
+    <div id="status-bar" class="status-chip" style="margin-bottom: 20px;">Đang tải...</div>
+
+    <div id="teams-list">
+      <p class="empty-state">Đang tải danh sách đội...</p>
+    </div>
+
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="i18n.js"></script>
+  <script src="app.js"></script>
+  <script src="teams.js"></script>
+
+</body>
+</html>

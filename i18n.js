@@ -6,7 +6,7 @@
 const TRANSLATIONS = {
   vi: {
     // Site
-    siteTitle:        "Giải Pickleball",
+    siteTitle:        "Giải Pickleball Tolo Pikaboo lần 3 - 2026",
     liveSub:          "Bảng Điểm Trực Tiếp",
     adminLink:        "Quản trị ›",
 
@@ -16,6 +16,13 @@ const TRANSLATIONS = {
     demoMode:         "⚠️ Demo — chưa cấu hình Supabase",
     realtimeActive:   "🟢 Realtime đang hoạt động",
     realtimeLost:     "⚠️ Mất kết nối — đang polling",
+    matchFinished:    "Trận đấu đã kết thúc ✓",
+    scoreSaved:       "Đã lưu điểm số ✓",
+    infoSaved:        "Đã lưu thông tin ✓",
+    matchReset:       "Đã reset trận đấu ✓",
+    bracketCleared:   "Đã reset trận đấu ✓ — bracket đã xóa",
+    semiCreated:      "Bán kết đã tạo!",
+    finalCreated:     "Chung kết đã tạo!",
 
     // Featured
     featuredLabel:    "Trận Nổi Bật",
@@ -124,7 +131,7 @@ const TRANSLATIONS = {
   },
 
   en: {
-    siteTitle:        "Pickleball Tournament",
+    siteTitle:        "Tolo Pikaboo Pickleball Tournament #3 - 2026",
     liveSub:          "Live Scoreboard",
     adminLink:        "Admin ›",
 
@@ -133,6 +140,13 @@ const TRANSLATIONS = {
     demoMode:         "⚠️ Demo — Supabase not configured",
     realtimeActive:   "🟢 Realtime active",
     realtimeLost:     "⚠️ Realtime lost — polling",
+    matchFinished:    "Match finished ✓",
+    scoreSaved:       "Score saved ✓",
+    infoSaved:        "Info saved ✓",
+    matchReset:       "Match reset ✓",
+    bracketCleared:   "Match reset ✓ — bracket cleared",
+    semiCreated:      "Semifinals created!",
+    finalCreated:     "Final created!",
 
     featuredLabel:    "Featured Match",
     liveBadge:        "● LIVE",
