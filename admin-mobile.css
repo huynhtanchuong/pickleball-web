@@ -366,3 +366,96 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
 .conflict-reload-btn:active { opacity: 0.8; }
 
 /* ── NOT-STARTED card style on public scoreboard ── */
+
+/* ── BEST-OF-3 SET ROWS ── */
+.adm-set-wins {
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--adm-text);
+  margin-bottom: 12px;
+  letter-spacing: 0.05em;
+}
+
+.adm-set-row {
+  background: var(--adm-card2);
+  border: 1px solid var(--adm-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.adm-set-num {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--adm-muted);
+  display: block;
+  margin-bottom: 8px;
+  text-align: center;
+}
+.adm-set-inputs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.adm-set-input {
+  width: 58px;
+  height: 58px;
+  text-align: center;
+  font-size: 1.8rem;
+  font-weight: 900;
+  background: var(--adm-bg);
+  border: 2px solid var(--adm-border);
+  color: var(--adm-text);
+  border-radius: 10px;
+  -moz-appearance: textfield;
+  appearance: textfield;
+  font-variant-numeric: tabular-nums;
+}
+.adm-set-input::-webkit-inner-spin-button,
+.adm-set-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+.adm-set-input:focus  { outline: 2px solid var(--adm-blue); border-color: transparent; }
+.adm-set-input:disabled { opacity: 0.4; }
+.adm-set-input.set-win { border-color: var(--adm-green); color: var(--adm-green); }
+
+.adm-set-sep {
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: var(--adm-border);
+  min-width: 16px;
+  text-align: center;
+}
+.adm-set-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  font-size: 1.2rem;
+  font-weight: 900;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.adm-set-btn:active { transform: scale(0.88); }
+.adm-set-btn.plus  { background: rgba(34,197,94,0.15); color: var(--adm-green); border: 2px solid rgba(34,197,94,0.3); }
+.adm-set-btn.minus { background: rgba(239,68,68,0.1);  color: #f87171;          border: 2px solid rgba(239,68,68,0.2); }
+.adm-set-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+
+.adm-add-set-btn {
+  width: 100%;
+  padding: 10px;
+  background: var(--adm-card2);
+  border: 1px dashed var(--adm-border);
+  color: var(--adm-muted);
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+.adm-add-set-btn:active { opacity: 0.7; }

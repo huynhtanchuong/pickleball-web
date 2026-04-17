@@ -263,9 +263,30 @@ function publicMatchHTML(m, stage) {
     ? `Group ${esc(m.group_name)}`
     : stage === "semi" ? "Semifinal" : "Final";
 
-  const badge = done       ? '<span class="badge-done">✓ Final Score</span>'
-              : playing    ? '<span class="badge-live">● Playing</span>'
-              :              '<span class="badge-ns">◌ Not Started</span>';
+  const badge = done    ? '<span class="badge-done">✓ Final</span>'
+              : playing ? '<span class="badge-live">● Playing</span>'
+              :           '<span class="badge-ns">◌ Not Started</span>';
+
+  // For semi/final: show set scores
+  let setsHtml = "";
+  if (needsSets(m)) {
+    const sets = [
+      { a: m.s1A || 0, b: m.s1B || 0, label: "S1" },
+      { a: m.s2A || 0, b: m.s2B || 0, label: "S2" },
+      { a: m.s3A || 0, b: m.s3B || 0, label: "S3" },
+    ];
+    const activeSets = sets.filter((s, i) => i === 0 || s.a > 0 || s.b > 0 || (i === 2 && m.scoreA === 1 && m.scoreB === 1));
+    setsHtml = `<div class="mc-sets">` +
+      activeSets.map(s => {
+        const wA = s.a > s.b, wB = s.b > s.a;
+        return `<div class="mc-set-item">
+          <span class="mc-set-label">${s.label}</span>
+          <span class="mc-set-score ${wA ? "winner" : ""}">${s.a}</span>
+          <span class="mc-set-sep">-</span>
+          <span class="mc-set-score ${wB ? "winner" : ""}">${s.b}</span>
+        </div>`;
+      }).join("") + `</div>`;
+  }
 
   return `
     <div class="match-card ${cardMod}" data-id="${m.id}">
@@ -278,6 +299,7 @@ function publicMatchHTML(m, stage) {
         </div>
         <span class="mc-team right ${winnerB ? "winner" : ""}">${esc(m.teamB)}</span>
       </div>
+      ${setsHtml}
       <div class="mc-footer">
         <span class="mc-group-tag">${groupTag}</span>
         ${badge}
@@ -285,7 +307,43 @@ function publicMatchHTML(m, stage) {
     </div>`;
 }
 
-// ── Conflict tracking ─────────────────────────────────────────
+// ── Set score helpers (semi + final only) ────────────────────
+// Sets: s1A/s1B, s2A/s2B, s3A/s3B (scores per set)
+// scoreA/scoreB = sets won (computed, not manually entered)
+
+function needsSets(m) {
+  return m.stage === "semi" || m.stage === "final";
+}
+
+function computeSetWins(m) {
+  // Returns { winsA, winsB } based on individual set scores
+  let wA = 0, wB = 0;
+  const sets = [
+    [m.s1A || 0, m.s1B || 0],
+    [m.s2A || 0, m.s2B || 0],
+    [m.s3A || 0, m.s3B || 0],
+  ];
+  sets.forEach(([a, b]) => {
+    if (a > 0 || b > 0) { // only count sets that have been played
+      if (a > b) wA++;
+      else if (b > a) wB++;
+    }
+  });
+  return { winsA: wA, winsB: wB };
+}
+
+function getSetInput(id, field) {
+  const el = document.querySelector(`input[data-id="${id}"][data-field="${field}"]`);
+  return el ? (parseInt(el.value, 10) || 0) : 0;
+}
+
+function adjustSetScore(id, field, delta) {
+  const input = document.querySelector(`input[data-id="${id}"][data-field="${field}"]`);
+  if (!input) return;
+  input.value = Math.max(0, (parseInt(input.value, 10) || 0) + delta);
+  clearTimeout(_saveDebounce[id]);
+  _saveDebounce[id] = setTimeout(() => { updateScore(id); }, 800);
+}
 // Maps matchId → updated_at string seen at last render.
 // Used to detect concurrent edits by multiple admins.
 const _knownUpdatedAt = {};
@@ -355,32 +413,47 @@ async function reloadMatch(id) {
 
 // ── Update score ──────────────────────────────────────────────
 async function updateScore(id) {
-  const scoreA = parseInt(getInput(id, "scoreA"), 10) || 0;
-  const scoreB = parseInt(getInput(id, "scoreB"), 10) || 0;
+  // Re-read fresh from localStorage
+  const stored = localStorage.getItem("pb_matches");
+  localMatches = stored ? JSON.parse(stored) : JSON.parse(JSON.stringify(SAMPLE_MATCHES));
+  const m = localMatches ? localMatches.find(x => x.id === id) : null;
+
+  let scoreA, scoreB, payload;
+
+  if (needsSets(m || { stage: "" })) {
+    // Best-of-3: read individual set scores
+    const s1A = getSetInput(id, "s1A"), s1B = getSetInput(id, "s1B");
+    const s2A = getSetInput(id, "s2A"), s2B = getSetInput(id, "s2B");
+    const s3A = getSetInput(id, "s3A"), s3B = getSetInput(id, "s3B");
+    const tmp = { s1A, s1B, s2A, s2B, s3A, s3B };
+    const { winsA, winsB } = computeSetWins(tmp);
+    scoreA = winsA;
+    scoreB = winsB;
+    payload = { s1A, s1B, s2A, s2B, s3A, s3B, scoreA, scoreB };
+  } else {
+    scoreA = parseInt(getInput(id, "scoreA"), 10) || 0;
+    scoreB = parseInt(getInput(id, "scoreB"), 10) || 0;
+    payload = { scoreA, scoreB };
+  }
 
   // Auto-status: not_started → playing when any score > 0
-  const autoStatus = (scoreA > 0 || scoreB > 0) ? "playing" : null;
+  const hasScore = scoreA > 0 || scoreB > 0 ||
+    (payload.s1A > 0 || payload.s1B > 0);
+  const autoStatus = hasScore ? "playing" : null;
 
   if (!db) {
-    // Re-read fresh from localStorage before mutating (avoid stale in-memory data)
-    const stored = localStorage.getItem("pb_matches");
-    localMatches = stored ? JSON.parse(stored) : JSON.parse(JSON.stringify(SAMPLE_MATCHES));
-
-    const m = localMatches.find(x => x.id === id);
     if (!m) { console.warn("updateScore: match not found", id); return; }
-    m.scoreA = scoreA;
-    m.scoreB = scoreB;
+    Object.assign(m, payload);
     if (autoStatus && (m.status === "not_started" || m.status === "pending")) {
       m.status = autoStatus;
     }
     m.updated_at = new Date().toISOString();
     saveLocal(localMatches);
 
-    // On admin page: update badge in-place, don't re-render (would destroy inputs)
-    // On public page: full re-render is fine (no inputs to lose)
     const isAdminPage = window.location.pathname.includes("admin");
     if (isAdminPage) {
       updateStatusBadgeInPlace(id, m.status);
+      updateSetWinsDisplay(id, scoreA, scoreB);
       flashSaved(id);
     } else {
       renderMatches(localMatches);
@@ -391,14 +464,12 @@ async function updateScore(id) {
     return;
   }
 
-  // Conflict check before writing
+  // Supabase path
   const conflict = await checkConflict(id);
   if (conflict) { handleConflict(id); return; }
 
-  // Build update payload
-  const payload = { scoreA, scoreB, updated_at: new Date().toISOString() };
+  payload.updated_at = new Date().toISOString();
 
-  // Fetch current status to decide auto-transition
   const { data: current } = await db
     .from("matches").select("status").eq("id", id).single();
   if (current && (current.status === "not_started" || current.status === "pending") && autoStatus) {
@@ -411,6 +482,13 @@ async function updateScore(id) {
   _knownUpdatedAt[id] = payload.updated_at;
   setStatus("Score saved ✓", "ok");
   flashSaved(id);
+}
+
+// Update set-wins display in-place on admin card (avoids full re-render)
+function updateSetWinsDisplay(id, winsA, winsB) {
+  const el = document.querySelector(`.adm-set-wins[data-id="${id}"]`);
+  if (!el) return;
+  el.textContent = `Sets: ${winsA} — ${winsB}`;
 }
 
 // ── Update status badge in-place (admin page only) ────────────
@@ -436,22 +514,27 @@ function updateStatusBadgeInPlace(id, status) {
 
 // ── Finish match (sets status = done) ─────────────────────────
 async function finishMatch(id) {
-  const scoreA = parseInt(getInput(id, "scoreA"), 10) || 0;
-  const scoreB = parseInt(getInput(id, "scoreB"), 10) || 0;
+  const stored = localStorage.getItem("pb_matches");
+  localMatches = stored ? JSON.parse(stored) : JSON.parse(JSON.stringify(SAMPLE_MATCHES));
+  const m = localMatches ? localMatches.find(x => x.id === id) : null;
+
+  let payload = { status: "done", updated_at: new Date().toISOString() };
+
+  if (needsSets(m || { stage: "" })) {
+    const s1A = getSetInput(id, "s1A"), s1B = getSetInput(id, "s1B");
+    const s2A = getSetInput(id, "s2A"), s2B = getSetInput(id, "s2B");
+    const s3A = getSetInput(id, "s3A"), s3B = getSetInput(id, "s3B");
+    const { winsA, winsB } = computeSetWins({ s1A, s1B, s2A, s2B, s3A, s3B });
+    Object.assign(payload, { s1A, s1B, s2A, s2B, s3A, s3B, scoreA: winsA, scoreB: winsB });
+  } else {
+    payload.scoreA = parseInt(getInput(id, "scoreA"), 10) || 0;
+    payload.scoreB = parseInt(getInput(id, "scoreB"), 10) || 0;
+  }
 
   if (!db) {
-    const stored = localStorage.getItem("pb_matches");
-    localMatches = stored ? JSON.parse(stored) : JSON.parse(JSON.stringify(SAMPLE_MATCHES));
-
-    const m = localMatches.find(x => x.id === id);
     if (!m) return;
-    m.scoreA = scoreA;
-    m.scoreB = scoreB;
-    m.status = "done";
-    m.updated_at = new Date().toISOString();
+    Object.assign(m, payload);
     saveLocal(localMatches);
-
-    // Full re-render is safe here — "done" disables all inputs anyway
     renderMatches(localMatches);
     calculateStandings(localMatches);
     setStatus("Match finished ✓", "ok");
@@ -461,7 +544,6 @@ async function finishMatch(id) {
   const conflict = await checkConflict(id);
   if (conflict) { handleConflict(id); return; }
 
-  const payload = { scoreA, scoreB, status: "done", updated_at: new Date().toISOString() };
   const { error } = await db.from("matches").update(payload).eq("id", id);
   if (error) { setStatus("Finish error: " + error.message, "err"); return; }
 

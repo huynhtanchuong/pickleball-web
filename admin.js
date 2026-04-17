@@ -95,68 +95,114 @@ function renderStageList(containerId, matches, stage) {
 function matchHTML(m, stage) {
   const done       = m.status === "done";
   const playing    = m.status === "playing";
-  const notStarted = m.status === "not_started" || m.status === "pending";
+  const dis        = done ? "disabled" : "";
   const winnerA    = done && m.scoreA > m.scoreB;
   const winnerB    = done && m.scoreB > m.scoreA;
-  const dis        = done ? "disabled" : "";
 
   let cardCls = done ? "is-done" : playing ? "is-playing is-live" : "is-ns";
   if (stage === "semi")  cardCls += " is-semi";
   if (stage === "final") cardCls += " is-final";
 
-  // Status badge
   const statusBadge = done
     ? '<span class="adm-status-badge adm-status-done">✓ DONE</span>'
     : playing
     ? '<span class="adm-status-badge adm-status-playing">● PLAYING</span>'
     : '<span class="adm-status-badge adm-status-ns">◌ NOT STARTED</span>';
 
+  const stageLabel = stage === "semi" ? "Semifinal" : stage === "final" ? "Final" : "";
+
+  // Best-of-3 sets for semi/final
+  const useSets = (stage === "semi" || stage === "final");
+
+  let scoreSection = "";
+  if (useSets) {
+    // Show set wins summary + 3 set rows
+    const { winsA, winsB } = computeSetWins(m);
+    // Show set 3 only if both teams have won 1 set each
+    const showSet3 = winsA >= 1 && winsB >= 1;
+
+    scoreSection = `
+      <div class="adm-set-wins" data-id="${m.id}">Sets: ${winsA} — ${winsB}</div>
+      ${setRowHTML(m, 1, dis)}
+      ${setRowHTML(m, 2, dis)}
+      ${showSet3 || m.s3A || m.s3B ? setRowHTML(m, 3, dis) : `
+        <div class="adm-set-row-placeholder" id="set3-${m.id}">
+          <button class="adm-add-set-btn" onclick="showSet3('${m.id}')" ${dis}>+ Set 3</button>
+        </div>`}`;
+  } else {
+    scoreSection = `
+      <div class="adm-score-row">
+        <div class="adm-score-ctrl">
+          <button class="adm-inc-btn plus" ${dis} onclick="adjustScore('${m.id}','scoreA',1)">+</button>
+          <input class="adm-score-input" type="number" min="0"
+            value="${m.scoreA}" data-field="scoreA" data-id="${m.id}" ${dis}>
+          <button class="adm-inc-btn minus" ${dis} onclick="adjustScore('${m.id}','scoreA',-1)">−</button>
+        </div>
+        <span class="adm-score-sep">:</span>
+        <div class="adm-score-ctrl">
+          <button class="adm-inc-btn plus" ${dis} onclick="adjustScore('${m.id}','scoreB',1)">+</button>
+          <input class="adm-score-input" type="number" min="0"
+            value="${m.scoreB}" data-field="scoreB" data-id="${m.id}" ${dis}>
+          <button class="adm-inc-btn minus" ${dis} onclick="adjustScore('${m.id}','scoreB',-1)">−</button>
+        </div>
+      </div>`;
+  }
+
   return `
     <div class="adm-match-card ${cardCls}" data-id="${m.id}" data-updated="${m.updated_at || ''}">
-
       <div class="adm-card-header">
         ${statusBadge}
-        <span class="adm-match-meta">${stage === "group" ? "" : stage === "semi" ? "Semifinal" : "Final"}</span>
+        <span class="adm-match-meta">${stageLabel}</span>
       </div>
-
       <div class="adm-teams">
         <span class="adm-team-name ${winnerA ? "winner" : ""}">${esc(m.teamA)}</span>
         <span class="adm-vs">vs</span>
         <span class="adm-team-name right ${winnerB ? "winner" : ""}">${esc(m.teamB)}</span>
       </div>
-
-      <div class="adm-score-row">
-        <div class="adm-score-ctrl">
-          <button class="adm-inc-btn plus" ${dis}
-            onclick="adjustScore('${m.id}','scoreA',1)">+</button>
-          <input class="adm-score-input" type="number" min="0"
-            value="${m.scoreA}" data-field="scoreA" data-id="${m.id}" ${dis}>
-          <button class="adm-inc-btn minus" ${dis}
-            onclick="adjustScore('${m.id}','scoreA',-1)">−</button>
-        </div>
-
-        <span class="adm-score-sep">:</span>
-
-        <div class="adm-score-ctrl">
-          <button class="adm-inc-btn plus" ${dis}
-            onclick="adjustScore('${m.id}','scoreB',1)">+</button>
-          <input class="adm-score-input" type="number" min="0"
-            value="${m.scoreB}" data-field="scoreB" data-id="${m.id}" ${dis}>
-          <button class="adm-inc-btn minus" ${dis}
-            onclick="adjustScore('${m.id}','scoreB',-1)">−</button>
-        </div>
-      </div>
-
+      ${scoreSection}
       <div class="adm-actions">
-        <button class="adm-save-btn" ${dis}
-          onclick="updateScore('${m.id}')">💾 Save</button>
-        <button class="adm-finish-btn ${done ? "is-done" : ""}" ${dis}
-          onclick="finishMatch('${m.id}')">
+        <button class="adm-save-btn" ${dis} onclick="updateScore('${m.id}')">💾 Save</button>
+        <button class="adm-finish-btn ${done ? "is-done" : ""}" ${dis} onclick="finishMatch('${m.id}')">
           ${done ? "✓ Finished" : "🏁 Finish Match"}
         </button>
       </div>
-
     </div>`;
+}
+
+function setRowHTML(m, setNum, dis) {
+  const fA = `s${setNum}A`, fB = `s${setNum}B`;
+  const vA = m[fA] || 0, vB = m[fB] || 0;
+  const wA = vA > vB && (vA > 0 || vB > 0);
+  const wB = vB > vA && (vA > 0 || vB > 0);
+  return `
+    <div class="adm-set-row">
+      <span class="adm-set-num">Set ${setNum}</span>
+      <div class="adm-set-inputs">
+        <button class="adm-set-btn minus" ${dis} onclick="adjustSetScore('${m.id}','${fA}',-1)">−</button>
+        <input class="adm-set-input ${wA ? "set-win" : ""}" type="number" min="0"
+          value="${vA}" data-field="${fA}" data-id="${m.id}" ${dis}>
+        <span class="adm-set-sep">—</span>
+        <input class="adm-set-input ${wB ? "set-win" : ""}" type="number" min="0"
+          value="${vB}" data-field="${fB}" data-id="${m.id}" ${dis}>
+        <button class="adm-set-btn plus" ${dis} onclick="adjustSetScore('${m.id}','${fB}',1)">+</button>
+      </div>
+      <div class="adm-set-inputs" style="margin-top:4px">
+        <button class="adm-set-btn plus" ${dis} onclick="adjustSetScore('${m.id}','${fA}',1)">+</button>
+        <span style="width:52px;text-align:center;font-size:0.65rem;color:var(--adm-muted)">${esc(m.teamA)}</span>
+        <span class="adm-set-sep"></span>
+        <span style="width:52px;text-align:center;font-size:0.65rem;color:var(--adm-muted)">${esc(m.teamB)}</span>
+        <button class="adm-set-btn minus" ${dis} onclick="adjustSetScore('${m.id}','${fB}',-1)">−</button>
+      </div>
+    </div>`;
+}
+
+function showSet3(id) {
+  const placeholder = document.getElementById(`set3-${id}`);
+  if (!placeholder) return;
+  const stored = localStorage.getItem("pb_matches");
+  const matches = stored ? JSON.parse(stored) : [];
+  const m = matches.find(x => x.id === id) || { s3A: 0, s3B: 0, teamA: "", teamB: "" };
+  placeholder.outerHTML = setRowHTML(m, 3, "");
 }
 
 // ── +1 / -1 score adjustment ──────────────────────────────────

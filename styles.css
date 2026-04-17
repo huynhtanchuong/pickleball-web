@@ -795,3 +795,43 @@ main {
   opacity: 0.75;
 }
 .match-card.card-ns::before { background: var(--text-muted); }
+
+/* ── Set scores (public scoreboard — semi/final) ── */
+.mc-sets {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 6px 0 4px;
+  flex-wrap: wrap;
+}
+.mc-set-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-card2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 0.82rem;
+}
+.mc-set-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-right: 4px;
+}
+.mc-set-score {
+  font-size: 0.95rem;
+  font-weight: 800;
+  min-width: 16px;
+  text-align: center;
+  color: var(--text-dim);
+}
+.mc-set-score.winner { color: var(--green); }
+.mc-set-sep {
+  color: var(--border);
+  font-weight: 700;
+  padding: 0 2px;
+}
