@@ -1,80 +1,57 @@
-# 🏓 Pickleball Tournament Website
+# 🏓 Pickleball Tournament — Live Scoreboard
 
-A minimal, real-time pickleball tournament scoring site — plain HTML + CSS + Vanilla JS, no frameworks.
-
----
-
-## 📁 Project Structure
-
-```
-pick-web/
-├── index.html   — Public scoreboard (read-only)
-├── admin.html   — Admin panel (score editing + bracket management)
-├── app.js       — Core logic: fetch, render, standings, realtime
-├── admin.js     — Admin auth + bracket generation
-├── styles.css   — Dark-theme responsive styles
-├── vercel.json  — Vercel static deployment config
-└── README.md    — This file
-```
+Hệ thống tính điểm pickleball realtime, xây dựng bằng HTML + CSS + Vanilla JS + Supabase.
 
 ---
 
-## ⚡ Features
+## 🔗 Links quan trọng
 
-- **Public scoreboard** — Read-only live view of all matches and standings
-- **Admin panel** — Password-protected score editing and bracket management
-- **Group Stage** — Matches in Group A / B with live standings
-- **Bracket System** — Auto-generate Semifinals → Final from top 2 teams per group
-- **Realtime Sync** — Supabase Postgres changes push updates to all browsers instantly
-- **Demo Mode** — Works offline using localStorage with 8 sample matches
-
----
-
-## 🔐 Admin Login
-
-1. Open `http://localhost:5500/admin.html`
-2. Enter password: **`admin123`**
-3. You can now edit scores, mark matches done, and generate bracket rounds
-
-To change the password, edit `admin.js`:
-```js
-const ADMIN_PASSWORD = "admin123";  // ← change this
-```
-
-The public `index.html` is always **read-only** — scores display as large numbers, no inputs.
+| Service | URL |
+|---------|-----|
+| 🌐 **Public Site** | https://pickleball-5ii7p94au-huynhtanchuongdtu-9871s-projects.vercel.app |
+| 🔑 **Admin Panel** | https://pickleball-5ii7p94au-huynhtanchuongdtu-9871s-projects.vercel.app/admin.html |
+| ▲ **Vercel Dashboard** | https://vercel.com/huynhtanchuongdtu-9871s-projects/pickleball-web |
+| 🗄️ **Supabase Dashboard** | https://supabase.com/dashboard/project/negwxhrkdypiopmmrxkf |
+| 📦 **GitHub Repo** | https://github.com/huynhtanchuong/pickleball-web |
 
 ---
 
-## 🏆 Bracket Logic
+## 🔐 Admin
 
-### How it works
-
-1. **Group Stage** — Play all group matches, mark them done
-2. **Generate Semifinals** — Click "Generate Semifinals" in admin panel
-   - Takes **Top 2 teams** from each group (sorted by wins → point diff)
-   - Creates: `A1 vs B2` and `B1 vs A2`
-3. **Generate Final** — Click "Generate Final" once both semis are done
-   - Winners of each semifinal face off
-
-### Functions
-| Function | Description |
-|---|---|
-| `generateSemifinals()` | Seeds SF matches from group standings |
-| `generateFinal()` | Seeds final from SF winners |
-| `getTopTeamsByGroup()` | Returns ranked teams per group |
-| `updateBracketUI()` | Refreshes bracket visual |
-| `renderBracketVisual()` | Draws the bracket card layout |
+- **URL:** `/admin.html`
+- **Password:** `admin123`
 
 ---
 
-## 🔌 Supabase Setup
+## 🗄️ Supabase
 
-### 1. Create a project
-Go to [https://supabase.com](https://supabase.com) → New Project.
+- **Project:** `pickleball`
+- **Project ID:** `negwxhrkdypiopmmrxkf`
+- **URL:** `https://negwxhrkdypiopmmrxkf.supabase.co`
+- **Region:** Southeast Asia (Singapore)
+- **Anon Key:** xem trong `app.js` hoặc Supabase Dashboard → Settings → API Keys → Legacy anon
 
-### 2. Create the `matches` table
+### Schema bảng `matches`
 
-Run in the **SQL Editor**:
+| Column | Type | Mô tả |
+|--------|------|-------|
+| id | uuid | Primary key (auto) |
+| teamA | text | Tên đội A |
+| teamB | text | Tên đội B |
+| scoreA | int | Điểm / số set thắng đội A |
+| scoreB | int | Điểm / số set thắng đội B |
+| group_name | text | "A", "B", "SF", "F" |
+| stage | text | "group" / "semi" / "final" |
+| status | text | "not_started" / "playing" / "done" |
+| updated_at | timestamptz | Auto-update khi có thay đổi |
+| s1a/s1b | int | Điểm set 1 (bán kết, chung kết) |
+| s2a/s2b | int | Điểm set 2 |
+| s3a/s3b | int | Điểm set 3 |
+| match_time | text | Giờ thi đấu (vd: "7h20") |
+| court | text | Sân (vd: "Sân 1") |
+| referee | text | Trọng tài |
+
+### SQL migration (nếu cần tạo lại)
 
 ```sql
 create table matches (
@@ -85,93 +62,119 @@ create table matches (
   "scoreB"    int  default 0,
   group_name  text default 'A',
   stage       text default 'group',
-  status      text default 'pending'
+  status      text default 'not_started',
+  updated_at  timestamptz default now(),
+  s1a int default 0, s1b int default 0,
+  s2a int default 0, s2b int default 0,
+  s3a int default 0, s3b int default 0,
+  match_time  text default '',
+  court       text default '',
+  referee     text default ''
 );
 
--- Enable realtime
+create or replace function set_updated_at()
+returns trigger as $$
+begin new.updated_at = now(); return new; end;
+$$ language plpgsql;
+
+create trigger matches_updated_at
+  before update on matches
+  for each row execute function set_updated_at();
+
 alter publication supabase_realtime add table matches;
-```
 
-### 3. Get your credentials
-Project Settings → API:
-- **Project URL** → `SUPABASE_URL`
-- **anon / public key** → `SUPABASE_ANON_KEY`
-
-### 4. Update app.js
-
-```js
-const SUPABASE_URL      = "https://xxxx.supabase.co";
-const SUPABASE_ANON_KEY = "eyJ...";
+-- RLS policies
+alter table matches enable row level security;
+create policy "Public read"   on matches for select using (true);
+create policy "Public insert" on matches for insert with check (true);
+create policy "Public update" on matches for update using (true);
 ```
 
 ---
 
-## 🚀 Run Locally
+## ▲ Vercel
 
-### PowerShell server (built-in, no installs needed)
+- **Project:** `pickleball-web`
+- **Team:** `huynhtanchuongdtu-9871s-projects`
+- **Dashboard:** https://vercel.com/huynhtanchuongdtu-9871s-projects/pickleball-web
+- **Auto-deploy:** mỗi khi push lên branch `master` → Vercel tự deploy
+
+### Deploy thủ công (nếu cần)
+```bash
+git add -A
+git commit -m "your message"
+git push origin master
+# Vercel tự deploy trong ~30s
+```
+
+---
+
+## 📁 Cấu trúc project
+
+```
+pick-web/
+├── index.html        — Public scoreboard (read-only)
+├── admin.html        — Admin panel (score editing)
+├── app.js            — Core logic: fetch, render, realtime, standings
+├── admin.js          — Admin: login, bracket gen, reset, match info
+├── styles.css        — Public UI styles
+├── admin-mobile.css  — Admin mobile-first styles
+├── vercel.json       — Vercel static config
+└── README.md         — This file
+```
+
+---
+
+## ⚡ Tính năng
+
+### Public Scoreboard
+- Featured match hero (trận đang diễn ra)
+- Group Stage với collapse bảng A/B
+- Semifinals & Final tự hiện khi có data
+- Bracket visual
+- Standings với 🥇🥈🥉
+- Realtime updates (Supabase Postgres Changes)
+- Hiển thị giờ, sân, trọng tài
+
+### Admin Panel
+- Login bằng password
+- Cards thu gọn mặc định, click để expand
+- Nhập điểm với nút +/- (debounced 800ms)
+- Best-of-3 sets cho bán kết & chung kết
+- Auto-status: `not_started` → `playing` → `done`
+- **Reset 1 trận** về not_started
+- **Re-gen bán kết/chung kết** (xóa cũ, tính lại)
+- **Auto-gen bracket**: tự tạo bán kết khi vòng bảng xong, tự tạo chung kết khi bán kết xong
+- Nhập giờ / sân / trọng tài cho từng trận
+- Conflict detection (nhiều admin cùng edit)
+
+### Realtime
+- Supabase Postgres Changes subscription
+- Fallback polling 5s nếu realtime mất kết nối
+- Public page poll localStorage 1s (demo mode)
+
+---
+
+## 🏆 Cấu trúc giải
+
+| Vòng | Format | Số trận |
+|------|--------|---------|
+| Vòng bảng A | 1 hiệp 11 điểm | 10 trận |
+| Vòng bảng B | 1 hiệp 11 điểm | 10 trận |
+| Bán kết | 3 hiệp 11 điểm | 2 trận |
+| Chung kết | 3 hiệp 11 điểm | 1 trận |
+
+### Các đội
+
+**Bảng A:** Tuấn Anh & Hang Dang · Quoc Le & Thảo · Dung Vo & Thư · Tai Tran & vk Dũng · Khoa Hoang & Phan Nguyen
+
+**Bảng B:** Dũng Nguyễn & Minh Ngọc · Chuong Huynh & Uyên · Hoc Truong & Linh Ngo · Tien Tran & Vu Phan · chú Cường & Alix Su
+
+---
+
+## 🚀 Chạy local
+
 ```powershell
 powershell -ExecutionPolicy Bypass -File E:\pick-web\serve.ps1
+# Mở: http://localhost:5500
 ```
-Opens automatically at: [http://localhost:5500](http://localhost:5500)
-
-### Python (if available)
-```bash
-python -m http.server 5500
-```
-
-### Node.js (if available)
-```bash
-npx serve . -p 5500
-```
-
----
-
-## 🌐 Deploy to Vercel
-
-### Prerequisites
-Install Node.js from [https://nodejs.org](https://nodejs.org), then:
-
-```bash
-npm install -g vercel
-```
-
-### Deploy steps
-
-```bash
-cd E:\pick-web
-vercel login          # authenticate with your Vercel account
-vercel                # deploy (follow prompts, accept defaults)
-vercel --prod         # promote to production URL
-```
-
-Vercel will output a public URL like:
-```
-https://pickleball-tournament-xxxx.vercel.app
-```
-
-### Environment note
-Since Supabase keys are hardcoded in `app.js`, no environment variables are needed for Vercel. Just make sure you've replaced the placeholder values before deploying.
-
----
-
-## 🔄 Realtime Notes
-
-- Realtime requires Supabase to be configured.
-- The green pulsing dot confirms the realtime channel is active.
-- Any change made in the admin panel is pushed to all open public views instantly.
-- In demo mode, changes are stored in `localStorage` — only visible in the current browser tab.
-
----
-
-## 🗄️ Database Schema
-
-| Column     | Type | Notes                              |
-|------------|------|------------------------------------|
-| id         | uuid | Primary key (auto)                 |
-| teamA      | text | Team A name                        |
-| teamB      | text | Team B name                        |
-| scoreA     | int  | Team A score                       |
-| scoreB     | int  | Team B score                       |
-| group_name | text | "A", "B", "SF", "F"                |
-| stage      | text | "group" \| "semi" \| "final"       |
-| status     | text | "pending" \| "done"                |
