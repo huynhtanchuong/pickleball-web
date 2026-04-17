@@ -805,8 +805,10 @@ function renderStandings(groups) {
 // ── Realtime subscription + polling fallback ─────────────────
 let _pollTimer    = null;
 let _rtConnected  = false;
+let _reconnectAttempts = 0;
 const POLL_MS_DEMO = 1000; // demo mode: poll every 1s (cross-tab localStorage sync)
 const POLL_MS_RT   = 5000; // realtime fallback: poll every 5s
+const MAX_RECONNECT_ATTEMPTS = 3;
 
 function subscribeRealtime() {
   if (!db) {
@@ -828,17 +830,35 @@ function subscribeRealtime() {
     .subscribe(status => {
       if (status === "SUBSCRIBED") {
         _rtConnected = true;
+        _reconnectAttempts = 0;
         stopPolling();
         const ri = document.getElementById("realtime-indicator");
         if (ri) ri.style.display = "inline-block";
-        setStatus(t("realtimeActive"), "ok");
+        // Only show success message on first connect or after reconnect
+        if (_reconnectAttempts === 0) {
+          setStatus(t("realtimeActive"), "ok");
+        }
       }
       if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
         _rtConnected = false;
         const ri = document.getElementById("realtime-indicator");
         if (ri) ri.style.display = "none";
-        setStatus(t("realtimeLost"), "err");
-        startPolling(POLL_MS_RT);
+        
+        // Only show error message if not auto-reconnecting
+        if (_reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+          _reconnectAttempts++;
+          // Try to reconnect silently
+          setTimeout(() => {
+            if (!_rtConnected && realtimeChannel) {
+              realtimeChannel.unsubscribe();
+              subscribeRealtime();
+            }
+          }, 2000); // Wait 2s before retry
+        } else {
+          // After max attempts, show message and use polling
+          setStatus(t("realtimeLost"), "err");
+          startPolling(POLL_MS_RT);
+        }
       }
     });
 }
