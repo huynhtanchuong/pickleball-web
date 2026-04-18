@@ -122,14 +122,11 @@ function renderStageList(containerId, matches, stage) {
     const statusDiff = (statusOrder[a.status] ?? 1) - (statusOrder[b.status] ?? 1);
     if (statusDiff !== 0) return statusDiff;
     
-    // Second: sort by match_time (if available)
-    const timeA = a.match_time || "";
-    const timeB = b.match_time || "";
-    if (timeA && timeB) {
-      return timeA.localeCompare(timeB);
-    }
-    if (timeA) return -1; // Has time comes first
-    if (timeB) return 1;
+    // Second: sort by match_time (parsed numerically)
+    // Use parseMatchTime from app.js (available globally)
+    const timeA = typeof parseMatchTime === 'function' ? parseMatchTime(a.match_time) : 9999;
+    const timeB = typeof parseMatchTime === 'function' ? parseMatchTime(b.match_time) : 9999;
+    if (timeA !== timeB) return timeA - timeB;
     
     // Third: keep original order
     return 0;

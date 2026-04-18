@@ -39,6 +39,16 @@ let _statusTimer = null;
 function setStatus(msg, type = "") {
   const el = document.getElementById("status-bar");
   if (!el) return;
+  
+  // Only show status on admin/teams pages (not user view)
+  const isAdminPage = window.location.pathname.includes("admin") || 
+                      window.location.pathname.includes("teams");
+  if (!isAdminPage) {
+    el.style.display = "none";
+    return;
+  }
+  
+  el.style.display = "inline-block";
   el.textContent = msg;
   el.className = type;
   if (_statusTimer) clearTimeout(_statusTimer);
@@ -305,6 +315,28 @@ function stopFeaturedRotation() {
   // Don't reset index here - let it reset only when matches change
 }
 
+// ── Parse match time for sorting ─────────────────────────────
+function parseMatchTime(timeStr) {
+  if (!timeStr) return 9999; // No time = sort last
+  
+  // Support formats: "7h00", "07:00", "7:00 AM", "7:00 PM"
+  const match = timeStr.match(/(\d{1,2})[h:](\d{2})/);
+  if (!match) return 9999;
+  
+  let hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  
+  // Handle AM/PM
+  if (timeStr.toLowerCase().includes('pm') && hours < 12) {
+    hours += 12;
+  }
+  if (timeStr.toLowerCase().includes('am') && hours === 12) {
+    hours = 0;
+  }
+  
+  return hours * 60 + minutes; // Return minutes since midnight
+}
+
 function renderPublicStage(containerId, matches, stage) {
   const container = document.getElementById(containerId);
   if (!container) return;
@@ -321,14 +353,10 @@ function renderPublicStage(containerId, matches, stage) {
     const statusDiff = (statusOrder[a.status] ?? 1) - (statusOrder[b.status] ?? 1);
     if (statusDiff !== 0) return statusDiff;
     
-    // Second: sort by match_time (if available)
-    const timeA = a.match_time || "";
-    const timeB = b.match_time || "";
-    if (timeA && timeB) {
-      return timeA.localeCompare(timeB);
-    }
-    if (timeA) return -1; // Has time comes first
-    if (timeB) return 1;
+    // Second: sort by match_time (parsed numerically)
+    const timeA = parseMatchTime(a.match_time);
+    const timeB = parseMatchTime(b.match_time);
+    if (timeA !== timeB) return timeA - timeB;
     
     // Third: keep original order
     return 0;
@@ -680,11 +708,11 @@ async function markDone(id) {
 }
 
 // ── Calculate standings (group stage only) ────────────────────
-// Ranking rules:
-// 1. Wins (thắng = 1đ, thua = 0đ)
-// 2. H2H wins (nếu bằng điểm)
-// 3. Point diff tổng
-// 4. H2H point diff
+// Ranking rules (FIXED):
+// 1. Wins (DESC)
+// 2. Point Difference (DESC)
+// 3. Head-to-head wins
+// 4. Head-to-head point diff
 function calculateStandings(matches) {
   const groupMatches = matches.filter(m => !m.stage || m.stage === "group");
   const groups = {};
@@ -712,25 +740,51 @@ function calculateStandings(matches) {
 
   // Sort with tiebreakers per group
   const sortedGroups = {};
+  const tieBreakInfo = {}; // Track tie-break explanations
+  
   Object.keys(groups).forEach(g => {
     const teams = Object.entries(groups[g])
       .map(([name, s]) => ({ name, ...s }));
 
-    // Sort with full tiebreaker chain
+    tieBreakInfo[g] = [];
+
+    // Sort with CORRECT tiebreaker chain
     teams.sort((a, b) => {
-      // 1. Wins DESC
+      // 1. Wins DESC (PRIMARY)
       if (b.wins !== a.wins) return b.wins - a.wins;
 
       // Teams are tied on wins — apply tiebreakers
-      // 2. H2H wins between tied teams
+      // 2. Point Difference DESC (SECONDARY)
+      if (b.diff !== a.diff) {
+        // Record tie-break reason
+        if (a.wins === b.wins && a.wins > 0) {
+          tieBreakInfo[g].push({
+            team1: b.diff > a.diff ? b.name : a.name,
+            team2: b.diff > a.diff ? a.name : b.name,
+            reason: 'point-diff',
+            value: Math.abs(b.diff - a.diff)
+          });
+        }
+        return b.diff - a.diff;
+      }
+
+      // 3. H2H wins between tied teams (TERTIARY)
       const h2hA = getH2HWins(a.name, b.name, doneMatches, g);
       const h2hB = getH2HWins(b.name, a.name, doneMatches, g);
-      if (h2hA !== h2hB) return h2hB - h2hA;
+      if (h2hA !== h2hB) {
+        // Record tie-break reason
+        if (a.wins === b.wins && a.diff === b.diff) {
+          tieBreakInfo[g].push({
+            team1: h2hB > h2hA ? b.name : a.name,
+            team2: h2hB > h2hA ? a.name : b.name,
+            reason: 'head-to-head',
+            value: Math.abs(h2hB - h2hA)
+          });
+        }
+        return h2hB - h2hA;
+      }
 
-      // 3. Overall point diff
-      if (b.diff !== a.diff) return b.diff - a.diff;
-
-      // 4. H2H point diff
+      // 4. H2H point diff (QUATERNARY)
       const h2hDiffA = getH2HDiff(a.name, b.name, doneMatches, g);
       const h2hDiffB = getH2HDiff(b.name, a.name, doneMatches, g);
       return h2hDiffB - h2hDiffA;
@@ -739,7 +793,7 @@ function calculateStandings(matches) {
     sortedGroups[g] = teams;
   });
 
-  renderStandings(sortedGroups);
+  renderStandings(sortedGroups, tieBreakInfo);
 }
 
 // H2H: số trận thắng của teamA khi đấu trực tiếp với teamB
@@ -765,7 +819,7 @@ function getH2HDiff(teamA, teamB, matches, group) {
 }
 
 // ── Render standings ──────────────────────────────────────────
-function renderStandings(groups) {
+function renderStandings(groups, tieBreakInfo = {}) {
   const container = document.getElementById("standings-container");
   if (!container) return;
 
@@ -807,8 +861,22 @@ function renderStandings(groups) {
       </tr>`;
     });
 
-    html += `</tbody></table>
-      <div class="standings-note">${t("standingsNote")}</div>
+    html += `</tbody></table>`;
+    
+    // Show tie-break explanation if any
+    if (tieBreakInfo[g] && tieBreakInfo[g].length > 0) {
+      html += `<div class="tie-break-info">`;
+      tieBreakInfo[g].forEach(tb => {
+        if (tb.reason === 'point-diff') {
+          html += `<div class="tie-break-line">ℹ️ ${esc(tb.team1)} xếp trên ${esc(tb.team2)} do hiệu số tốt hơn (+${tb.value})</div>`;
+        } else if (tb.reason === 'head-to-head') {
+          html += `<div class="tie-break-line">ℹ️ ${esc(tb.team1)} xếp trên ${esc(tb.team2)} do thắng đối đầu</div>`;
+        }
+      });
+      html += `</div>`;
+    }
+    
+    html += `<div class="standings-note">${t("standingsNote")}</div>
     </div>`;
   });
 
