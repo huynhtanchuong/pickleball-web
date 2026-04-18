@@ -710,10 +710,23 @@ async function finishMatch(id) {
     const s2A = getSetInput(id, "s2A"), s2B = getSetInput(id, "s2B");
     const s3A = getSetInput(id, "s3A"), s3B = getSetInput(id, "s3B");
     const { winsA, winsB } = computeSetWins({ s1A, s1B, s2A, s2B, s3A, s3B });
+    
+    // Validate: cannot finish with tied score
+    if (winsA === winsB) {
+      alert("Không thể kết thúc trận đấu khi điểm hòa!\nCannot finish match with tied score!");
+      return;
+    }
+    
     Object.assign(payload, { s1a:s1A, s1b:s1B, s2a:s2A, s2b:s2B, s3a:s3A, s3b:s3B, scoreA:winsA, scoreB:winsB });
   } else {
     payload.scoreA = parseInt(getInput(id, "scoreA"), 10) || 0;
     payload.scoreB = parseInt(getInput(id, "scoreB"), 10) || 0;
+    
+    // Validate: cannot finish with tied score
+    if (payload.scoreA === payload.scoreB) {
+      alert("Không thể kết thúc trận đấu khi điểm hòa!\nCannot finish match with tied score!");
+      return;
+    }
   }
 
   if (!db) {

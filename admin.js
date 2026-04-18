@@ -235,14 +235,6 @@ function matchHTML(m, stage) {
 
   const stageLabel = stage === "semi" ? t("semifinal") : stage === "final" ? t("final") : "";
 
-  // Meta info: time, court, referee
-  const metaHtml = (m.match_time || m.court || m.referee) ? `
-    <div class="adm-match-info">
-      ${m.match_time ? `<span>🕐 ${esc(m.match_time)}</span>` : ""}
-      ${m.court      ? `<span>🏟 ${esc(m.court)}</span>`      : ""}
-      ${m.referee    ? `<span>👤 ${esc(m.referee)}</span>`    : ""}
-    </div>` : "";
-
   // Score section - Only semi/final use 3-set scoring, group uses single score
   let scoreSection = "";
   if (!ready) {
@@ -301,10 +293,14 @@ function matchHTML(m, stage) {
       </div>
     </div>`;
 
+  // Check if score is tied (cannot finish with tie)
+  const isTied = !done && m.scoreA === m.scoreB;
+  const finishDisabled = dis || isTied ? "disabled" : "";
+  const finishTitle = isTied ? "Không thể kết thúc khi điểm hòa" : "";
+
   // Full card body (hidden by default)
   const body = `
     <div class="adm-card-body" id="body-${m.id}" style="display:none;">
-      ${metaHtml}
       <div class="adm-teams">
         <span class="adm-team-name ${winnerA?"winner":""}">${esc(m.teamA)}</span>
         <span class="adm-vs">vs</span>
@@ -313,16 +309,10 @@ function matchHTML(m, stage) {
       ${scoreSection}
       <div class="adm-actions">
         <button class="adm-save-btn" ${dis} onclick="updateScore('${m.id}')">${t("save")}</button>
-        <button class="adm-finish-btn ${done?"is-done":""}" ${dis} onclick="finishMatch('${m.id}')">
+        <button class="adm-finish-btn ${done?"is-done":""}" ${finishDisabled} onclick="finishMatch('${m.id}')" title="${finishTitle}">
           ${done ? t("finished") : t("finish")}
         </button>
         ${done ? `<button class="adm-reset-btn" onclick="resetMatch('${m.id}')">${t("resetMatch")}</button>` : ""}
-      </div>
-      <div class="adm-info-edit">
-        <input class="adm-info-input" placeholder="${t("timePlaceholder")}" data-field="match_time" data-id="${m.id}" value="${esc(m.match_time||'')}" ${!ready?"disabled":""}>
-        <input class="adm-info-input" placeholder="${t("courtPlaceholder")}" data-field="court" data-id="${m.id}" value="${esc(m.court||'')}" ${!ready?"disabled":""}>
-        <input class="adm-info-input" placeholder="${t("refPlaceholder")}" data-field="referee" data-id="${m.id}" value="${esc(m.referee||'')}" ${!ready?"disabled":""}>
-        <button class="adm-info-save-btn" onclick="saveMatchInfo('${m.id}')" ${!ready?"disabled":""}>${t("saveInfo")}</button>
       </div>
     </div>`;
 
