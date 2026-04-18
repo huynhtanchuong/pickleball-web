@@ -758,15 +758,7 @@ function calculateStandings(matches) {
       // Teams are tied on wins — apply tiebreakers
       // 2. Point Difference DESC (SECONDARY)
       if (b.diff !== a.diff) {
-        // Record tie-break reason
-        if (a.wins === b.wins && a.wins > 0) {
-          tieBreakInfo[g].push({
-            team1: b.diff > a.diff ? b.name : a.name,
-            team2: b.diff > a.diff ? a.name : b.name,
-            reason: 'point-diff',
-            value: Math.abs(b.diff - a.diff)
-          });
-        }
+        // Don't record tie-break for point diff (obvious from standings)
         return b.diff - a.diff;
       }
 
@@ -774,7 +766,7 @@ function calculateStandings(matches) {
       const h2hA = getH2HWins(a.name, b.name, doneMatches, g);
       const h2hB = getH2HWins(b.name, a.name, doneMatches, g);
       if (h2hA !== h2hB) {
-        // Record tie-break reason
+        // Record tie-break reason ONLY when wins AND diff are equal
         if (a.wins === b.wins && a.diff === b.diff) {
           tieBreakInfo[g].push({
             team1: h2hB > h2hA ? b.name : a.name,

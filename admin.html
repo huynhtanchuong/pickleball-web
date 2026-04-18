@@ -45,6 +45,7 @@
       <div class="adm-header-right">
         <span id="realtime-indicator" class="pulse" style="display:none;"></span>
         <span id="status-bar" class="status-chip">…</span>
+        <a href="index.html" class="adm-btn-sm" data-i18n="viewPublic">👁 Xem</a>
       </div>
     </div>
 
@@ -80,6 +81,10 @@
 
     <!-- Language switcher at bottom -->
     <div class="adm-section" style="text-align:center;padding:12px 16px;">
+      <div style="display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;margin-bottom:12px;">
+        <a href="teams.html" style="font-size:0.8rem;color:var(--text-dim);text-decoration:none;padding:4px 12px;border:1px solid var(--border);border-radius:6px;">📋 Quản lý đội</a>
+        <button onclick="doLogout()" style="font-size:0.8rem;color:#fca5a5;background:transparent;border:1px solid var(--border);border-radius:6px;padding:4px 12px;cursor:pointer;" data-i18n="logout">🚪 Đăng xuất</button>
+      </div>
       <span class="lang-switcher">
         <button class="lang-btn lang-btn-active" data-lang="vi" onclick="setLang('vi')">🇻🇳 VI</button>
         <button class="lang-btn" data-lang="en" onclick="setLang('en')">🇬🇧 EN</button>
@@ -87,24 +92,6 @@
       <br>
       <button class="adm-reset-all-link" onclick="resetDemo()">↺ Reset all data</button>
     </div>
-
-    <!-- Footer with navigation -->
-    <footer class="adm-footer">
-      <div class="adm-footer-nav">
-        <a href="teams.html" class="adm-footer-btn">
-          <span class="adm-footer-icon">📋</span>
-          <span>Quản lý đội</span>
-        </a>
-        <a href="index.html" class="adm-footer-btn" data-i18n="viewPublic">
-          <span class="adm-footer-icon">👁</span>
-          <span>Xem</span>
-        </a>
-        <button class="adm-footer-btn adm-footer-btn-logout" onclick="doLogout()">
-          <span class="adm-footer-icon">🚪</span>
-          <span data-i18n="logout">Đăng xuất</span>
-        </button>
-      </div>
-    </footer>
 
   </div>
 
