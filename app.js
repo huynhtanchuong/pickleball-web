@@ -738,9 +738,19 @@ function updateStatusBadgeInPlace(id, status) {
 
 // ── Finish match (sets status = done) ─────────────────────────
 async function finishMatch(id) {
-  const stored = localStorage.getItem("pb_matches");
-  localMatches = stored ? JSON.parse(stored) : JSON.parse(JSON.stringify(SAMPLE_MATCHES));
-  const m = localMatches ? localMatches.find(x => x.id === id) : null;
+  // Get match info to determine if it needs sets
+  let m = null;
+  
+  if (!db) {
+    // Demo mode: read from localStorage
+    const stored = localStorage.getItem("pb_matches");
+    localMatches = stored ? JSON.parse(stored) : JSON.parse(JSON.stringify(SAMPLE_MATCHES));
+    m = localMatches ? localMatches.find(x => x.id === id) : null;
+  } else {
+    // Supabase mode: fetch from DB to get stage info
+    const { data } = await db.from("matches").select("*").eq("id", id).single();
+    m = data;
+  }
 
   let payload = { status: "done", updated_at: new Date().toISOString() };
 
