@@ -545,7 +545,7 @@ async function checkConflict(id) {
 }
 
 function handleConflict(id) {
-  setStatus("⚠️ Conflict — match updated by another admin", "err");
+  setStatus("ℹ️ Trận đấu đã được cập nhật bởi admin khác", "err");
 
   // Show inline conflict banner on the card
   const card = document.querySelector(`.adm-match-card[data-id="${id}"]`);
@@ -557,8 +557,11 @@ function handleConflict(id) {
     const banner = document.createElement("div");
     banner.className = "conflict-banner";
     banner.innerHTML = `
-      ⚠️ Updated by another admin.
-      <button class="conflict-reload-btn" onclick="reloadMatch('${id}')">↺ Reload</button>`;
+      <div style="flex:1;">
+        <strong>ℹ️ Trận đấu đã được cập nhật</strong><br>
+        <span style="font-size:0.75rem;opacity:0.9;">Admin khác vừa cập nhật trận này. Vui lòng bấm nút Reload ở trên cùng để xem dữ liệu mới nhất.</span>
+      </div>
+      <button class="conflict-reload-btn" onclick="location.reload()">↺ Reload</button>`;
     card.prepend(banner);
   }
 }
@@ -685,7 +688,8 @@ async function updateScore(id) {
   const { error } = await db.from("matches").update(payload).eq("id", id);
   if (error) { 
     console.error('updateScore: DB error:', error);
-    setStatus("Update error: " + error.message, "err"); 
+    setStatus(`❌ Lỗi lưu điểm: ${error.message || 'Không xác định'}`, "err");
+    alert(`Không thể lưu điểm!\n\nLỗi: ${error.message || 'Không xác định'}\n\nVui lòng thử lại hoặc bấm Reload ở trên cùng.`);
     return; 
   }
 
@@ -761,8 +765,9 @@ async function finishMatch(id) {
     const { winsA, winsB } = computeSetWins({ s1A, s1B, s2A, s2B, s3A, s3B });
     
     // Validate: cannot finish with tied score
-    if (winsA === winsB) {
-      alert("Không thể kết thúc trận đấu khi điểm hòa!\nCannot finish match with tied score!");
+    // Best-of-3: need at least 2 wins (2-0 or 2-1)
+    if (winsA < 2 && winsB < 2) {
+      alert("Không thể kết thúc trận đấu!\nCần ít nhất 1 đội thắng 2 sets.\n\nCannot finish match!\nNeed at least one team to win 2 sets.");
       return;
     }
     
@@ -794,7 +799,12 @@ async function finishMatch(id) {
   if (conflict) { handleConflict(id); return; }
 
   const { error } = await db.from("matches").update(payload).eq("id", id);
-  if (error) { setStatus("Finish error: " + error.message, "err"); return; }
+  if (error) { 
+    console.error('finishMatch: DB error:', error);
+    setStatus(`❌ Lỗi kết thúc trận: ${error.message || 'Không xác định'}`, "err");
+    alert(`Không thể kết thúc trận đấu!\n\nLỗi: ${error.message || 'Không xác định'}\n\nVui lòng thử lại hoặc bấm Reload ở trên cùng.`);
+    return; 
+  }
 
   _knownUpdatedAt[id] = payload.updated_at;
   // Remove from open set so when realtime triggers fetchMatches → re-render,

@@ -293,10 +293,25 @@ function matchHTML(m, stage) {
       </div>
     </div>`;
 
-  // Check if score is tied (cannot finish with tie)
-  const isTied = !done && m.scoreA === m.scoreB;
-  const finishDisabled = dis || isTied ? "disabled" : "";
-  const finishTitle = isTied ? "Không thể kết thúc khi điểm hòa" : "";
+  // Check if can finish (for sets: need at least one team with 2 wins)
+  let canFinish = true;
+  let finishTitle = "";
+  
+  if (!done && stage === "semi" || stage === "final") {
+    const { winsA, winsB } = computeSetWins(m);
+    canFinish = winsA >= 2 || winsB >= 2;
+    if (!canFinish) {
+      finishTitle = "Cần ít nhất 1 đội thắng 2 sets";
+    }
+  } else if (!done) {
+    // Group stage: cannot finish with tie
+    canFinish = m.scoreA !== m.scoreB;
+    if (!canFinish) {
+      finishTitle = "Không thể kết thúc khi điểm hòa";
+    }
+  }
+  
+  const finishDisabled = dis || !canFinish ? "disabled" : "";
 
   // Full card body (hidden by default)
   const body = `
@@ -386,13 +401,19 @@ function setRowHTML(m, setNum, dis) {
     <div class="adm-set-row">
       <span class="adm-set-num">Set ${setNum}</span>
       <div class="adm-set-inputs">
-        <button class="adm-set-btn minus" ${dis} onclick="adjustSetScore('${m.id}','${fA}',-1)">−</button>
-        <input class="adm-set-input ${wA?"set-win":""}" type="number" min="0"
-          value="${vA}" data-field="${fA}" data-id="${m.id}" ${dis}>
+        <div class="adm-set-ctrl">
+          <button class="adm-set-btn minus" ${dis} onclick="adjustSetScore('${m.id}','${fA}',-1)">−</button>
+          <input class="adm-set-input ${wA?"set-win":""}" type="number" min="0"
+            value="${vA}" data-field="${fA}" data-id="${m.id}" ${dis}>
+          <button class="adm-set-btn plus" ${dis} onclick="adjustSetScore('${m.id}','${fA}',1)">+</button>
+        </div>
         <span class="adm-set-sep">—</span>
-        <input class="adm-set-input ${wB?"set-win":""}" type="number" min="0"
-          value="${vB}" data-field="${fB}" data-id="${m.id}" ${dis}>
-        <button class="adm-set-btn plus" ${dis} onclick="adjustSetScore('${m.id}','${fB}',1)">+</button>
+        <div class="adm-set-ctrl">
+          <button class="adm-set-btn minus" ${dis} onclick="adjustSetScore('${m.id}','${fB}',-1)">−</button>
+          <input class="adm-set-input ${wB?"set-win":""}" type="number" min="0"
+            value="${vB}" data-field="${fB}" data-id="${m.id}" ${dis}>
+          <button class="adm-set-btn plus" ${dis} onclick="adjustSetScore('${m.id}','${fB}',1)">+</button>
+        </div>
       </div>
     </div>`;
 }
