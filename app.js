@@ -1328,3 +1328,290 @@ if (!window.location.pathname.includes("admin")) {
     setTimeout(setupMatchCardHandlers, 500);
   });
 }
+
+// ── Export Backup ─────────────────────────────────────────────
+async function exportBackup() {
+  setStatus("Đang tạo file backup...", "");
+  
+  // Fetch latest data
+  let matches = [];
+  if (!db) {
+    const stored = localStorage.getItem("pb_matches");
+    matches = stored ? JSON.parse(stored) : [];
+  } else {
+    const { data, error } = await db.from("matches").select("*").order("group_name");
+    if (error) {
+      setStatus("❌ Không thể tải dữ liệu", "err");
+      alert("Không thể tạo backup!\n\nVui lòng thử lại.");
+      return;
+    }
+    matches = data || [];
+  }
+
+  // Generate HTML backup file
+  const html = generateBackupHTML(matches);
+  
+  // Create and download file
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  
+  // Filename with timestamp
+  const now = new Date();
+  const timestamp = now.toISOString().slice(0, 19).replace(/:/g, '-');
+  a.download = `pickleball-backup-${timestamp}.html`;
+  
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  
+  setStatus(t("backupSuccess"), "ok");
+}
+
+function generateBackupHTML(matches) {
+  const now = new Date();
+  const dateStr = now.toLocaleString('vi-VN', { 
+    year: 'numeric', 
+    month: '2-digit', 
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+
+  // Separate matches by stage
+  const groupMatches = matches.filter(m => !m.stage || m.stage === "group");
+  const semiMatches = matches.filter(m => m.stage === "semi");
+  const finalMatches = matches.filter(m => m.stage === "final");
+
+  // Calculate standings
+  const standings = calculateStandingsForBackup(groupMatches);
+
+  // Build HTML
+  let html = `<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${t("backupTitle")} - ${dateStr}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 20px;
+      background: #f5f5f5;
+      color: #333;
+      line-height: 1.6;
+    }
+    .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    h1 { color: #059669; margin-bottom: 8px; font-size: 1.8rem; }
+    .backup-date { color: #666; font-size: 0.9rem; margin-bottom: 30px; }
+    h2 { color: #047857; margin: 30px 0 15px; font-size: 1.4rem; border-bottom: 2px solid #059669; padding-bottom: 8px; }
+    h3 { color: #065f46; margin: 20px 0 10px; font-size: 1.1rem; }
+    table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+    th { background: #f0fdf4; color: #065f46; font-weight: 600; }
+    tr:hover { background: #f9fafb; }
+    .match-card { background: #f9fafb; padding: 15px; margin: 10px 0; border-radius: 8px; border-left: 4px solid #d1d5db; }
+    .match-card.done { border-left-color: #059669; }
+    .match-card.playing { border-left-color: #f59e0b; background: #fffbeb; }
+    .match-teams { font-weight: 600; font-size: 1.05rem; margin-bottom: 8px; }
+    .match-score { font-size: 1.3rem; color: #059669; font-weight: 700; margin: 8px 0; }
+    .match-sets { font-size: 0.9rem; color: #666; margin: 5px 0; }
+    .match-info { font-size: 0.85rem; color: #666; margin-top: 8px; }
+    .status-badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; }
+    .status-done { background: #d1fae5; color: #065f46; }
+    .status-playing { background: #fef3c7; color: #92400e; }
+    .status-ns { background: #e5e7eb; color: #6b7280; }
+    .winner { color: #059669; font-weight: 700; }
+    .rank-1 { background: #fef3c7; }
+    .rank-2 { background: #dbeafe; }
+    .empty { color: #9ca3af; font-style: italic; padding: 20px; text-align: center; }
+    @media print {
+      body { background: white; }
+      .container { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🏓 ${t("backupTitle")}</h1>
+    <div class="backup-date">📅 ${t("backupDate")}: ${dateStr}</div>
+`;
+
+  // ── STANDINGS ──
+  html += `<h2>📊 ${t("backupStandings")}</h2>`;
+  if (Object.keys(standings).length === 0) {
+    html += `<p class="empty">Chưa có dữ liệu xếp hạng.</p>`;
+  } else {
+    Object.keys(standings).sort().forEach(group => {
+      html += `<h3>${t("groupLabel")} ${esc(group)}</h3>`;
+      html += `<table><thead><tr>
+        <th>#</th>
+        <th>${t("standingsTeam")}</th>
+        <th>${t("standingsW")}</th>
+        <th>${t("standingsL")}</th>
+        <th>${t("standingsDiff")}</th>
+      </tr></thead><tbody>`;
+      
+      standings[group].forEach((team, idx) => {
+        const rankClass = idx === 0 ? "rank-1" : idx === 1 ? "rank-2" : "";
+        const medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : "";
+        html += `<tr class="${rankClass}">
+          <td>${medal || (idx + 1)}</td>
+          <td>${esc(team.name)}</td>
+          <td>${team.wins}</td>
+          <td>${team.losses}</td>
+          <td>${team.diff > 0 ? "+" : ""}${team.diff}</td>
+        </tr>`;
+      });
+      
+      html += `</tbody></table>`;
+    });
+  }
+
+  // ── GROUP MATCHES ──
+  html += `<h2>📋 ${t("groupStage")}</h2>`;
+  if (groupMatches.length === 0) {
+    html += `<p class="empty">Không có trận đấu vòng bảng.</p>`;
+  } else {
+    const groups = {};
+    groupMatches.forEach(m => {
+      if (!groups[m.group_name]) groups[m.group_name] = [];
+      groups[m.group_name].push(m);
+    });
+    
+    Object.keys(groups).sort().forEach(g => {
+      html += `<h3>${t("groupLabel")} ${esc(g)}</h3>`;
+      groups[g].forEach(m => {
+        html += formatMatchCard(m);
+      });
+    });
+  }
+
+  // ── SEMIFINALS ──
+  if (semiMatches.length > 0) {
+    html += `<h2>⚡ ${t("semifinals")}</h2>`;
+    semiMatches.forEach(m => {
+      html += formatMatchCard(m);
+    });
+  }
+
+  // ── FINAL ──
+  if (finalMatches.length > 0) {
+    html += `<h2>🏆 ${t("final")}</h2>`;
+    finalMatches.forEach(m => {
+      html += formatMatchCard(m);
+    });
+  }
+
+  html += `
+    <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #9ca3af; font-size: 0.85rem;">
+      <p>Backup được tạo tự động từ hệ thống Pickleball Tournament</p>
+      <p>🏓 Giải Pickleball Tolo Pikaboo lần 3 - 2026</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  return html;
+}
+
+function formatMatchCard(m) {
+  const done = m.status === "done";
+  const playing = m.status === "playing";
+  const winnerA = done && m.scoreA > m.scoreB;
+  const winnerB = done && m.scoreB > m.scoreA;
+  
+  const cardClass = done ? "done" : playing ? "playing" : "";
+  const statusBadge = done 
+    ? `<span class="status-badge status-done">✓ ${t("statusDone")}</span>`
+    : playing 
+    ? `<span class="status-badge status-playing">● ${t("statusPlaying")}</span>`
+    : `<span class="status-badge status-ns">◌ ${t("statusNs")}</span>`;
+
+  let setsHTML = "";
+  if (m.stage === "semi" || m.stage === "final") {
+    const s1a = m.s1A || m.s1a || 0, s1b = m.s1B || m.s1b || 0;
+    const s2a = m.s2A || m.s2a || 0, s2b = m.s2B || m.s2b || 0;
+    const s3a = m.s3A || m.s3a || 0, s3b = m.s3B || m.s3b || 0;
+    
+    if (s1a > 0 || s1b > 0 || s2a > 0 || s2b > 0 || s3a > 0 || s3b > 0) {
+      const sets = [];
+      if (s1a > 0 || s1b > 0) sets.push(`Set 1: ${s1a}-${s1b}`);
+      if (s2a > 0 || s2b > 0) sets.push(`Set 2: ${s2a}-${s2b}`);
+      if (s3a > 0 || s3b > 0) sets.push(`Set 3: ${s3a}-${s3b}`);
+      setsHTML = `<div class="match-sets">${sets.join(" | ")}</div>`;
+    }
+  }
+
+  let infoHTML = "";
+  if (m.match_time || m.court || m.referee) {
+    const parts = [];
+    if (m.match_time) parts.push(`🕐 ${esc(m.match_time)}`);
+    if (m.court) parts.push(`🏟 ${esc(m.court)}`);
+    if (m.referee) parts.push(`👤 ${esc(m.referee)}`);
+    infoHTML = `<div class="match-info">${parts.join(" · ")}</div>`;
+  }
+
+  return `
+    <div class="match-card ${cardClass}">
+      ${statusBadge}
+      <div class="match-teams">
+        <span class="${winnerA ? "winner" : ""}">${esc(m.teamA)}</span>
+        <span style="color: #9ca3af;"> vs </span>
+        <span class="${winnerB ? "winner" : ""}">${esc(m.teamB)}</span>
+      </div>
+      <div class="match-score">${m.scoreA} : ${m.scoreB}</div>
+      ${setsHTML}
+      ${infoHTML}
+    </div>`;
+}
+
+function calculateStandingsForBackup(groupMatches) {
+  const groups = {};
+
+  // Register all teams
+  groupMatches.forEach(m => {
+    if (!groups[m.group_name]) groups[m.group_name] = {};
+    [m.teamA, m.teamB].forEach(t => {
+      if (!groups[m.group_name][t])
+        groups[m.group_name][t] = { wins:0, losses:0, diff:0 };
+    });
+  });
+
+  // Tally done matches
+  const doneMatches = groupMatches.filter(m => m.status === "done");
+  doneMatches.forEach(m => {
+    const g = m.group_name;
+    const a = groups[g][m.teamA], b = groups[g][m.teamB];
+    if (m.scoreA > m.scoreB)      { a.wins++; b.losses++; }
+    else if (m.scoreB > m.scoreA) { b.wins++; a.losses++; }
+    a.diff += (m.scoreA - m.scoreB);
+    b.diff += (m.scoreB - m.scoreA);
+  });
+
+  // Sort teams
+  const sortedGroups = {};
+  Object.keys(groups).forEach(g => {
+    const teams = Object.entries(groups[g])
+      .map(([name, s]) => ({ name, ...s }));
+    
+    teams.sort((a, b) => {
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      if (b.diff !== a.diff) return b.diff - a.diff;
+      const h2hA = getH2HWins(a.name, b.name, doneMatches, g);
+      const h2hB = getH2HWins(b.name, a.name, doneMatches, g);
+      if (h2hA !== h2hB) return h2hB - h2hA;
+      const h2hDiffA = getH2HDiff(a.name, b.name, doneMatches, g);
+      const h2hDiffB = getH2HDiff(b.name, a.name, doneMatches, g);
+      return h2hDiffB - h2hDiffA;
+    });
+
+    sortedGroups[g] = teams;
+  });
+
+  return sortedGroups;
+}

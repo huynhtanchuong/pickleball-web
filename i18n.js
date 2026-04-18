@@ -137,6 +137,15 @@ const TRANSLATIONS = {
 
     // Language switcher
     langLabel:        "Ngôn ngữ",
+    
+    // Teams & Backup
+    teamsLink:        "📋 Quản lý đội",
+    backupLink:       "💾 Backup",
+    backupTitle:      "Backup Kết Quả Giải Đấu",
+    backupDate:       "Ngày backup",
+    backupMatches:    "Danh Sách Trận Đấu",
+    backupStandings:  "Bảng Xếp Hạng",
+    backupSuccess:    "✓ Đã tải file backup",
   },
 
   en: {
@@ -255,6 +264,15 @@ const TRANSLATIONS = {
     playing:          "playing",
 
     langLabel:        "Language",
+    
+    // Teams & Backup
+    teamsLink:        "📋 Manage Teams",
+    backupLink:       "💾 Backup",
+    backupTitle:      "Tournament Results Backup",
+    backupDate:       "Backup date",
+    backupMatches:    "Match List",
+    backupStandings:  "Standings",
+    backupSuccess:    "✓ Backup file downloaded",
   }
 };
 
