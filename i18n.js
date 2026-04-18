@@ -62,6 +62,13 @@ const TRANSLATIONS = {
     bracketChamp:     "🏆 Vô Địch",
     bracketTbd:       "Chờ kết quả",
     bracketNone:      "Bracket chưa có.",
+    bracketPlaceholder1A: "Nhất Bảng A",
+    bracketPlaceholder2B: "Nhì Bảng B",
+    bracketPlaceholder1B: "Nhất Bảng B",
+    bracketPlaceholder2A: "Nhì Bảng A",
+    bracketWinnerSF1: "Thắng BK1",
+    bracketWinnerSF2: "Thắng BK2",
+    matchWaiting:     "⏳ Chờ kết quả vòng trước",
 
     // Empty states
     loadingMatches:   "Đang tải trận đấu…",
@@ -78,8 +85,8 @@ const TRANSLATIONS = {
     // Footer
     footerSub:        "Bảng Điểm Trực Tiếp",
 
-    // Admin login
-    adminTitle:       "Đăng Nhập Admin",
+    // Admin
+    adminTitle:       "Đăng Nhập Trọng Tài",
     adminSub:         "Giải Pickleball",
     passwordLabel:    "Mật khẩu",
     passwordPlaceholder: "Nhập mật khẩu",
@@ -88,7 +95,9 @@ const TRANSLATIONS = {
     wrongPassword:    "Sai mật khẩu. Thử lại.",
 
     // Admin panel
-    adminPanelTitle:  "Quản Trị",
+    adminPanelTitle:  "Bảng Điều Khiển Trọng Tài",
+    adminMode:        "Trọng tài mode",
+    viewerMode:       "Người xem mode",
     viewPublic:       "👁 Xem",
     logout:           "Đăng xuất",
     bracketSection:   "⚙️ Bracket",
@@ -181,6 +190,13 @@ const TRANSLATIONS = {
     bracketChamp:     "🏆 Champion",
     bracketTbd:       "TBD",
     bracketNone:      "Bracket not yet generated.",
+    bracketPlaceholder1A: "1st Group A",
+    bracketPlaceholder2B: "2nd Group B",
+    bracketPlaceholder1B: "1st Group B",
+    bracketPlaceholder2A: "2nd Group A",
+    bracketWinnerSF1: "Winner SF1",
+    bracketWinnerSF2: "Winner SF2",
+    matchWaiting:     "⏳ Waiting for previous round",
 
     loadingMatches:   "Loading matches…",
     loadingStandings: "Loading standings…",
@@ -194,7 +210,7 @@ const TRANSLATIONS = {
 
     footerSub:        "Live Scoreboard",
 
-    adminTitle:       "Admin Login",
+    adminTitle:       "Referee Login",
     adminSub:         "Pickleball Tournament",
     passwordLabel:    "Password",
     passwordPlaceholder: "Enter password",
@@ -202,7 +218,9 @@ const TRANSLATIONS = {
     backToPublic:     "← Public scoreboard",
     wrongPassword:    "Incorrect password. Try again.",
 
-    adminPanelTitle:  "Admin Panel",
+    adminPanelTitle:  "Referee Control Panel",
+    adminMode:        "Referee mode",
+    viewerMode:       "Viewer mode",
     viewPublic:       "👁 View",
     logout:           "Logout",
     bracketSection:   "⚙️ Bracket",

@@ -159,6 +159,24 @@ function renderStageList(containerId, matches, stage) {
     });
     container.innerHTML = html;
     restoreGroupCollapse(); // keep collapsed state across re-renders
+    
+    // Auto-collapse groups when all matches are done
+    const allGroupsDone = Object.keys(groups).every(g => 
+      groups[g].every(m => m.status === "done")
+    );
+    if (allGroupsDone) {
+      setTimeout(() => {
+        Object.keys(groups).forEach(g => {
+          const body = document.getElementById(`grp-${g}`);
+          const icon = document.getElementById(`icon-grp-${g}`);
+          if (body && body.style.display !== "none") {
+            body.style.display = "none";
+            if (icon) icon.textContent = "▶";
+            _collapsedGroups.add(g);
+          }
+        });
+      }, 100);
+    }
   } else {
     container.innerHTML = sorted.map(m => matchHTML(m, stage)).join("");
   }
@@ -199,13 +217,15 @@ function restoreGroupCollapse() {
 function matchHTML(m, stage) {
   const done    = m.status === "done";
   const playing = m.status === "playing";
-  const dis     = done ? "disabled" : "";
+  const ready   = isMatchReady(m); // Check if match has valid teams
+  const dis     = done || !ready ? "disabled" : "";
   const winnerA = done && m.scoreA > m.scoreB;
   const winnerB = done && m.scoreB > m.scoreA;
 
   let cardCls = done ? "is-done" : playing ? "is-playing is-live" : "is-ns";
   if (stage === "semi")  cardCls += " is-semi";
   if (stage === "final") cardCls += " is-final";
+  if (!ready) cardCls += " match-waiting";
 
   const statusBadge = done
     ? `<span class="adm-status-badge adm-status-done">${t("statusDone")}</span>`
@@ -223,10 +243,12 @@ function matchHTML(m, stage) {
       ${m.referee    ? `<span>👤 ${esc(m.referee)}</span>`    : ""}
     </div>` : "";
 
-  // Score section
-  const useSets = (stage === "semi" || stage === "final");
+  // Score section - ALL matches now use sets
   let scoreSection = "";
-  if (useSets) {
+  if (!ready) {
+    // Show waiting message for matches with placeholder teams
+    scoreSection = `<div class="match-waiting-msg">${t("matchWaiting")}</div>`;
+  } else {
     const { winsA, winsB } = computeSetWins(m);
     const showSet3 = winsA >= 1 && winsB >= 1;
     scoreSection = `
@@ -238,23 +260,6 @@ function matchHTML(m, stage) {
         : `<div id="set3-${m.id}">
              <button class="adm-add-set-btn" onclick="showSet3('${m.id}')" ${dis}>${t("addSet3")}</button>
            </div>`}`;
-  } else {
-    scoreSection = `
-      <div class="adm-score-row">
-        <div class="adm-score-ctrl">
-          <button class="adm-inc-btn plus" ${dis} onclick="adjustScore('${m.id}','scoreA',1)">+</button>
-          <input class="adm-score-input" type="number" min="0"
-            value="${m.scoreA}" data-field="scoreA" data-id="${m.id}" ${dis}>
-          <button class="adm-inc-btn minus" ${dis} onclick="adjustScore('${m.id}','scoreA',-1)">−</button>
-        </div>
-        <span class="adm-score-sep">:</span>
-        <div class="adm-score-ctrl">
-          <button class="adm-inc-btn plus" ${dis} onclick="adjustScore('${m.id}','scoreB',1)">+</button>
-          <input class="adm-score-input" type="number" min="0"
-            value="${m.scoreB}" data-field="scoreB" data-id="${m.id}" ${dis}>
-          <button class="adm-inc-btn minus" ${dis} onclick="adjustScore('${m.id}','scoreB',-1)">−</button>
-        </div>
-      </div>`;
   }
 
   // Collapsed summary (shown when card is collapsed)
@@ -293,14 +298,26 @@ function matchHTML(m, stage) {
         ${done ? `<button class="adm-reset-btn" onclick="resetMatch('${m.id}')">${t("resetMatch")}</button>` : ""}
       </div>
       <div class="adm-info-edit">
-        <input class="adm-info-input" placeholder="${t("timePlaceholder")}" data-field="match_time" data-id="${m.id}" value="${esc(m.match_time||'')}">
-        <input class="adm-info-input" placeholder="${t("courtPlaceholder")}" data-field="court" data-id="${m.id}" value="${esc(m.court||'')}">
-        <input class="adm-info-input" placeholder="${t("refPlaceholder")}" data-field="referee" data-id="${m.id}" value="${esc(m.referee||'')}">
-        <button class="adm-info-save-btn" onclick="saveMatchInfo('${m.id}')">${t("saveInfo")}</button>
+        <input class="adm-info-input" placeholder="${t("timePlaceholder")}" data-field="match_time" data-id="${m.id}" value="${esc(m.match_time||'')}" ${!ready?"disabled":""}>
+        <input class="adm-info-input" placeholder="${t("courtPlaceholder")}" data-field="court" data-id="${m.id}" value="${esc(m.court||'')}" ${!ready?"disabled":""}>
+        <input class="adm-info-input" placeholder="${t("refPlaceholder")}" data-field="referee" data-id="${m.id}" value="${esc(m.referee||'')}" ${!ready?"disabled":""}>
+        <button class="adm-info-save-btn" onclick="saveMatchInfo('${m.id}')" ${!ready?"disabled":""}>${t("saveInfo")}</button>
       </div>
     </div>`;
 
   return `<div class="adm-match-card ${cardCls}" data-id="${m.id}" data-updated="${m.updated_at||''}">${summary}${body}</div>`;
+}
+
+// ── Helper: Check if match is ready (has valid teams) ────────
+function isMatchReady(match) {
+  if (!match.teamA || !match.teamB) return false;
+  // Use the same helper from app.js
+  if (typeof isTeamPlaceholder === "function") {
+    return !isTeamPlaceholder(match.teamA) && !isTeamPlaceholder(match.teamB);
+  }
+  // Fallback check
+  const placeholders = ["Winner", "Thắng", "Nhất", "Nhì", "TBD", "1st", "2nd"];
+  return !placeholders.some(p => match.teamA.includes(p) || match.teamB.includes(p));
 }
 
 // ── Track which cards are open (survive re-renders) ──────────
@@ -622,37 +639,60 @@ function updateBracketUI(matches) {
 function renderBracketVisual(container, matches) {
   const semis  = matches.filter(m=>m.stage==="semi");
   const finals = matches.filter(m=>m.stage==="final");
-  if (!semis.length&&!finals.length) {
-    container.innerHTML=`<p class="empty-state">${t("bracketNone")}</p>`; return;
-  }
   const getWinner = m => m.status==="done" ? (m.scoreA>=m.scoreB?m.teamA:m.teamB) : null;
+  
+  // Always show bracket structure (even before matches are generated)
   let html='<div class="bracket-wrap">';
+  
+  // ── SEMIFINALS COLUMN ──
   html+=`<div class="bracket-col"><div class="bracket-col-title">${t("bracketSemi")}</div>`;
-  semis.forEach(m=>{
-    const wA=m.status==="done"&&m.scoreA>m.scoreB, wB=m.status==="done"&&m.scoreB>m.scoreA;
-    html+=`<div class="bracket-match-card">
-      <div class="bracket-team-row ${wA?"winner":""}"><span>${esc(m.teamA)}</span><span class="bracket-score-val">${m.status==="done"?m.scoreA:"-"}</span></div>
-      <div class="bracket-team-row ${wB?"winner":""}"><span>${esc(m.teamB)}</span><span class="bracket-score-val">${m.status==="done"?m.scoreB:"-"}</span></div>
-    </div>`;
-  });
+  
+  if (semis.length >= 2) {
+    // Show actual semifinal matches
+    semis.forEach(m=>{
+      const wA=m.status==="done"&&m.scoreA>m.scoreB, wB=m.status==="done"&&m.scoreB>m.scoreA;
+      const isPlaceholder = isMatchReady ? !isMatchReady(m) : false;
+      html+=`<div class="bracket-match-card ${isPlaceholder?"bracket-placeholder":""}">
+        <div class="bracket-team-row ${wA?"winner":""} ${isPlaceholder?"tbd":""}"><span>${esc(m.teamA)}</span><span class="bracket-score-val">${m.status==="done"?m.scoreA:"-"}</span></div>
+        <div class="bracket-team-row ${wB?"winner":""} ${isPlaceholder?"tbd":""}"><span>${esc(m.teamB)}</span><span class="bracket-score-val">${m.status==="done"?m.scoreB:"-"}</span></div>
+      </div>`;
+    });
+  } else {
+    // Show placeholders before semis are generated
+    html+=`
+      <div class="bracket-match-card bracket-placeholder">
+        <div class="bracket-team-row tbd"><span>${t("bracketPlaceholder1A")}</span></div>
+        <div class="bracket-team-row tbd"><span>${t("bracketPlaceholder2B")}</span></div>
+      </div>
+      <div class="bracket-match-card bracket-placeholder">
+        <div class="bracket-team-row tbd"><span>${t("bracketPlaceholder1B")}</span></div>
+        <div class="bracket-team-row tbd"><span>${t("bracketPlaceholder2A")}</span></div>
+      </div>`;
+  }
   html+=`</div><div class="bracket-arrow">→</div>`;
+  
+  // ── FINAL COLUMN ──
   html+=`<div class="bracket-col"><div class="bracket-col-title">${t("bracketFinal")}</div>`;
+  
   if (finals.length) {
     finals.forEach(m=>{
       const wA=m.status==="done"&&m.scoreA>m.scoreB, wB=m.status==="done"&&m.scoreB>m.scoreA;
-      html+=`<div class="bracket-match-card">
-        <div class="bracket-team-row ${wA?"winner":""}"><span>${esc(m.teamA)}</span><span class="bracket-score-val">${m.status==="done"?m.scoreA:"-"}</span></div>
-        <div class="bracket-team-row ${wB?"winner":""}"><span>${esc(m.teamB)}</span><span class="bracket-score-val">${m.status==="done"?m.scoreB:"-"}</span></div>
+      const isPlaceholder = isMatchReady ? !isMatchReady(m) : false;
+      html+=`<div class="bracket-match-card ${isPlaceholder?"bracket-placeholder":""}">
+        <div class="bracket-team-row ${wA?"winner":""} ${isPlaceholder?"tbd":""}"><span>${esc(m.teamA)}</span><span class="bracket-score-val">${m.status==="done"?m.scoreA:"-"}</span></div>
+        <div class="bracket-team-row ${wB?"winner":""} ${isPlaceholder?"tbd":""}"><span>${esc(m.teamB)}</span><span class="bracket-score-val">${m.status==="done"?m.scoreB:"-"}</span></div>
       </div>`;
     });
   } else {
     const w1=semis[0]?getWinner(semis[0]):null, w2=semis[1]?getWinner(semis[1]):null;
-    html+=`<div class="bracket-match-card">
-      <div class="bracket-team-row ${w1?"":"tbd"}"><span>${w1||"Winner SF1"}</span></div>
-      <div class="bracket-team-row ${w2?"":"tbd"}"><span>${w2||"Winner SF2"}</span></div>
+    html+=`<div class="bracket-match-card bracket-placeholder">
+      <div class="bracket-team-row ${w1?"":"tbd"}"><span>${w1||t("bracketWinnerSF1")}</span></div>
+      <div class="bracket-team-row ${w2?"":"tbd"}"><span>${w2||t("bracketWinnerSF2")}</span></div>
     </div>`;
   }
   html+='</div>';
+  
+  // ── CHAMPION (only if final is done) ──
   if (finals.length&&finals[0].status==="done") {
     const champ=finals[0].scoreA>=finals[0].scoreB?finals[0].teamA:finals[0].teamB;
     html+=`<div class="bracket-arrow">→</div>

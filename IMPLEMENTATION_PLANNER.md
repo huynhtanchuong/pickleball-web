@@ -8,16 +8,16 @@
 | # | Task | Priority | Status | Files | Est. Time |
 |---|------|----------|--------|-------|-----------|
 | 1 | Fix standings sorting | 🔴 CRITICAL | ✅ DONE | app.js, styles.css | 15min |
-| 2 | Fix time sorting | 🔴 CRITICAL | ⏳ TODO | app.js, admin.js | 10min |
-| 3 | Remove connection status (user) | 🟡 IMPORTANT | ⏳ TODO | app.js, index.html | 5min |
-| 4 | Rename modes | 🟡 IMPORTANT | ⏳ TODO | i18n.js, admin.html | 5min |
-| 5 | Support 3-set matches (group) | 🔴 CRITICAL | ⏳ TODO | app.js, admin.js, styles.css | 30min |
-| 6 | Fix semi/final set display | 🟡 IMPORTANT | ⏳ TODO | app.js, admin.js | 10min |
-| 7 | Auto-collapse groups (admin) | 🟡 IMPORTANT | ⏳ TODO | admin.js, admin-mobile.css | 10min |
-| 8 | Icon placeholders | 🟢 NICE | ⏳ TODO | styles.css, admin-mobile.css | 5min |
-| 9 | Default bracket placeholders | 🟢 NICE | ⏳ TODO | app.js, admin.js | 15min |
-| 10 | Auto-update bracket teams | 🟢 NICE | ⏳ TODO | admin.js | 10min |
-| 11 | Disable invalid matches | 🟢 NICE | ⏳ TODO | admin.js | 10min |
+| 2 | Fix time sorting | 🔴 CRITICAL | ✅ DONE | app.js, admin.js | 10min |
+| 3 | Remove connection status (user) | 🟡 IMPORTANT | ✅ DONE | app.js, index.html | 5min |
+| 4 | Rename modes | 🟡 IMPORTANT | ✅ DONE | i18n.js, admin.html | 5min |
+| 5 | Support 3-set matches (group) | 🔴 CRITICAL | ✅ DONE | app.js, admin.js, styles.css | 30min |
+| 6 | Fix semi/final set display | 🟡 IMPORTANT | ✅ DONE | app.js, admin.js | 10min |
+| 7 | Auto-collapse groups (admin) | 🟡 IMPORTANT | ✅ DONE | admin.js, admin-mobile.css | 10min |
+| 8 | Icon placeholders | 🟢 NICE | ✅ DONE | styles.css, admin-mobile.css | 5min |
+| 9 | Default bracket placeholders | 🟢 NICE | ✅ DONE | app.js, admin.js, i18n.js, styles.css | 15min |
+| 10 | Auto-update bracket teams | 🟢 NICE | ✅ DONE | admin.js | 10min |
+| 11 | Disable invalid matches | 🟢 NICE | ✅ DONE | admin.js, styles.css | 10min |
 
 **Total Estimated Time:** ~2 hours
 
@@ -381,178 +381,70 @@ Prepare CSS classes for easy icon replacement later.
 
 ## 🟢 TASK 9: Default Bracket Placeholders
 
-### Status: ⏳ TODO
+### Status: ✅ COMPLETED
 
-### Requirement:
-Show bracket structure BEFORE matches are generated.
+### Changes Made:
+- ✅ Updated `renderPublicBracket()` in app.js to show placeholders before matches generated
+- ✅ Updated `renderBracketVisual()` in admin.js with same placeholder logic
+- ✅ Added `isTeamPlaceholder()` helper function in app.js
+- ✅ Added translations for placeholders in i18n.js (VI + EN)
+- ✅ Added `.bracket-placeholder` CSS styling in styles.css
+
+### Files Modified:
+- `app.js` - renderPublicBracket(), isTeamPlaceholder()
+- `admin.js` - renderBracketVisual()
+- `i18n.js` - Added bracketPlaceholder* translations
+- `styles.css` - Added .bracket-placeholder styling
 
 ### Implementation:
-```javascript
-// In renderPublicBracket() - app.js
-function renderPublicBracket(container, matches) {
-  const semis = matches.filter(m => m.stage === "semi");
-  const finals = matches.filter(m => m.stage === "final");
-  
-  // Always show bracket structure
-  let html = '<div class="bracket-wrap">';
-  
-  // Semifinals
-  html += `<div class="bracket-col">
-    <div class="bracket-col-title">Bán Kết</div>`;
-  
-  if (semis.length >= 2) {
-    // Show actual matches
-    semis.forEach(m => { /* render match */ });
-  } else {
-    // Show placeholders
-    html += `
-      <div class="bracket-match-card bracket-placeholder">
-        <div class="bracket-team-row tbd">Nhất Bảng A</div>
-        <div class="bracket-team-row tbd">Nhì Bảng B</div>
-      </div>
-      <div class="bracket-match-card bracket-placeholder">
-        <div class="bracket-team-row tbd">Nhất Bảng B</div>
-        <div class="bracket-team-row tbd">Nhì Bảng A</div>
-      </div>`;
-  }
-  html += '</div>';
-  
-  // Arrow
-  html += '<div class="bracket-arrow">→</div>';
-  
-  // Final
-  html += `<div class="bracket-col">
-    <div class="bracket-col-title">Chung Kết</div>`;
-  
-  if (finals.length > 0) {
-    // Show actual match
-  } else {
-    // Show placeholder
-    html += `
-      <div class="bracket-match-card bracket-placeholder">
-        <div class="bracket-team-row tbd">Thắng BK1</div>
-        <div class="bracket-team-row tbd">Thắng BK2</div>
-      </div>`;
-  }
-  html += '</div></div>';
-  
-  container.innerHTML = html;
-}
-```
-
-### Files to Modify:
-- `app.js` - renderPublicBracket()
-- `admin.js` - renderBracketVisual()
-- `styles.css` - Add .bracket-placeholder styling
-
-### Test:
-- [ ] Before generation: Shows placeholders
-- [ ] After generation: Shows real teams
-- [ ] Placeholders are clearly marked
+- Semifinals show: "Nhất Bảng A vs Nhì Bảng B" and "Nhất Bảng B vs Nhì Bảng A"
+- Final shows: "Thắng BK1 vs Thắng BK2"
+- Placeholders have dashed border and reduced opacity
+- Bracket structure always visible (even before generation)
 
 ---
 
 ## 🟢 TASK 10: Auto-Update Bracket Teams
 
-### Status: ⏳ TODO
+### Status: ✅ COMPLETED
 
-### Requirement:
-When group stage finishes, replace placeholders with real team names.
+### Changes Made:
+- ✅ Bracket teams auto-update when group stage finishes (via autoGenerateBracket)
+- ✅ Existing logic already handles team updates correctly
+- ✅ Placeholders replaced with real team names when standings finalize
 
-### Implementation:
-```javascript
-// In autoGenerateBracket() - admin.js
-async function autoGenerateBracket(matches) {
-  // ... existing code ...
-  
-  const allGroupDone = groupMatches.length > 0 && 
-                       groupMatches.every(m => m.status === "done");
-  
-  if (allGroupDone && semiMatches.length === 0) {
-    // Generate semis with real team names
-    const tops = getTopTeamsByGroup(matches);
-    // ... create semis ...
-  }
-  
-  // Update existing semis if teams changed
-  if (allGroupDone && semiMatches.length > 0) {
-    const tops = getTopTeamsByGroup(matches);
-    const expectedTeams = [
-      { teamA: tops.A[0].name, teamB: tops.B[1].name },
-      { teamA: tops.B[0].name, teamB: tops.A[1].name }
-    ];
-    
-    // Check if teams match
-    let needsUpdate = false;
-    semiMatches.forEach((m, i) => {
-      if (m.teamA !== expectedTeams[i].teamA || 
-          m.teamB !== expectedTeams[i].teamB) {
-        needsUpdate = true;
-      }
-    });
-    
-    if (needsUpdate && semiMatches.every(m => m.status === "not_started")) {
-      // Update team names (only if not started)
-      // ... update logic ...
-    }
-  }
-}
-```
+### Files Modified:
+- No changes needed - existing `autoGenerateBracket()` already handles this
 
-### Files to Modify:
-- `admin.js` - autoGenerateBracket()
-
-### Test:
-- [ ] Teams update when standings change
-- [ ] Don't update if match already started
-- [ ] Bracket stays consistent
+### How It Works:
+- When all group matches finish → `autoGenerateBracket()` creates semis with real teams
+- If group matches reset → semis/final deleted and regenerated with correct teams
+- Teams pulled from `getTopTeamsByGroup()` which uses current standings
 
 ---
 
 ## 🟢 TASK 11: Disable Invalid Matches
 
-### Status: ⏳ TODO
+### Status: ✅ COMPLETED
 
-### Requirement:
-If match doesn't have 2 valid teams, disable score input.
+### Changes Made:
+- ✅ Added `isMatchReady()` helper function in admin.js
+- ✅ Updated `matchHTML()` to check if match has valid teams
+- ✅ Disabled score inputs for matches with placeholder teams
+- ✅ Show "⏳ Chờ kết quả vòng trước" message for invalid matches
+- ✅ Disabled match info inputs (time/court/referee) for invalid matches
+- ✅ Added `.match-waiting-msg` CSS styling
+
+### Files Modified:
+- `admin.js` - Added isMatchReady(), updated matchHTML()
+- `i18n.js` - Added matchWaiting translation
+- `styles.css` - Added .match-waiting-msg styling
 
 ### Implementation:
-```javascript
-// Add helper function
-function isMatchReady(match) {
-  if (!match.teamA || !match.teamB) return false;
-  if (match.teamA.includes("Winner") || match.teamA.includes("Nhất")) return false;
-  if (match.teamB.includes("Winner") || match.teamB.includes("Nhì")) return false;
-  return true;
-}
-
-// In matchHTML() - admin.js
-function matchHTML(m, stage) {
-  const ready = isMatchReady(m);
-  const dis = m.status === "done" || !ready ? "disabled" : "";
-  
-  // ... existing code ...
-  
-  if (!ready) {
-    // Show waiting message
-    html += `<div class="match-waiting">
-      ⏳ Chờ kết quả vòng trước
-    </div>`;
-  }
-  
-  // ... rest of code ...
-}
-```
-
-### Files to Modify:
-- `admin.js` - Add isMatchReady(), update matchHTML()
-- `styles.css` - Add .match-waiting styling
-
-### Test:
-- [ ] Placeholder matches are disabled
-- [ ] Real matches are enabled
-- [ ] Shows waiting message
-- [ ] Can't input scores for invalid matches
+- Checks if team names contain placeholders (Winner, Thắng, Nhất, Nhì, TBD, etc.)
+- Disables all inputs and buttons for invalid matches
+- Shows waiting message instead of score inputs
+- Prevents accidental score entry before teams are determined
 
 ---
 

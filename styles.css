@@ -581,6 +581,11 @@ body {
   border-radius: var(--radius-sm);
   overflow: hidden;
 }
+.bracket-match-card.bracket-placeholder {
+  border-style: dashed;
+  border-color: var(--border-soft);
+  opacity: 0.7;
+}
 .bracket-team-row {
   display: flex;
   justify-content: space-between;
@@ -938,6 +943,20 @@ main {
   border-top: 1px solid var(--border-soft);
 }
 
+/* ── Icon placeholders (easy to replace with icon fonts later) ── */
+.icon-edit::before { content: "✏️"; }
+.icon-done::before { content: "✓"; }
+.icon-live::before { content: "●"; }
+.icon-save::before { content: "💾"; }
+.icon-finish::before { content: "🏁"; }
+.icon-reset::before { content: "↺"; }
+.icon-playing::before { content: "●"; }
+.icon-not-started::before { content: "◌"; }
+
+/* To use icon font later, just change content:
+.icon-edit::before { content: "\f044"; font-family: "FontAwesome"; }
+*/
+
 /* ── Language switcher ── */
 .lang-switcher {
   display: inline-flex;
@@ -960,4 +979,17 @@ main {
   background: var(--blue);
   border-color: var(--blue);
   color: #fff;
+}
+
+/* ── Match waiting message (admin) ── */
+.match-waiting-msg {
+  padding: 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  font-style: italic;
+  background: rgba(100,116,139,0.05);
+  border: 1px dashed var(--border-soft);
+  border-radius: var(--radius-sm);
+  margin: 8px 0;
 }
