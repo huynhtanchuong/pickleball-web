@@ -1327,14 +1327,48 @@ if (!window.location.pathname.includes("admin")) {
     // Setup click handlers after initial render
     setTimeout(setupMatchCardHandlers, 500);
     
-    // Start auto-backup timer (every 30 minutes)
-    startAutoBackup();
+    // Initialize auto-backup toggle (loads saved preference)
+    initAutoBackupToggle();
   });
 }
 
 // ── Auto Backup Timer ─────────────────────────────────────────
 let _autoBackupTimer = null;
+let _autoBackupEnabled = false; // Track if auto-backup is enabled
 const AUTO_BACKUP_INTERVAL = 30 * 60 * 1000; // 30 minutes in milliseconds
+const AUTO_BACKUP_PREF_KEY = "pb_auto_backup_enabled"; // localStorage key
+
+function initAutoBackupToggle() {
+  // Load saved preference from localStorage
+  const saved = localStorage.getItem(AUTO_BACKUP_PREF_KEY);
+  _autoBackupEnabled = saved === "true"; // Default is false
+  
+  // Update checkbox state
+  const toggle = document.getElementById("auto-backup-toggle");
+  if (toggle) {
+    toggle.checked = _autoBackupEnabled;
+  }
+  
+  // Start timer if enabled
+  if (_autoBackupEnabled) {
+    startAutoBackup();
+  }
+}
+
+function toggleAutoBackup(enabled) {
+  _autoBackupEnabled = enabled;
+  
+  // Save preference to localStorage
+  localStorage.setItem(AUTO_BACKUP_PREF_KEY, enabled ? "true" : "false");
+  
+  if (enabled) {
+    startAutoBackup();
+    setStatus(t("autoBackupOn"), "ok");
+  } else {
+    stopAutoBackup();
+    setStatus(t("autoBackupOff"), "ok");
+  }
+}
 
 function startAutoBackup() {
   // Clear existing timer if any

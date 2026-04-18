@@ -87,7 +87,11 @@
     <div class="adm-section" style="text-align:center;padding:12px 16px;">
       <div style="display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;margin-bottom:12px;">
         <a href="teams.html" style="font-size:0.8rem;color:var(--text-dim);text-decoration:none;padding:4px 12px;border:1px solid var(--border);border-radius:6px;" data-i18n="teamsLink">📋 Quản lý đội</a>
-        <a href="#" onclick="exportBackup(); return false;" style="font-size:0.8rem;color:var(--text-dim);text-decoration:none;padding:4px 12px;border:1px solid var(--border);border-radius:6px;" data-i18n="backupLink" data-i18n-attr="title" title="🔄 Auto-backup: mỗi 30 phút">💾 Backup</a>
+        <a href="#" onclick="exportBackup(); return false;" style="font-size:0.8rem;color:var(--text-dim);text-decoration:none;padding:4px 12px;border:1px solid var(--border);border-radius:6px;" data-i18n="backupLink">💾 Backup</a>
+        <label style="font-size:0.8rem;color:var(--text-dim);cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border:1px solid var(--border);border-radius:6px;">
+          <input type="checkbox" id="auto-backup-toggle" onchange="toggleAutoBackup(this.checked)" style="cursor:pointer;">
+          <span data-i18n="autoBackupToggle">🔄 Auto (30p)</span>
+        </label>
         <button onclick="doLogout()" style="font-size:0.8rem;color:#fca5a5;background:transparent;border:1px solid var(--border);border-radius:6px;padding:4px 12px;cursor:pointer;" data-i18n="logout">🚪 Đăng xuất</button>
       </div>
       <span class="lang-switcher">

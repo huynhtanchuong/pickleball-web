@@ -147,6 +147,9 @@ const TRANSLATIONS = {
     backupStandings:  "Bảng Xếp Hạng",
     backupSuccess:    "✓ Đã tải file backup",
     autoBackupActive: "🔄 Auto-backup: mỗi 30 phút",
+    autoBackupToggle: "🔄 Auto-backup (30p)",
+    autoBackupOn:     "✓ Auto-backup đã bật",
+    autoBackupOff:    "Auto-backup đã tắt",
   },
 
   en: {
@@ -275,6 +278,9 @@ const TRANSLATIONS = {
     backupStandings:  "Standings",
     backupSuccess:    "✓ Backup file downloaded",
     autoBackupActive: "🔄 Auto-backup: every 30 min",
+    autoBackupToggle: "🔄 Auto-backup (30m)",
+    autoBackupOn:     "✓ Auto-backup enabled",
+    autoBackupOff:    "Auto-backup disabled",
   }
 };
 

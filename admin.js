@@ -31,9 +31,9 @@ function showAdminPanel() {
   fetchMatches();
   subscribeRealtime();
   
-  // Start auto-backup timer (every 30 minutes)
-  if (typeof startAutoBackup === 'function') {
-    startAutoBackup();
+  // Initialize auto-backup toggle (loads saved preference)
+  if (typeof initAutoBackupToggle === 'function') {
+    initAutoBackupToggle();
   }
 }
 
