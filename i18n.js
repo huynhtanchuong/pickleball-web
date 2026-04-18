@@ -8,7 +8,7 @@ const TRANSLATIONS = {
     // Site
     siteTitle:        "Giải Pickleball Tolo Pikaboo lần 3 - 2026",
     liveSub:          "Bảng Điểm Trực Tiếp",
-    adminLink:        "Quản trị ›",
+    adminLink:        "Trọng tài ›",
 
     // Status
     initializing:     "Đang khởi động…",
@@ -142,7 +142,7 @@ const TRANSLATIONS = {
   en: {
     siteTitle:        "Tolo Pikaboo Pickleball Tournament #3 - 2026",
     liveSub:          "Live Scoreboard",
-    adminLink:        "Admin ›",
+    adminLink:        "Referee ›",
 
     initializing:     "Initializing…",
     connected:        "🟢 Connected",

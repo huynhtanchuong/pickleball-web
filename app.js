@@ -163,13 +163,12 @@ function renderMatches(matches) {
     renderPublicStage("match-list-final", finalMatches, "final");
   }
 
-  // Bracket visual
+  // Bracket visual - ALWAYS show (with placeholders if needed)
   const bracketSec = document.getElementById("section-bracket");
   if (bracketSec) {
-    const hasBracket = semiMatches.length > 0 || finalMatches.length > 0;
-    bracketSec.style.display = hasBracket ? "block" : "none";
+    bracketSec.style.display = "block"; // Always show bracket section
     const bc = document.getElementById("bracket-container");
-    if (bc && hasBracket) {
+    if (bc) {
       // Use admin.js renderBracketVisual if available, else use built-in
       if (typeof renderBracketVisual === "function") {
         renderBracketVisual(bc, matches);
