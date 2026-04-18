@@ -591,10 +591,15 @@ async function updateScore(id) {
   const stored = localStorage.getItem("pb_matches");
   localMatches = stored ? JSON.parse(stored) : JSON.parse(JSON.stringify(SAMPLE_MATCHES));
   const m = localMatches ? localMatches.find(x => x.id === id) : null;
+  
+  console.log('updateScore: match found:', m ? { id: m.id, stage: m.stage, teamA: m.teamA, teamB: m.teamB } : 'NOT FOUND');
 
   let scoreA, scoreB, payload;
 
-  if (needsSets(m || { stage: "" })) {
+  const useSets = needsSets(m || { stage: "" });
+  console.log('updateScore: needsSets?', useSets, 'stage:', m?.stage);
+
+  if (useSets) {
     // Best-of-3: read individual set scores
     const s1A = getSetInput(id, "s1A"), s1B = getSetInput(id, "s1B");
     const s2A = getSetInput(id, "s2A"), s2B = getSetInput(id, "s2B");
