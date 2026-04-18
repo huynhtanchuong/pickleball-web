@@ -146,6 +146,7 @@ const TRANSLATIONS = {
     backupMatches:    "Danh Sách Trận Đấu",
     backupStandings:  "Bảng Xếp Hạng",
     backupSuccess:    "✓ Đã tải file backup",
+    autoBackupActive: "🔄 Auto-backup: mỗi 30 phút",
   },
 
   en: {
@@ -273,6 +274,7 @@ const TRANSLATIONS = {
     backupMatches:    "Match List",
     backupStandings:  "Standings",
     backupSuccess:    "✓ Backup file downloaded",
+    autoBackupActive: "🔄 Auto-backup: every 30 min",
   }
 };
 

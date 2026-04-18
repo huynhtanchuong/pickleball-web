@@ -1326,12 +1326,44 @@ if (!window.location.pathname.includes("admin")) {
     
     // Setup click handlers after initial render
     setTimeout(setupMatchCardHandlers, 500);
+    
+    // Start auto-backup timer (every 30 minutes)
+    startAutoBackup();
   });
 }
 
+// ── Auto Backup Timer ─────────────────────────────────────────
+let _autoBackupTimer = null;
+const AUTO_BACKUP_INTERVAL = 30 * 60 * 1000; // 30 minutes in milliseconds
+
+function startAutoBackup() {
+  // Clear existing timer if any
+  if (_autoBackupTimer) {
+    clearInterval(_autoBackupTimer);
+  }
+  
+  // Start auto-backup every 30 minutes
+  _autoBackupTimer = setInterval(() => {
+    console.log('Auto-backup: Creating backup file...');
+    exportBackup(true); // true = silent mode (no status messages)
+  }, AUTO_BACKUP_INTERVAL);
+  
+  console.log('Auto-backup: Started (every 30 minutes)');
+}
+
+function stopAutoBackup() {
+  if (_autoBackupTimer) {
+    clearInterval(_autoBackupTimer);
+    _autoBackupTimer = null;
+    console.log('Auto-backup: Stopped');
+  }
+}
+
 // ── Export Backup ─────────────────────────────────────────────
-async function exportBackup() {
-  setStatus("Đang tạo file backup...", "");
+async function exportBackup(silent = false) {
+  if (!silent) {
+    setStatus("Đang tạo file backup...", "");
+  }
   
   // Fetch latest data
   let matches = [];
@@ -1341,8 +1373,11 @@ async function exportBackup() {
   } else {
     const { data, error } = await db.from("matches").select("*").order("group_name");
     if (error) {
-      setStatus("❌ Không thể tải dữ liệu", "err");
-      alert("Không thể tạo backup!\n\nVui lòng thử lại.");
+      if (!silent) {
+        setStatus("❌ Không thể tải dữ liệu", "err");
+        alert("Không thể tạo backup!\n\nVui lòng thử lại.");
+      }
+      console.error('Auto-backup: Failed to fetch data', error);
       return;
     }
     matches = data || [];
@@ -1367,7 +1402,11 @@ async function exportBackup() {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   
-  setStatus(t("backupSuccess"), "ok");
+  if (!silent) {
+    setStatus(t("backupSuccess"), "ok");
+  } else {
+    console.log(`Auto-backup: File created - ${a.download}`);
+  }
 }
 
 function generateBackupHTML(matches) {

@@ -30,6 +30,11 @@ function showAdminPanel() {
   initSupabase();
   fetchMatches();
   subscribeRealtime();
+  
+  // Start auto-backup timer (every 30 minutes)
+  if (typeof startAutoBackup === 'function') {
+    startAutoBackup();
+  }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
