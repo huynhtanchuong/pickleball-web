@@ -599,6 +599,10 @@ async function updateScore(id) {
     // Supabase mode: fetch from DB to get stage info
     const { data } = await db.from("matches").select("*").eq("id", id).single();
     m = data;
+    // Update known timestamp to avoid false conflict detection
+    if (m && m.updated_at) {
+      _knownUpdatedAt[id] = m.updated_at;
+    }
   }
   
   console.log('updateScore: match found:', m ? { id: m.id, stage: m.stage, teamA: m.teamA, teamB: m.teamB } : 'NOT FOUND');
