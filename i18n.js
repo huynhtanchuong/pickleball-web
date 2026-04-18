@@ -139,15 +139,15 @@ const TRANSLATIONS = {
     langLabel:        "Ngôn ngữ",
     
     // Teams & Backup
-    teamsLink:        "📋 Quản lý đội",
-    backupLink:       "💾 Backup",
+    teamsLink:        "Quản lý đội",
+    backupLink:       "Backup Now",
     backupTitle:      "Backup Kết Quả Giải Đấu",
     backupDate:       "Ngày backup",
     backupMatches:    "Danh Sách Trận Đấu",
     backupStandings:  "Bảng Xếp Hạng",
     backupSuccess:    "✓ Đã tải file backup",
     autoBackupActive: "🔄 Auto-backup: mỗi 30 phút",
-    autoBackupToggle: "🔄 Auto-backup (30p)",
+    autoBackupToggle: "Auto BU",
     autoBackupOn:     "✓ Auto-backup đã bật",
     autoBackupOff:    "Auto-backup đã tắt",
   },
@@ -270,15 +270,15 @@ const TRANSLATIONS = {
     langLabel:        "Language",
     
     // Teams & Backup
-    teamsLink:        "📋 Manage Teams",
-    backupLink:       "💾 Backup",
+    teamsLink:        "Manage Teams",
+    backupLink:       "Backup Now",
     backupTitle:      "Tournament Results Backup",
     backupDate:       "Backup date",
     backupMatches:    "Match List",
     backupStandings:  "Standings",
     backupSuccess:    "✓ Backup file downloaded",
     autoBackupActive: "🔄 Auto-backup: every 30 min",
-    autoBackupToggle: "🔄 Auto-backup (30m)",
+    autoBackupToggle: "Auto BU",
     autoBackupOn:     "✓ Auto-backup enabled",
     autoBackupOff:    "Auto-backup disabled",
   }
