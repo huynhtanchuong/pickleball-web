@@ -29,7 +29,7 @@ function initSupabase() {
     setStatus(t("connected"), "ok");
     return true;
   } catch (e) {
-    setStatus("Supabase init failed: " + e.message, "err");
+    setStatus("❌ Không thể kết nối cơ sở dữ liệu", "err");
     return false;
   }
 }
@@ -119,7 +119,10 @@ async function fetchMatches() {
   }
 
   const { data, error } = await db.from("matches").select("*").order("group_name");
-  if (error) { setStatus("Fetch error: " + error.message, "err"); return; }
+  if (error) { 
+    setStatus("❌ Không thể tải dữ liệu trận đấu", "err"); 
+    return; 
+  }
 
   if (!data || data.length === 0) {
     await seedMatches();
@@ -135,7 +138,10 @@ async function seedMatches() {
   if (!db) return;
   const rows = SAMPLE_MATCHES.map(({ id, ...rest }) => rest);
   const { error } = await db.from("matches").insert(rows);
-  if (error) { setStatus("Seed error: " + error.message, "err"); return; }
+  if (error) { 
+    setStatus("❌ Không thể tạo dữ liệu mẫu", "err"); 
+    return; 
+  }
   setStatus("Sample matches inserted!", "ok");
   await fetchMatches();
 }
@@ -767,7 +773,9 @@ async function finishMatch(id) {
     // Validate: cannot finish with tied score
     // Best-of-3: need at least 2 wins (2-0 or 2-1)
     if (winsA < 2 && winsB < 2) {
-      alert("Không thể kết thúc trận đấu!\nCần ít nhất 1 đội thắng 2 sets.\n\nCannot finish match!\nNeed at least one team to win 2 sets.");
+      alert("Chưa thể kết thúc trận đấu!\n\n" +
+        "Cần ít nhất 1 đội thắng 2 sets (tỷ số 2-0 hoặc 2-1).\n\n" +
+        "Vui lòng tiếp tục cập nhật điểm.");
       return;
     }
     
@@ -778,7 +786,9 @@ async function finishMatch(id) {
     
     // Validate: cannot finish with tied score
     if (payload.scoreA === payload.scoreB) {
-      alert("Không thể kết thúc trận đấu khi điểm hòa!\nCannot finish match with tied score!");
+      alert("Chưa thể kết thúc trận đấu!\n\n" +
+        "Điểm số đang hòa. Cần có đội thắng trước khi kết thúc.\n\n" +
+        "Vui lòng tiếp tục cập nhật điểm.");
       return;
     }
   }
@@ -814,6 +824,15 @@ async function finishMatch(id) {
   
   // Force refresh to update standings and re-sort matches
   await fetchMatches();
+  
+  // Redirect to viewer page after finishing match (admin only)
+  const isAdminPage = window.location.pathname.includes("admin");
+  if (isAdminPage) {
+    // Show success message briefly before redirect
+    setTimeout(() => {
+      window.location.href = "index.html";
+    }, 1500); // 1.5 second delay to show success message
+  }
 }
 
 // ── Mark done (legacy alias → finishMatch) ────────────────────
@@ -1121,7 +1140,10 @@ async function resetDemo() {
     updated_at: new Date().toISOString()
   }).eq("stage", "group");
 
-  if (error) { setStatus("Reset error: " + error.message, "err"); return; }
+  if (error) { 
+    setStatus("❌ Không thể reset dữ liệu", "err"); 
+    return; 
+  }
 
   setStatus("Reset xong ✓", "ok");
   fetchMatches();

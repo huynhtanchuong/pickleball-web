@@ -480,7 +480,10 @@ async function saveMatchInfo(id) {
   }
   const { error } = await db.from("matches")
     .update({ match_time: timeVal, court: courtVal, referee: refVal }).eq("id", id);
-  if (error) { setStatus("Info error: " + error.message, "err"); return; }
+  if (error) { 
+    setStatus("❌ Không thể lưu thông tin trận đấu", "err"); 
+    return; 
+  }
   setStatus(t("infoSaved"), "ok");
 }
 
@@ -488,7 +491,13 @@ async function saveMatchInfo(id) {
 // After resetting a group match, also wipe semi/final so bracket
 // auto-regenerates with fresh standings when all group matches finish.
 async function resetMatch(id) {
-  if (!confirm(t("confirmResetMatch"))) return;
+  const confirmMsg = "Bạn có chắc muốn đặt lại trận này?\n\n" +
+    "• Điểm số sẽ về 0-0\n" +
+    "• Trạng thái về chưa bắt đầu\n" +
+    "• Nếu là trận vòng bảng, bán kết và chung kết sẽ bị xóa để tạo lại\n\n" +
+    "Hành động này không thể hoàn tác!";
+  
+  if (!confirm(confirmMsg)) return;
 
   const payload = {
     scoreA: 0, scoreB: 0, status: "not_started",
@@ -508,13 +517,17 @@ async function resetMatch(id) {
     Object.assign(m, payload);
     saveLocal(localMatches);
     fetchMatches();
-    setStatus(t("matchReset"), "ok");
+    setStatus("✓ Đã đặt lại trận đấu", "ok");
     return;
   }
 
   // 1. Reset the match
   const { error } = await db.from("matches").update(payload).eq("id", id);
-  if (error) { setStatus("Reset error: " + error.message, "err"); return; }
+  if (error) { 
+    setStatus("❌ Không thể đặt lại trận đấu", "err");
+    alert(`Không thể đặt lại trận đấu!\n\nVui lòng thử lại hoặc liên hệ quản trị viên.`);
+    return; 
+  }
 
   // 2. Check stage and wipe appropriate bracket rows
   const { data: m } = await db.from("matches").select("stage").eq("id", id).single();
@@ -551,7 +564,10 @@ async function regenSemifinals() {
 
   // Delete existing semis and wait for confirmation
   const { error: delErr } = await db.from("matches").delete().eq("stage", "semi");
-  if (delErr) { setStatus("Delete error: " + delErr.message, "err"); return; }
+  if (delErr) { 
+    setStatus("❌ Không thể xóa bán kết cũ", "err"); 
+    return; 
+  }
 
   // Small delay to ensure DB consistency before re-fetching
   await new Promise(r => setTimeout(r, 300));
@@ -571,7 +587,10 @@ async function regenFinal() {
   }
 
   const { error: delErr } = await db.from("matches").delete().eq("stage", "final");
-  if (delErr) { setStatus("Delete error: " + delErr.message, "err"); return; }
+  if (delErr) { 
+    setStatus("❌ Không thể xóa chung kết cũ", "err"); 
+    return; 
+  }
 
   await new Promise(r => setTimeout(r, 300));
   await generateFinal(true);
@@ -640,7 +659,10 @@ async function generateSemifinals(silent=false) {
   }
 
   const { error } = await db.from("matches").insert(semis);
-  if (error) { setStatus("Semi error: " + error.message, "err"); return; }
+  if (error) { 
+    setStatus("❌ Không thể tạo bán kết", "err"); 
+    return; 
+  }
   if (!silent) setStatus(t("semiCreated"), "ok");
   fetchMatches();
 }
@@ -675,7 +697,10 @@ async function generateFinal(silent=false) {
   }
 
   const { error } = await db.from("matches").insert([finalMatch]);
-  if (error) { setStatus("Final error: " + error.message, "err"); return; }
+  if (error) { 
+    setStatus("❌ Không thể tạo chung kết", "err"); 
+    return; 
+  }
   if (!silent) setStatus(t("finalCreated"), "ok");
   fetchMatches();
 }
