@@ -433,10 +433,22 @@ function adjustScore(id, field, delta) {
   const newValue = Math.max(0, oldValue + delta);
   console.log('adjustScore: updating', { oldValue, newValue });
   input.value = newValue;
+  
+  // Set editing flag to prevent realtime fetch from interrupting
+  if (typeof _isEditingScore !== 'undefined') {
+    _isEditingScore = true;
+  }
+  
   clearTimeout(_saveDebounce[id]);
   _saveDebounce[id] = setTimeout(() => {
     console.log('adjustScore: calling updateScore after debounce');
     updateScore(id);
+    // Clear editing flag after save completes
+    setTimeout(() => {
+      if (typeof _isEditingScore !== 'undefined') {
+        _isEditingScore = false;
+      }
+    }, 1000);
   }, 800);
 }
 

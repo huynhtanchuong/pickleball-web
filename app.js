@@ -502,10 +502,18 @@ function adjustSetScore(id, field, delta) {
   const newValue = Math.max(0, oldValue + delta);
   console.log('adjustSetScore: updating', { oldValue, newValue });
   input.value = newValue;
+  
+  // Set editing flag to prevent realtime fetch from interrupting
+  _isEditingScore = true;
+  
   clearTimeout(_saveDebounce[id]);
   _saveDebounce[id] = setTimeout(() => {
     console.log('adjustSetScore: calling updateScore after debounce');
     updateScore(id);
+    // Clear editing flag after save completes
+    setTimeout(() => {
+      _isEditingScore = false;
+    }, 1000);
   }, 800);
 }
 // Maps matchId → updated_at string seen at last render.
@@ -914,6 +922,8 @@ function renderStandings(groups, tieBreakInfo = {}) {
 let _pollTimer    = null;
 let _rtConnected  = false;
 let _reconnectAttempts = 0;
+let _realtimeFetchDebounce = null; // Debounce realtime fetch to avoid interrupting edits
+let _isEditingScore = false; // Track if admin is currently editing scores
 const POLL_MS_DEMO = 1000; // demo mode: poll every 1s (cross-tab localStorage sync)
 const POLL_MS_RT   = 5000; // realtime fallback: poll every 5s
 const MAX_RECONNECT_ATTEMPTS = 3;
@@ -933,7 +943,19 @@ function subscribeRealtime() {
     .channel("matches-channel")
     .on("postgres_changes",
       { event: "*", schema: "public", table: "matches" },
-      () => { fetchMatches(); }
+      () => {
+        // Skip fetch if admin is currently editing scores
+        if (_isEditingScore) {
+          console.log('Realtime: skipping fetch (admin is editing)');
+          return;
+        }
+        // Debounce fetchMatches to avoid interrupting admin edits
+        clearTimeout(_realtimeFetchDebounce);
+        _realtimeFetchDebounce = setTimeout(() => {
+          console.log('Realtime: fetching matches after debounce');
+          fetchMatches();
+        }, 2000); // Wait 2 seconds before fetching (longer than save debounce)
+      }
     )
     .subscribe(status => {
       if (status === "SUBSCRIBED") {
