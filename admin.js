@@ -521,12 +521,26 @@ async function resetMatch(id) {
     return;
   }
 
+  // Check for conflict before resetting (multiple admins)
+  const conflict = await checkConflict(id);
+  if (conflict) {
+    handleConflict(id);
+    alert("⚠️ Trận đấu đã được cập nhật bởi admin khác!\n\n" +
+      "Vui lòng bấm Reload để xem dữ liệu mới nhất trước khi reset.");
+    return;
+  }
+
   // 1. Reset the match
   const { error } = await db.from("matches").update(payload).eq("id", id);
   if (error) { 
     setStatus("❌ Không thể đặt lại trận đấu", "err");
     alert(`Không thể đặt lại trận đấu!\n\nVui lòng thử lại hoặc liên hệ quản trị viên.`);
     return; 
+  }
+
+  // Update known timestamp after successful reset
+  if (typeof _knownUpdatedAt !== 'undefined') {
+    _knownUpdatedAt[id] = payload.updated_at;
   }
 
   // 2. Check stage and wipe appropriate bracket rows
