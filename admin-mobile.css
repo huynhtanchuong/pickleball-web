@@ -151,6 +151,15 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
   gap: 6px;
 }
 
+.adm-score-sep {
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--adm-border);
+  line-height: 1;
+  align-self: center;
+  padding-top: 20px; /* align with number, not buttons */
+}
+
 /* +/- buttons for scores */
 .adm-score-btn {
   width: 40px;
