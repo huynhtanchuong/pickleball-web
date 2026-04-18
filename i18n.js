@@ -150,6 +150,10 @@ const TRANSLATIONS = {
     autoBackupToggle: "Auto BU",
     autoBackupOn:     "✓ Auto-backup đã bật",
     autoBackupOff:    "Auto-backup đã tắt",
+    
+    // Set Lock
+    setLocked:        "🔒 Set đã khóa",
+    setUnlocked:      "🔓 Set đã mở",
   },
 
   en: {
@@ -281,6 +285,10 @@ const TRANSLATIONS = {
     autoBackupToggle: "Auto BU",
     autoBackupOn:     "✓ Auto-backup enabled",
     autoBackupOff:    "Auto-backup disabled",
+    
+    // Set Lock
+    setLocked:        "🔒 Set locked",
+    setUnlocked:      "🔓 Set unlocked",
   }
 };
 

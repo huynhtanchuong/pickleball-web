@@ -419,6 +419,40 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
   border-radius: 10px;
   padding: 10px 12px;
   margin-bottom: 8px;
+  position: relative;
+}
+.adm-set-row.locked {
+  opacity: 0.6;
+  background: var(--adm-card);
+}
+.adm-set-lock-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--adm-border);
+  background: var(--adm-card);
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.adm-set-lock-btn:hover {
+  background: var(--adm-card2);
+  border-color: var(--adm-blue);
+}
+.adm-set-lock-btn.locked {
+  background: rgba(239,68,68,0.1);
+  border-color: rgba(239,68,68,0.3);
+  color: #f87171;
+}
+.adm-set-lock-btn.locked:hover {
+  background: rgba(239,68,68,0.15);
 }
 .adm-set-num {
   font-size: 0.68rem;

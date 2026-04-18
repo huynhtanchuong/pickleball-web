@@ -402,22 +402,36 @@ function setRowHTML(m, setNum, dis) {
   const vB = m[fB] || m[fBl] || 0;
   const wA = vA > vB && (vA > 0 || vB > 0);
   const wB = vB > vA && (vA > 0 || vB > 0);
+  
+  // Check if this set is locked
+  const lockField = `s${setNum}_locked`;
+  const isLocked = m[lockField] === true || m[lockField] === 1;
+  const lockDis = isLocked || dis ? "disabled" : "";
+  const rowClass = isLocked ? "adm-set-row locked" : "adm-set-row";
+  const lockBtnClass = isLocked ? "adm-set-lock-btn locked" : "adm-set-lock-btn";
+  const lockIcon = isLocked ? "🔒" : "🔓";
+  const lockTitle = isLocked ? "Bấm để mở khóa set này" : "Bấm để khóa set này";
+  
   return `
-    <div class="adm-set-row">
+    <div class="${rowClass}" data-set="${setNum}">
+      <button class="${lockBtnClass}" 
+              onclick="toggleSetLock('${m.id}', ${setNum})" 
+              title="${lockTitle}"
+              ${dis}>${lockIcon}</button>
       <span class="adm-set-num">Set ${setNum}</span>
       <div class="adm-set-inputs">
         <div class="adm-set-ctrl">
-          <button class="adm-set-btn minus" ${dis} onclick="adjustSetScore('${m.id}','${fA}',-1)">−</button>
+          <button class="adm-set-btn minus" ${lockDis} onclick="adjustSetScore('${m.id}','${fA}',-1)">−</button>
           <input class="adm-set-input ${wA?"set-win":""}" type="number" min="0"
-            value="${vA}" data-field="${fA}" data-id="${m.id}" ${dis}>
-          <button class="adm-set-btn plus" ${dis} onclick="adjustSetScore('${m.id}','${fA}',1)">+</button>
+            value="${vA}" data-field="${fA}" data-id="${m.id}" ${lockDis}>
+          <button class="adm-set-btn plus" ${lockDis} onclick="adjustSetScore('${m.id}','${fA}',1)">+</button>
         </div>
         <span class="adm-set-sep">—</span>
         <div class="adm-set-ctrl">
-          <button class="adm-set-btn minus" ${dis} onclick="adjustSetScore('${m.id}','${fB}',-1)">−</button>
+          <button class="adm-set-btn minus" ${lockDis} onclick="adjustSetScore('${m.id}','${fB}',-1)">−</button>
           <input class="adm-set-input ${wB?"set-win":""}" type="number" min="0"
-            value="${vB}" data-field="${fB}" data-id="${m.id}" ${dis}>
-          <button class="adm-set-btn plus" ${dis} onclick="adjustSetScore('${m.id}','${fB}',1)">+</button>
+            value="${vB}" data-field="${fB}" data-id="${m.id}" ${lockDis}>
+          <button class="adm-set-btn plus" ${lockDis} onclick="adjustSetScore('${m.id}','${fB}',1)">+</button>
         </div>
       </div>
     </div>`;
@@ -430,6 +444,50 @@ function showSet3(id) {
   const matches = stored ? JSON.parse(stored) : [];
   const m = matches.find(x => x.id === id) || { s3A:0, s3B:0, s3a:0, s3b:0, teamA:"", teamB:"" };
   placeholder.outerHTML = setRowHTML(m, 3, "");
+}
+
+// ── Toggle Set Lock ───────────────────────────────────────────
+async function toggleSetLock(id, setNum) {
+  const lockField = `s${setNum}_locked`;
+  
+  // Get current match data
+  let m = null;
+  if (!db) {
+    const stored = localStorage.getItem("pb_matches");
+    localMatches = stored ? JSON.parse(stored) : [];
+    m = localMatches.find(x => x.id === id);
+  } else {
+    const { data } = await db.from("matches").select("*").eq("id", id).single();
+    m = data;
+  }
+  
+  if (!m) return;
+  
+  // Toggle lock state
+  const currentLock = m[lockField] === true || m[lockField] === 1;
+  const newLock = !currentLock;
+  
+  // Update in database/localStorage
+  const payload = { [lockField]: newLock, updated_at: new Date().toISOString() };
+  
+  if (!db) {
+    m[lockField] = newLock;
+    m.updated_at = payload.updated_at;
+    saveLocal(localMatches);
+    fetchMatches();
+    setStatus(newLock ? `🔒 Set ${setNum} đã khóa` : `🔓 Set ${setNum} đã mở`, "ok");
+    return;
+  }
+  
+  // Supabase path
+  const { error } = await db.from("matches").update(payload).eq("id", id);
+  if (error) {
+    setStatus("❌ Không thể cập nhật khóa", "err");
+    return;
+  }
+  
+  setStatus(newLock ? `🔒 Set ${setNum} đã khóa` : `🔓 Set ${setNum} đã mở`, "ok");
+  fetchMatches();
 }
 
 // ── +1/-1 debounced ───────────────────────────────────────────
