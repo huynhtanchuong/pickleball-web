@@ -36,6 +36,8 @@ function initSupabase() {
 
 // ── Status bar ───────────────────────────────────────────────
 let _statusTimer = null;
+let _saveDebounce = {}; // Debounce timer for score updates (shared with admin.js)
+
 function setStatus(msg, type = "") {
   const el = document.getElementById("status-bar");
   if (!el) return;

@@ -417,7 +417,10 @@ function showSet3(id) {
 }
 
 // ── +1/-1 debounced ───────────────────────────────────────────
-const _saveDebounce = {};
+// Use global _saveDebounce from app.js if available, otherwise create new
+if (typeof _saveDebounce === 'undefined') {
+  var _saveDebounce = {};
+}
 
 function adjustScore(id, field, delta) {
   const input = document.querySelector(`input[data-id="${id}"][data-field="${field}"]`);
