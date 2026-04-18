@@ -1376,13 +1376,39 @@ function startAutoBackup() {
     clearInterval(_autoBackupTimer);
   }
   
-  // Start auto-backup every 30 minutes
-  _autoBackupTimer = setInterval(() => {
-    console.log('Auto-backup: Creating backup file...');
-    exportBackup(true); // true = silent mode (no status messages)
-  }, AUTO_BACKUP_INTERVAL);
+  // Calculate time until next 30-minute mark (system time)
+  const now = new Date();
+  const minutes = now.getMinutes();
+  const seconds = now.getSeconds();
+  const milliseconds = now.getMilliseconds();
   
-  console.log('Auto-backup: Started (every 30 minutes)');
+  // Calculate minutes until next 00 or 30
+  let minutesUntilNext;
+  if (minutes < 30) {
+    minutesUntilNext = 30 - minutes;
+  } else {
+    minutesUntilNext = 60 - minutes;
+  }
+  
+  // Calculate exact milliseconds until next backup time
+  const msUntilNext = (minutesUntilNext * 60 * 1000) - (seconds * 1000) - milliseconds;
+  
+  console.log(`Auto-backup: Will start at next 30-min mark (in ${Math.round(msUntilNext/1000)}s)`);
+  
+  // Schedule first backup at next 30-minute mark
+  setTimeout(() => {
+    // Do first backup
+    console.log('Auto-backup: Creating backup file at scheduled time...');
+    exportBackup(true);
+    
+    // Then set up recurring backup every 30 minutes
+    _autoBackupTimer = setInterval(() => {
+      console.log('Auto-backup: Creating backup file at scheduled time...');
+      exportBackup(true);
+    }, AUTO_BACKUP_INTERVAL);
+    
+    console.log('Auto-backup: Now running every 30 minutes at :00 and :30');
+  }, msUntilNext);
 }
 
 function stopAutoBackup() {
