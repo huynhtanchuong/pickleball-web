@@ -45,9 +45,6 @@
       <div class="adm-header-right">
         <span id="realtime-indicator" class="pulse" style="display:none;"></span>
         <span id="status-bar" class="status-chip">…</span>
-        <a href="teams.html" class="adm-btn-sm" style="background: var(--purple); color: #fff;">📋 Quản lý đội</a>
-        <a href="index.html" class="adm-btn-sm" data-i18n="viewPublic">👁 Xem</a>
-        <button class="adm-btn-sm adm-btn-red" onclick="doLogout()" data-i18n="logout">Đăng xuất</button>
       </div>
     </div>
 
@@ -90,6 +87,24 @@
       <br>
       <button class="adm-reset-all-link" onclick="resetDemo()">↺ Reset all data</button>
     </div>
+
+    <!-- Footer with navigation -->
+    <footer class="adm-footer">
+      <div class="adm-footer-nav">
+        <a href="teams.html" class="adm-footer-btn">
+          <span class="adm-footer-icon">📋</span>
+          <span>Quản lý đội</span>
+        </a>
+        <a href="index.html" class="adm-footer-btn" data-i18n="viewPublic">
+          <span class="adm-footer-icon">👁</span>
+          <span>Xem</span>
+        </a>
+        <button class="adm-footer-btn adm-footer-btn-logout" onclick="doLogout()">
+          <span class="adm-footer-icon">🚪</span>
+          <span data-i18n="logout">Đăng xuất</span>
+        </button>
+      </div>
+    </footer>
 
   </div>
 

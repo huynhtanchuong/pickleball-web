@@ -405,25 +405,27 @@ function publicMatchHTML(m, stage) {
               : playing ? `<span class="badge-live">${t("badgeLive")}</span>`
               :           `<span class="badge-ns">${t("badgeNs")}</span>`;
 
-  // For all matches: show set scores (handle both uppercase and lowercase DB fields)
+  // Only show set scores for semi/final (group stage uses single score)
   let setsHtml = "";
-  const sets = [
-    { a:m.s1A||m.s1a||0, b:m.s1B||m.s1b||0, label:"S1" },
-    { a:m.s2A||m.s2a||0, b:m.s2B||m.s2b||0, label:"S2" },
-    { a:m.s3A||m.s3a||0, b:m.s3B||m.s3b||0, label:"S3" },
-  ];
-  const activeSets = sets.filter((s,i) => i===0 || s.a>0 || s.b>0 || (i===2 && m.scoreA===1 && m.scoreB===1));
-  if (activeSets.length > 0 && (activeSets[0].a > 0 || activeSets[0].b > 0)) {
-    setsHtml = `<div class="mc-sets">` +
-      activeSets.map(s => {
-        const wA=s.a>s.b, wB=s.b>s.a;
-        return `<div class="mc-set-item">
-          <span class="mc-set-label">${s.label}</span>
-          <span class="mc-set-score ${wA?"winner":""}">${s.a}</span>
-          <span class="mc-set-sep">-</span>
-          <span class="mc-set-score ${wB?"winner":""}">${s.b}</span>
-        </div>`;
-      }).join("") + `</div>`;
+  if (stage === "semi" || stage === "final") {
+    const sets = [
+      { a:m.s1A||m.s1a||0, b:m.s1B||m.s1b||0, label:"S1" },
+      { a:m.s2A||m.s2a||0, b:m.s2B||m.s2b||0, label:"S2" },
+      { a:m.s3A||m.s3a||0, b:m.s3B||m.s3b||0, label:"S3" },
+    ];
+    const activeSets = sets.filter((s,i) => i===0 || s.a>0 || s.b>0 || (i===2 && m.scoreA===1 && m.scoreB===1));
+    if (activeSets.length > 0 && (activeSets[0].a > 0 || activeSets[0].b > 0)) {
+      setsHtml = `<div class="mc-sets">` +
+        activeSets.map(s => {
+          const wA=s.a>s.b, wB=s.b>s.a;
+          return `<div class="mc-set-item">
+            <span class="mc-set-label">${s.label}</span>
+            <span class="mc-set-score ${wA?"winner":""}">${s.a}</span>
+            <span class="mc-set-sep">-</span>
+            <span class="mc-set-score ${wB?"winner":""}">${s.b}</span>
+          </div>`;
+        }).join("") + `</div>`;
+    }
   }
 
   // Match info: time, court, referee
@@ -459,7 +461,8 @@ function publicMatchHTML(m, stage) {
 // scoreA/scoreB = sets won (computed, not manually entered)
 
 function needsSets(m) {
-  return true; // ALL matches use sets now (not just semi/final)
+  // Only semi/final use 3-set scoring, group stage uses single score
+  return m.stage === "semi" || m.stage === "final";
 }
 
 function computeSetWins(m) {

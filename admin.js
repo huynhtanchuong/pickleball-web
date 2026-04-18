@@ -243,12 +243,13 @@ function matchHTML(m, stage) {
       ${m.referee    ? `<span>👤 ${esc(m.referee)}</span>`    : ""}
     </div>` : "";
 
-  // Score section - ALL matches now use sets
+  // Score section - Only semi/final use 3-set scoring, group uses single score
   let scoreSection = "";
   if (!ready) {
     // Show waiting message for matches with placeholder teams
     scoreSection = `<div class="match-waiting-msg">${t("matchWaiting")}</div>`;
-  } else {
+  } else if (stage === "semi" || stage === "final") {
+    // 3-set scoring for semi/final
     const { winsA, winsB } = computeSetWins(m);
     const showSet3 = winsA >= 1 && winsB >= 1;
     scoreSection = `
@@ -260,6 +261,20 @@ function matchHTML(m, stage) {
         : `<div id="set3-${m.id}">
              <button class="adm-add-set-btn" onclick="showSet3('${m.id}')" ${dis}>${t("addSet3")}</button>
            </div>`}`;
+  } else {
+    // Single score for group stage
+    scoreSection = `
+      <div class="adm-score-row">
+        <div class="adm-score-inputs">
+          <button class="adm-score-btn minus" ${dis} onclick="adjustScore('${m.id}','scoreA',-1)">−</button>
+          <input class="adm-score-input ${winnerA?"score-win":""}" type="number" min="0"
+            value="${m.scoreA||0}" data-field="scoreA" data-id="${m.id}" ${dis}>
+          <span class="adm-score-sep">—</span>
+          <input class="adm-score-input ${winnerB?"score-win":""}" type="number" min="0"
+            value="${m.scoreB||0}" data-field="scoreB" data-id="${m.id}" ${dis}>
+          <button class="adm-score-btn plus" ${dis} onclick="adjustScore('${m.id}','scoreB',1)">+</button>
+        </div>
+      </div>`;
   }
 
   // Collapsed summary (shown when card is collapsed)
