@@ -262,17 +262,23 @@ function matchHTML(m, stage) {
              <button class="adm-add-set-btn" onclick="showSet3('${m.id}')" ${dis}>${t("addSet3")}</button>
            </div>`}`;
   } else {
-    // Single score for group stage
+    // Single score for group stage - with +/- buttons for BOTH teams
     scoreSection = `
       <div class="adm-score-row">
         <div class="adm-score-inputs">
-          <button class="adm-score-btn minus" ${dis} onclick="adjustScore('${m.id}','scoreA',-1)">−</button>
-          <input class="adm-score-input ${winnerA?"score-win":""}" type="number" min="0"
-            value="${m.scoreA||0}" data-field="scoreA" data-id="${m.id}" ${dis}>
+          <div class="adm-score-ctrl">
+            <button class="adm-score-btn minus" ${dis} onclick="adjustScore('${m.id}','scoreA',-1)">−</button>
+            <input class="adm-score-input ${winnerA?"score-win":""}" type="number" min="0"
+              value="${m.scoreA||0}" data-field="scoreA" data-id="${m.id}" ${dis}>
+            <button class="adm-score-btn plus" ${dis} onclick="adjustScore('${m.id}','scoreA',1)">+</button>
+          </div>
           <span class="adm-score-sep">—</span>
-          <input class="adm-score-input ${winnerB?"score-win":""}" type="number" min="0"
-            value="${m.scoreB||0}" data-field="scoreB" data-id="${m.id}" ${dis}>
-          <button class="adm-score-btn plus" ${dis} onclick="adjustScore('${m.id}','scoreB',1)">+</button>
+          <div class="adm-score-ctrl">
+            <button class="adm-score-btn minus" ${dis} onclick="adjustScore('${m.id}','scoreB',-1)">−</button>
+            <input class="adm-score-input ${winnerB?"score-win":""}" type="number" min="0"
+              value="${m.scoreB||0}" data-field="scoreB" data-id="${m.id}" ${dis}>
+            <button class="adm-score-btn plus" ${dis} onclick="adjustScore('${m.id}','scoreB',1)">+</button>
+          </div>
         </div>
       </div>`;
   }
