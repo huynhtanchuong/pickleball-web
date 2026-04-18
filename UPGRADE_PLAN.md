@@ -132,9 +132,14 @@
 
 **Deployed:** ✅ YES
 **URL:** https://pickleball-web-dusky.vercel.app
-**Commit:** 349e98e
+**Commit:** f2a67de
 **Branch:** master
 **Auto-Deploy:** Vercel will deploy automatically (~30 seconds)
+
+### Latest Updates (Commit f2a67de)
+- ✅ Bracket layout changed to vertical (top to bottom)
+- ✅ Score input buttons: Both teams now have +/- buttons
+- ✅ Reload button now has "Reload" label text
 
 ---
 
