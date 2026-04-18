@@ -423,11 +423,21 @@ if (typeof _saveDebounce === 'undefined') {
 }
 
 function adjustScore(id, field, delta) {
+  console.log('adjustScore called:', { id, field, delta });
   const input = document.querySelector(`input[data-id="${id}"][data-field="${field}"]`);
-  if (!input) return;
-  input.value = Math.max(0, (parseInt(input.value,10)||0) + delta);
+  if (!input) {
+    console.error('adjustScore: input not found', { id, field });
+    return;
+  }
+  const oldValue = parseInt(input.value, 10) || 0;
+  const newValue = Math.max(0, oldValue + delta);
+  console.log('adjustScore: updating', { oldValue, newValue });
+  input.value = newValue;
   clearTimeout(_saveDebounce[id]);
-  _saveDebounce[id] = setTimeout(() => updateScore(id), 800);
+  _saveDebounce[id] = setTimeout(() => {
+    console.log('adjustScore: calling updateScore after debounce');
+    updateScore(id);
+  }, 800);
 }
 
 // ── Save match info (time/court/referee) ──────────────────────
