@@ -628,6 +628,18 @@ async function updateScore(id) {
   if (error) { setStatus("Update error: " + error.message, "err"); return; }
 
   _knownUpdatedAt[id] = payload.updated_at;
+  
+  // Update UI in-place for admin page
+  const isAdminPage = window.location.pathname.includes("admin");
+  if (isAdminPage) {
+    if (payload.status) {
+      updateStatusBadgeInPlace(id, payload.status);
+    }
+    if (needsSets({ stage: m?.stage })) {
+      updateSetWinsDisplay(id, scoreA, scoreB);
+    }
+  }
+  
   setStatus(t("scoreSaved"), "ok");
   flashSaved(id);
 }
@@ -702,6 +714,9 @@ async function finishMatch(id) {
   // the card stays collapsed in its new sorted position
   if (typeof _openCards !== "undefined") _openCards.delete(id);
   setStatus(t("matchFinished"), "ok");
+  
+  // Force refresh to update standings and re-sort matches
+  await fetchMatches();
 }
 
 // ── Mark done (legacy alias → finishMatch) ────────────────────
