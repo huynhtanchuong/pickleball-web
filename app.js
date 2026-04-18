@@ -585,6 +585,8 @@ async function reloadMatch(id) {
 
 // ── Update score ──────────────────────────────────────────────
 async function updateScore(id) {
+  console.log('updateScore called for:', id);
+  
   // Re-read fresh from localStorage
   const stored = localStorage.getItem("pb_matches");
   localMatches = stored ? JSON.parse(stored) : JSON.parse(JSON.stringify(SAMPLE_MATCHES));
@@ -597,22 +599,28 @@ async function updateScore(id) {
     const s1A = getSetInput(id, "s1A"), s1B = getSetInput(id, "s1B");
     const s2A = getSetInput(id, "s2A"), s2B = getSetInput(id, "s2B");
     const s3A = getSetInput(id, "s3A"), s3B = getSetInput(id, "s3B");
+    console.log('updateScore: set scores read:', { s1A, s1B, s2A, s2B, s3A, s3B });
     const tmp = { s1A, s1B, s2A, s2B, s3A, s3B };
     const { winsA, winsB } = computeSetWins(tmp);
     scoreA = winsA;
     scoreB = winsB;
+    console.log('updateScore: computed wins:', { winsA, winsB });
     // Use lowercase for Supabase (DB columns are lowercase)
     payload = { s1a:s1A, s1b:s1B, s2a:s2A, s2b:s2B, s3a:s3A, s3b:s3B, scoreA, scoreB };
   } else {
     scoreA = parseInt(getInput(id, "scoreA"), 10) || 0;
     scoreB = parseInt(getInput(id, "scoreB"), 10) || 0;
+    console.log('updateScore: group stage scores:', { scoreA, scoreB });
     payload = { scoreA, scoreB };
   }
 
+  console.log('updateScore: payload to save:', payload);
+
   // Auto-status: not_started → playing when any score > 0
   const hasScore = scoreA > 0 || scoreB > 0 ||
-    (payload.s1A > 0 || payload.s1B > 0);
+    (payload.s1a > 0 || payload.s1b > 0);
   const autoStatus = hasScore ? "playing" : null;
+  console.log('updateScore: auto status:', autoStatus);
 
   if (!db) {
     if (!m) { console.warn("updateScore: match not found", id); return; }
@@ -638,8 +646,13 @@ async function updateScore(id) {
   }
 
   // Supabase path
+  console.log('updateScore: using Supabase path');
   const conflict = await checkConflict(id);
-  if (conflict) { handleConflict(id); return; }
+  if (conflict) { 
+    console.log('updateScore: conflict detected, aborting');
+    handleConflict(id); 
+    return; 
+  }
 
   payload.updated_at = new Date().toISOString();
 
@@ -647,11 +660,18 @@ async function updateScore(id) {
     .from("matches").select("status").eq("id", id).single();
   if (current && (current.status === "not_started" || current.status === "pending") && autoStatus) {
     payload.status = autoStatus;
+    console.log('updateScore: setting status to:', autoStatus);
   }
 
+  console.log('updateScore: saving to DB...', payload);
   const { error } = await db.from("matches").update(payload).eq("id", id);
-  if (error) { setStatus("Update error: " + error.message, "err"); return; }
+  if (error) { 
+    console.error('updateScore: DB error:', error);
+    setStatus("Update error: " + error.message, "err"); 
+    return; 
+  }
 
+  console.log('updateScore: saved successfully!');
   _knownUpdatedAt[id] = payload.updated_at;
   
   // Update UI in-place for admin page
@@ -665,6 +685,7 @@ async function updateScore(id) {
     }
   }
   
+  console.log('updateScore: complete!');
   setStatus(t("scoreSaved"), "ok");
   flashSaved(id);
 }
