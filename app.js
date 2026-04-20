@@ -112,13 +112,33 @@ async function fetchMatches() {
       localMatches = JSON.parse(JSON.stringify(SAMPLE_MATCHES));
       saveLocal(localMatches);
     }
-    renderMatches(localMatches);
-    calculateStandings(localMatches);
-    storeUpdatedAt(localMatches);
+    
+    // Filter by active tournament if available
+    let filtered = localMatches;
+    if (typeof tournamentManager !== 'undefined' && tournamentManager) {
+      const activeId = tournamentManager.getActiveTournamentId();
+      if (activeId) {
+        filtered = localMatches.filter(m => m.tournament_id == activeId);
+      }
+    }
+    
+    renderMatches(filtered);
+    calculateStandings(filtered);
+    storeUpdatedAt(filtered);
     return;
   }
 
-  const { data, error } = await db.from("matches").select("*").order("group_name");
+  // Filter by active tournament if available
+  let query = db.from("matches").select("*").order("group_name");
+  
+  if (typeof tournamentManager !== 'undefined' && tournamentManager) {
+    const activeId = tournamentManager.getActiveTournamentId();
+    if (activeId) {
+      query = query.eq('tournament_id', activeId);
+    }
+  }
+
+  const { data, error } = await query;
   if (error) { 
     setStatus("❌ Không thể tải dữ liệu trận đấu", "err"); 
     return; 
@@ -1321,6 +1341,10 @@ function handleMatchCardClick(e) {
 if (!window.location.pathname.includes("admin")) {
   document.addEventListener("DOMContentLoaded", () => {
     const connected = initSupabase();
+    
+    // Load tournament selector for public view
+    loadPublicTournamentSelector();
+    
     fetchMatches();
     subscribeRealtime(); // always — handles both realtime + polling fallback
     
@@ -1330,6 +1354,88 @@ if (!window.location.pathname.includes("admin")) {
     // Initialize auto-backup toggle (loads saved preference)
     initAutoBackupToggle();
   });
+}
+
+// ── Public Tournament Selector ───────────────────────────────
+async function loadPublicTournamentSelector() {
+  try {
+    // Initialize storage and tournament manager
+    if (typeof storage === 'undefined' || !storage) {
+      window.storage = new StorageAdapter(db);
+    }
+    if (typeof tournamentManager === 'undefined' || !tournamentManager) {
+      window.tournamentManager = new TournamentManager(storage);
+    }
+
+    const tournaments = await tournamentManager.getAllTournaments();
+    const select = document.getElementById('public-tournament-select');
+    
+    if (!select) return; // Not on public page
+    
+    if (tournaments.length === 0) {
+      select.innerHTML = '<option value="">Chưa có giải đấu nào</option>';
+      return;
+    }
+
+    // Get active tournament ID or default to ongoing/upcoming
+    let activeId = tournamentManager.getActiveTournamentId();
+    
+    // If no active, default to ongoing, then upcoming
+    if (!activeId) {
+      const ongoing = tournaments.find(t => t.status === 'ongoing');
+      const upcoming = tournaments.find(t => t.status === 'upcoming');
+      activeId = (ongoing || upcoming || tournaments[0]).id;
+    }
+
+    // Populate dropdown (exclude archived)
+    select.innerHTML = tournaments
+      .filter(t => !t.archived)
+      .map(t => `
+        <option value="${t.id}" ${t.id == activeId ? 'selected' : ''}>
+          ${t.name}
+        </option>
+      `).join('');
+
+    // Set active tournament
+    if (activeId) {
+      await switchPublicTournament(activeId);
+    }
+  } catch (error) {
+    console.error('Error loading tournaments:', error);
+  }
+}
+
+async function switchPublicTournament(tournamentId) {
+  if (!tournamentId) return;
+  
+  try {
+    await tournamentManager.setActiveTournament(tournamentId);
+    
+    // Update status display
+    const tournament = await tournamentManager.getTournament(tournamentId);
+    const statusEl = document.getElementById('public-tournament-status');
+    if (statusEl && tournament) {
+      const statusMap = {
+        'upcoming': 'Sắp diễn ra',
+        'ongoing': 'Đang diễn ra',
+        'completed': 'Đã kết thúc'
+      };
+      statusEl.textContent = statusMap[tournament.status] || tournament.status;
+      
+      // Update status color
+      statusEl.style.background = tournament.status === 'ongoing' ? '#d4edda' : 
+                                  tournament.status === 'upcoming' ? '#fff3cd' : '#d1ecf1';
+      statusEl.style.color = tournament.status === 'ongoing' ? '#155724' : 
+                            tournament.status === 'upcoming' ? '#856404' : '#0c5460';
+    }
+    
+    // Reload matches for selected tournament
+    await fetchMatches();
+    
+    setStatus('Đã chuyển giải đấu', 'ok');
+  } catch (error) {
+    setStatus('Lỗi khi chuyển giải đấu: ' + error.message, 'err');
+  }
 }
 
 // ── Auto Backup Timer ─────────────────────────────────────────

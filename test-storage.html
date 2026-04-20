@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Storage Adapter Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 20px;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    .success { color: green; }
+    .error { color: red; }
+    button {
+      margin: 5px;
+      padding: 8px 15px;
+      cursor: pointer;
+    }
+    pre {
+      background: #f5f5f5;
+      padding: 10px;
+      border-radius: 3px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>Storage Adapter Test</h1>
+  
+  <div class="test-section">
+    <h2>Mode: <span id="mode">-</span></h2>
+    <p>Testing localStorage provider (demo mode)</p>
+  </div>
+
+  <div class="test-section">
+    <h3>Test CRUD Operations</h3>
+    <button onclick="testCreate()">Test Create</button>
+    <button onclick="testRead()">Test Read</button>
+    <button onclick="testUpdate()">Test Update</button>
+    <button onclick="testDelete()">Test Delete</button>
+    <button onclick="clearStorage()">Clear Storage</button>
+    <div id="crud-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h3>Test Filtering</h3>
+    <button onclick="testFilters()">Test Filters</button>
+    <div id="filter-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h3>Test Transaction</h3>
+    <button onclick="testTransaction()">Test Transaction</button>
+    <div id="transaction-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h3>Current Storage Data</h3>
+    <button onclick="showStorage()">Show All Data</button>
+    <pre id="storage-data"></pre>
+  </div>
+
+  <script src="storage.js"></script>
+  <script>
+    let storage;
+
+    // Initialize storage adapter
+    function init() {
+      storage = new StorageAdapter(); // Will use localStorage
+      document.getElementById('mode').textContent = storage.getMode();
+      log('crud-results', `Initialized in ${storage.getMode()} mode`, 'success');
+    }
+
+    function log(elementId, message, type = '') {
+      const el = document.getElementById(elementId);
+      const className = type === 'success' ? 'success' : type === 'error' ? 'error' : '';
+      el.innerHTML += `<p class="${className}">${message}</p>`;
+    }
+
+    async function testCreate() {
+      const results = document.getElementById('crud-results');
+      results.innerHTML = '<h4>Create Test</h4>';
+      
+      try {
+        // Create single member
+        const member1 = await storage.create('members', {
+          name: 'Tuấn Anh',
+          email: 'tuan@example.com',
+          phone: '0123456789',
+          tier: 1
+        });
+        log('crud-results', `✓ Created member: ${JSON.stringify(member1)}`, 'success');
+
+        // Create multiple members
+        const members = await storage.create('members', [
+          { name: 'Hang Dang', tier: 3, email: 'hang@example.com' },
+          { name: 'Khoa Hoang', tier: 2, email: 'khoa@example.com' }
+        ]);
+        log('crud-results', `✓ Created ${members.length} members`, 'success');
+        
+      } catch (error) {
+        log('crud-results', `✗ Error: ${error.message}`, 'error');
+      }
+    }
+
+    async function testRead() {
+      const results = document.getElementById('crud-results');
+      results.innerHTML = '<h4>Read Test</h4>';
+      
+      try {
+        // Read all members
+        const allMembers = await storage.read('members');
+        log('crud-results', `✓ Found ${allMembers.length} members`, 'success');
+        log('crud-results', `<pre>${JSON.stringify(allMembers, null, 2)}</pre>`);
+        
+      } catch (error) {
+        log('crud-results', `✗ Error: ${error.message}`, 'error');
+      }
+    }
+
+    async function testUpdate() {
+      const results = document.getElementById('crud-results');
+      results.innerHTML = '<h4>Update Test</h4>';
+      
+      try {
+        // Get first member
+        const members = await storage.read('members');
+        if (members.length === 0) {
+          log('crud-results', '⚠ No members to update. Create some first.', 'error');
+          return;
+        }
+
+        const member = members[0];
+        const updated = await storage.update('members', member.id, {
+          tier: 2,
+          phone: '0987654321'
+        });
+        log('crud-results', `✓ Updated member: ${JSON.stringify(updated)}`, 'success');
+        
+      } catch (error) {
+        log('crud-results', `✗ Error: ${error.message}`, 'error');
+      }
+    }
+
+    async function testDelete() {
+      const results = document.getElementById('crud-results');
+      results.innerHTML = '<h4>Delete Test</h4>';
+      
+      try {
+        // Get last member
+        const members = await storage.read('members');
+        if (members.length === 0) {
+          log('crud-results', '⚠ No members to delete. Create some first.', 'error');
+          return;
+        }
+
+        const member = members[members.length - 1];
+        await storage.delete('members', member.id);
+        log('crud-results', `✓ Deleted member: ${member.name}`, 'success');
+        
+        const remaining = await storage.read('members');
+        log('crud-results', `✓ Remaining members: ${remaining.length}`, 'success');
+        
+      } catch (error) {
+        log('crud-results', `✗ Error: ${error.message}`, 'error');
+      }
+    }
+
+    async function testFilters() {
+      const results = document.getElementById('filter-results');
+      results.innerHTML = '<h4>Filter Test</h4>';
+      
+      try {
+        // Create test data
+        await storage.create('members', [
+          { name: 'Alice', tier: 1 },
+          { name: 'Bob', tier: 2 },
+          { name: 'Charlie', tier: 1 },
+          { name: 'David', tier: 3 }
+        ]);
+
+        // Test tier filter
+        const tier1 = await storage.read('members', { tierFilter: 1 });
+        log('filter-results', `✓ Tier 1 members: ${tier1.length}`, 'success');
+        log('filter-results', `Names: ${tier1.map(m => m.name).join(', ')}`);
+
+        // Test query filter
+        const searchResults = await storage.read('members', { query: 'a' });
+        log('filter-results', `✓ Members with 'a' in name: ${searchResults.length}`, 'success');
+        log('filter-results', `Names: ${searchResults.map(m => m.name).join(', ')}`);
+
+        // Test combined filters
+        const combined = await storage.read('members', { tierFilter: 1, query: 'li' });
+        log('filter-results', `✓ Tier 1 with 'li': ${combined.length}`, 'success');
+        
+      } catch (error) {
+        log('filter-results', `✗ Error: ${error.message}`, 'error');
+      }
+    }
+
+    async function testTransaction() {
+      const results = document.getElementById('transaction-results');
+      results.innerHTML = '<h4>Transaction Test</h4>';
+      
+      try {
+        const operations = [
+          { action: 'create', table: 'tournaments', data: { name: 'Test Tournament', start_date: '2025-03-15', status: 'upcoming' } },
+          { action: 'create', table: 'members', data: { name: 'Transaction Test', tier: 2 } }
+        ];
+
+        const results_data = await storage.transaction(operations);
+        log('transaction-results', `✓ Transaction completed: ${results_data.length} operations`, 'success');
+        log('transaction-results', `<pre>${JSON.stringify(results_data, null, 2)}</pre>`);
+        
+      } catch (error) {
+        log('transaction-results', `✗ Error: ${error.message}`, 'error');
+      }
+    }
+
+    function clearStorage() {
+      localStorage.clear();
+      document.getElementById('crud-results').innerHTML = '<p class="success">✓ Storage cleared</p>';
+      showStorage();
+    }
+
+    function showStorage() {
+      const data = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.startsWith('pb_')) {
+          data[key] = JSON.parse(localStorage.getItem(key));
+        }
+      }
+      document.getElementById('storage-data').textContent = JSON.stringify(data, null, 2);
+    }
+
+    // Initialize on load
+    init();
+  </script>
+</body>
+</html>

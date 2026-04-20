@@ -28,12 +28,134 @@ function showAdminPanel() {
   document.getElementById("login-screen").style.display = "none";
   document.getElementById("admin-panel").style.display  = "block";
   initSupabase();
+  
+  // Initialize storage and tournament manager
+  if (typeof storage === 'undefined' || !storage) {
+    window.storage = new StorageAdapter(db);
+  }
+  if (typeof tournamentManager === 'undefined' || !tournamentManager) {
+    window.tournamentManager = new TournamentManager(storage);
+  }
+  
+  // Run migration check
+  checkAndMigrate();
+  
+  // Load tournament selector
+  loadTournamentSelector();
+  
   fetchMatches();
   subscribeRealtime();
   
   // Initialize auto-backup toggle (loads saved preference)
   if (typeof initAutoBackupToggle === 'function') {
     initAutoBackupToggle();
+  }
+}
+
+// ── Migration Check ──────────────────────────────────────────
+async function checkAndMigrate() {
+  try {
+    if (!tournamentManager) return;
+    
+    const needsMigration = await tournamentManager.needsMigration();
+    
+    if (needsMigration) {
+      setStatus('🔄 Đang di chuyển dữ liệu cũ...', 'ok');
+      
+      const result = await tournamentManager.migrateExistingMatches();
+      
+      setStatus(`✓ ${result.message}`, 'ok');
+      
+      // Set the default tournament as active
+      const defaultTournament = await tournamentManager.ensureDefaultTournament();
+      await tournamentManager.setActiveTournament(defaultTournament.id);
+    }
+  } catch (error) {
+    console.error('Migration error:', error);
+    setStatus('⚠️ Lỗi di chuyển dữ liệu: ' + error.message, 'err');
+  }
+}
+
+// ── Tournament Selector ──────────────────────────────────────
+async function loadTournamentSelector() {
+  try {
+    // Initialize storage and tournament manager if not already done
+    if (typeof storage === 'undefined' || !storage) {
+      window.storage = new StorageAdapter(db);
+    }
+    if (typeof tournamentManager === 'undefined' || !tournamentManager) {
+      window.tournamentManager = new TournamentManager(storage);
+    }
+
+    const tournaments = await tournamentManager.getAllTournaments();
+    const select = document.getElementById('tournament-select');
+    
+    if (tournaments.length === 0) {
+      select.innerHTML = '<option value="">Chưa có giải đấu nào</option>';
+      return;
+    }
+
+    // Get active tournament ID
+    const activeId = tournamentManager.getActiveTournamentId();
+    
+    // Populate dropdown
+    select.innerHTML = tournaments
+      .filter(t => !t.archived)
+      .map(t => `
+        <option value="${t.id}" ${t.id == activeId ? 'selected' : ''}>
+          ${t.name} (${getStatusText(t.status)})
+        </option>
+      `).join('');
+
+    // If no active tournament, select first one
+    if (!activeId && tournaments.length > 0) {
+      await switchTournament(tournaments[0].id);
+    } else {
+      updateTournamentStatus();
+    }
+  } catch (error) {
+    console.error('Error loading tournaments:', error);
+  }
+}
+
+function getStatusText(status) {
+  const map = {
+    'upcoming': 'Sắp diễn ra',
+    'ongoing': 'Đang diễn ra',
+    'completed': 'Đã kết thúc'
+  };
+  return map[status] || status;
+}
+
+async function switchTournament(tournamentId) {
+  if (!tournamentId) return;
+  
+  try {
+    await tournamentManager.setActiveTournament(tournamentId);
+    updateTournamentStatus();
+    
+    // Reload matches for selected tournament
+    await fetchMatches();
+    
+    setStatus('Đã chuyển giải đấu', 'ok');
+  } catch (error) {
+    setStatus('Lỗi khi chuyển giải đấu: ' + error.message, 'err');
+  }
+}
+
+function updateTournamentStatus() {
+  const select = document.getElementById('tournament-select');
+  const statusEl = document.getElementById('tournament-status');
+  
+  if (!select || !statusEl) return;
+  
+  const selectedOption = select.options[select.selectedIndex];
+  if (selectedOption && selectedOption.value) {
+    const statusText = selectedOption.text.match(/\((.*?)\)/);
+    if (statusText) {
+      statusEl.textContent = statusText[1];
+      statusEl.className = 'status-chip';
+    }
   }
 }
 
@@ -50,6 +172,7 @@ function renderMatches(matches) {
   renderStageList("match-list-group", groupMatches, "group");
   renderStageList("match-list-semi",  semiMatches,  "semi");
   renderStageList("match-list-final", finalMatches, "final");
+  renderSpecialMatches(matches);
   updateBracketUI(matches);
 
   // Auto-generate bracket stages
@@ -784,7 +907,18 @@ async function generateFinal(silent=false) {
 
 async function fetchAllMatches() {
   if (!db) return localMatches||[];
-  const {data}=await db.from("matches").select("*");
+  
+  // Filter by active tournament if available
+  let query = db.from("matches").select("*");
+  
+  if (typeof tournamentManager !== 'undefined' && tournamentManager) {
+    const activeId = tournamentManager.getActiveTournamentId();
+    if (activeId) {
+      query = query.eq('tournament_id', activeId);
+    }
+  }
+  
+  const {data} = await query;
   return data||[];
 }
 
@@ -861,4 +995,214 @@ function renderBracketVisual(container, matches) {
   }
   html+='</div>';
   container.innerHTML=html;
+}
+
+// ── Special Match Types ──────────────────────────────────────
+
+/**
+ * Create third-place match (auto-detect losers from semifinals)
+ */
+async function createThirdPlaceMatch() {
+  try {
+    if (!tournamentManager) {
+      setStatus('❌ Tournament manager not initialized', 'err');
+      return;
+    }
+
+    const activeId = tournamentManager.getActiveTournamentId();
+    if (!activeId) {
+      setStatus('❌ Chưa chọn giải đấu', 'err');
+      return;
+    }
+
+    // Check if third-place match already exists
+    const matches = await tournamentManager.getMatches(activeId);
+    const existingThirdPlace = matches.find(m => m.match_type === 'third_place');
+    
+    if (existingThirdPlace) {
+      setStatus('⚠️ Trận tranh giải ba đã tồn tại', 'err');
+      return;
+    }
+
+    // Generate third-place match
+    const thirdPlaceMatch = await tournamentManager.generateThirdPlaceMatch(activeId);
+    
+    setStatus('✓ Đã tạo trận tranh giải ba', 'ok');
+    await fetchMatches();
+  } catch (error) {
+    setStatus('❌ Lỗi: ' + error.message, 'err');
+  }
+}
+
+/**
+ * Create consolation match (3rd place teams from groups)
+ */
+async function createConsolationMatch() {
+  try {
+    if (!tournamentManager) {
+      setStatus('❌ Tournament manager not initialized', 'err');
+      return;
+    }
+
+    const activeId = tournamentManager.getActiveTournamentId();
+    if (!activeId) {
+      setStatus('❌ Chưa chọn giải đấu', 'err');
+      return;
+    }
+
+    // Check if consolation match already exists
+    const matches = await tournamentManager.getMatches(activeId);
+    const existingConsolation = matches.find(m => m.match_type === 'consolation');
+    
+    if (existingConsolation) {
+      setStatus('⚠️ Trận khuyến khích đã tồn tại', 'err');
+      return;
+    }
+
+    // Generate consolation match
+    const consolationMatch = await tournamentManager.generateConsolationMatch(activeId);
+    
+    setStatus('✓ Đã tạo trận khuyến khích', 'ok');
+    await fetchMatches();
+  } catch (error) {
+    setStatus('❌ Lỗi: ' + error.message, 'err');
+  }
+}
+
+/**
+ * Open show match modal
+ */
+async function openShowMatchModal() {
+  try {
+    if (!storage) {
+      setStatus('❌ Storage not initialized', 'err');
+      return;
+    }
+
+    // Load all members for selection
+    const members = await storage.read('members');
+    
+    // Populate dropdowns
+    const selects = [
+      'show-team-a-member1',
+      'show-team-a-member2',
+      'show-team-b-member1',
+      'show-team-b-member2'
+    ];
+
+    selects.forEach(selectId => {
+      const select = document.getElementById(selectId);
+      if (select) {
+        select.innerHTML = '<option value="">Chọn thành viên...</option>' +
+          members.map(m => `<option value="${m.id}">${m.name} (T${m.tier})</option>`).join('');
+      }
+    });
+
+    // Show modal
+    const modal = document.getElementById('show-match-modal');
+    if (modal) {
+      modal.style.display = 'flex';
+    }
+  } catch (error) {
+    setStatus('❌ Lỗi: ' + error.message, 'err');
+  }
+}
+
+/**
+ * Close show match modal
+ */
+function closeShowMatchModal() {
+  const modal = document.getElementById('show-match-modal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+  
+  // Clear form
+  ['show-team-a-member1', 'show-team-a-member2', 'show-team-b-member1', 'show-team-b-member2'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  ['show-team-a-name', 'show-team-b-name'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+}
+
+/**
+ * Create show match (exhibition)
+ */
+async function createShowMatch() {
+  try {
+    if (!tournamentManager) {
+      setStatus('❌ Tournament manager not initialized', 'err');
+      return;
+    }
+
+    const activeId = tournamentManager.getActiveTournamentId();
+    if (!activeId) {
+      setStatus('❌ Chưa chọn giải đấu', 'err');
+      return;
+    }
+
+    // Get selected members
+    const teamAMember1 = document.getElementById('show-team-a-member1').value;
+    const teamAMember2 = document.getElementById('show-team-a-member2').value;
+    const teamBMember1 = document.getElementById('show-team-b-member1').value;
+    const teamBMember2 = document.getElementById('show-team-b-member2').value;
+
+    // Validate
+    if (!teamAMember1 || !teamAMember2 || !teamBMember1 || !teamBMember2) {
+      setStatus('❌ Vui lòng chọn đủ 4 thành viên', 'err');
+      return;
+    }
+
+    // Check for duplicates
+    const selected = [teamAMember1, teamAMember2, teamBMember1, teamBMember2];
+    const unique = new Set(selected);
+    if (unique.size !== 4) {
+      setStatus('❌ Không được chọn trùng thành viên', 'err');
+      return;
+    }
+
+    // Get custom names
+    const customNames = {
+      teamA: document.getElementById('show-team-a-name').value.trim() || null,
+      teamB: document.getElementById('show-team-b-name').value.trim() || null
+    };
+
+    // Create show match
+    const showMatch = await tournamentManager.createShowMatch(
+      activeId,
+      [teamAMember1, teamAMember2],
+      [teamBMember1, teamBMember2],
+      customNames
+    );
+
+    setStatus('✓ Đã tạo trận biểu diễn', 'ok');
+    closeShowMatchModal();
+    await fetchMatches();
+  } catch (error) {
+    setStatus('❌ Lỗi: ' + error.message, 'err');
+  }
+}
+
+/**
+ * Render special matches in the special section
+ */
+function renderSpecialMatches(matches) {
+  const specialMatches = matches.filter(m => 
+    m.match_type === 'third_place' || 
+    m.match_type === 'consolation' || 
+    m.match_type === 'exhibition'
+  );
+
+  const container = document.getElementById('match-list-special');
+  if (!container) return;
+
+  if (specialMatches.length === 0) {
+    container.innerHTML = '<p class="empty">Chưa có trận đặc biệt nào.</p>';
+    return;
+  }
+
+  container.innerHTML = specialMatches.map(m => matchHTML(m, 'special')).join('');
 }

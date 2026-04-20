@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản Lý Giải Đấu - Pickleball Tournament</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .tournaments-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #ddd;
+      flex-wrap: wrap;
+    }
+
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      border: none;
+      background: none;
+      font-size: 14px;
+      font-weight: 500;
+      color: #666;
+      border-bottom: 3px solid transparent;
+      transition: all 0.3s;
+    }
+
+    .tab.active {
+      color: #3498db;
+      border-bottom-color: #3498db;
+    }
+
+    .tab:hover {
+      color: #3498db;
+    }
+
+    .tournaments-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      gap: 20px;
+    }
+
+    .tournament-card {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      transition: transform 0.2s;
+    }
+
+    .tournament-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+
+    .tournament-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 15px;
+    }
+
+    .tournament-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #2c3e50;
+      margin: 0;
+    }
+
+    .status-badge {
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .status-upcoming {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .status-ongoing {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .status-completed {
+      background: #d1ecf1;
+      color: #0c5460;
+    }
+
+    .tournament-info {
+      margin-bottom: 15px;
+      color: #666;
+      font-size: 14px;
+    }
+
+    .tournament-info div {
+      margin-bottom: 5px;
+    }
+
+    .tournament-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 13px;
+    }
+
+    /* Wizard Modal */
+    .wizard-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .wizard-modal.active {
+      display: flex;
+    }
+
+    .wizard-content {
+      background: white;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 800px;
+      max-height: 90vh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .wizard-header {
+      padding: 20px;
+      border-bottom: 1px solid #ddd;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .wizard-steps {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .wizard-step {
+      flex: 1;
+      height: 4px;
+      background: #ddd;
+      border-radius: 2px;
+      transition: background 0.3s;
+    }
+
+    .wizard-step.active {
+      background: #3498db;
+    }
+
+    .wizard-step.completed {
+      background: #27ae60;
+    }
+
+    .wizard-body {
+      padding: 30px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .wizard-footer {
+      padding: 20px;
+      border-top: 1px solid #ddd;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .step-content {
+      display: none;
+    }
+
+    .step-content.active {
+      display: block;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+      color: #555;
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .participant-list {
+      max-height: 400px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 10px;
+    }
+
+    .participant-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .participant-item:last-child {
+      border-bottom: none;
+    }
+
+    .teams-display {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 15px;
+    }
+
+    .team-card {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 6px;
+      border: 2px solid #dee2e6;
+    }
+
+    .team-card.seeded {
+      border-color: #ffd700;
+      background: #fffef0;
+    }
+
+    .matches-list {
+      max-height: 500px;
+      overflow-y: auto;
+    }
+
+    .match-item {
+      background: #f8f9fa;
+      padding: 12px;
+      margin-bottom: 10px;
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #999;
+    }
+
+    /* Loading Spinner */
+    .loading-spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(52, 152, 219, 0.3);
+      border-radius: 50%;
+      border-top-color: #3498db;
+      animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    .loading-overlay.active {
+      display: flex;
+    }
+
+    .loading-content {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .status-message {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 15px 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 10000;
+      display: none;
+      max-width: 400px;
+    }
+
+    .status-message.active {
+      display: block;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    .status-message.success {
+      background: #d4edda;
+      color: #155724;
+      border-left: 4px solid #28a745;
+    }
+
+    .status-message.error {
+      background: #f8d7da;
+      color: #721c24;
+      border-left: 4px solid #dc3545;
+    }
+
+    .status-message.info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border-left: 4px solid #17a2b8;
+    }
+
+    @media (max-width: 768px) {
+      .tournaments-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .teams-display {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="tournaments-container">
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+      <div class="loading-content">
+        <div class="loading-spinner" style="width: 40px; height: 40px; border-width: 4px;"></div>
+        <p style="margin-top: 15px; color: #666;">Đang xử lý...</p>
+      </div>
+    </div>
+
+    <!-- Navigation Menu -->
+    <nav style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+      <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+        <a href="admin.html" style="padding: 8px 16px; text-decoration: none; color: #666; border-radius: 4px; transition: all 0.3s;">
+          🏠 Trang Chủ
+        </a>
+        <a href="tournaments.html" style="padding: 8px 16px; text-decoration: none; color: white; background: #3498db; border-radius: 4px; font-weight: 500;">
+          🏆 Giải Đấu
+        </a>
+        <a href="members.html" style="padding: 8px 16px; text-decoration: none; color: #666; border-radius: 4px; transition: all 0.3s;">
+          👥 Thành Viên
+        </a>
+        <a href="teams.html" style="padding: 8px 16px; text-decoration: none; color: #666; border-radius: 4px; transition: all 0.3s;">
+          🤝 Đội
+        </a>
+        <a href="index.html" style="padding: 8px 16px; text-decoration: none; color: #666; border-radius: 4px; transition: all 0.3s; margin-left: auto;">
+          👁️ Xem Công Khai
+        </a>
+      </div>
+    </nav>
+
+    <div class="page-header">
+      <h1>🏆 Quản Lý Giải Đấu</h1>
+      <div style="display: flex; gap: 10px;">
+        <button class="btn btn-secondary" onclick="openRestoreModal()">📥 Khôi Phục</button>
+        <button class="btn btn-primary" onclick="openWizard()">+ Tạo Giải Đấu Mới</button>
+      </div>
+    </div>
+
+    <div id="status-message" class="status-message"></div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('upcoming')">Sắp diễn ra</button>
+      <button class="tab" onclick="switchTab('ongoing')">Đang diễn ra</button>
+      <button class="tab" onclick="switchTab('completed')">Đã kết thúc</button>
+      <button class="tab" onclick="switchTab('archived')">Lưu trữ</button>
+    </div>
+
+    <div id="tournaments-grid" class="tournaments-grid"></div>
+
+    <div id="empty-state" class="empty-state" style="display: none;">
+      <div style="font-size: 48px; margin-bottom: 20px;">🏆</div>
+      <h3>Chưa có giải đấu nào</h3>
+      <p>Nhấn "Tạo Giải Đấu Mới" để bắt đầu</p>
+    </div>
+  </div>
+
+  <!-- Tournament Creation Wizard -->
+  <div id="wizard-modal" class="wizard-modal">
+    <div class="wizard-content">
+      <div class="wizard-header">
+        <div>
+          <h2 id="wizard-title">Tạo Giải Đấu Mới</h2>
+          <div class="wizard-steps">
+            <div class="wizard-step active" id="step-indicator-1"></div>
+            <div class="wizard-step" id="step-indicator-2"></div>
+            <div class="wizard-step" id="step-indicator-3"></div>
+            <div class="wizard-step" id="step-indicator-4"></div>
+          </div>
+        </div>
+        <button class="close-btn" onclick="closeWizard()">&times;</button>
+      </div>
+
+      <div class="wizard-body">
+        <!-- Step 1: Basic Info -->
+        <div id="step-1" class="step-content active">
+          <h3>Bước 1: Thông tin cơ bản</h3>
+          <div class="form-group">
+            <label>Tên giải đấu <span class="required">*</span></label>
+            <input type="text" id="tournament-name" required placeholder="VD: Giải Pickleball Tháng 3">
+          </div>
+          <div class="form-group">
+            <label>Ngày bắt đầu <span class="required">*</span></label>
+            <input type="date" id="tournament-date" required>
+          </div>
+          <div class="form-group">
+            <label>Số bảng đấu</label>
+            <input type="number" id="num-groups" value="2" min="1">
+          </div>
+          <div class="form-group">
+            <label>Số đội mỗi bảng (dự kiến)</label>
+            <input type="number" id="teams-per-group" value="5" min="2">
+          </div>
+        </div>
+
+        <!-- Step 2: Select Participants -->
+        <div id="step-2" class="step-content">
+          <h3>Bước 2: Chọn thành viên</h3>
+          <div class="form-group">
+            <input type="text" id="participant-search" placeholder="🔍 Tìm kiếm thành viên..." oninput="filterParticipants()">
+          </div>
+          <div id="participants-list" class="participant-list"></div>
+          <p>Đã chọn: <strong id="selected-count">0</strong> thành viên</p>
+        </div>
+
+        <!-- Step 3: Team Pairing -->
+        <div id="step-3" class="step-content">
+          <h3>Bước 3: Ghép cặp đội</h3>
+          <div style="margin-bottom: 20px;">
+            <button class="btn btn-primary" onclick="autoPair()">🎲 Ghép Cặp Tự Động</button>
+            <button class="btn btn-secondary" onclick="rePair()">🔄 Ghép Lại</button>
+          </div>
+          <div id="teams-display" class="teams-display"></div>
+        </div>
+
+        <!-- Step 4: Schedule -->
+        <div id="step-4" class="step-content">
+          <h3>Bước 4: Lịch thi đấu</h3>
+          <div style="margin-bottom: 20px;">
+            <button class="btn btn-primary" onclick="generateSchedule()">📅 Tạo Lịch Tự Động</button>
+          </div>
+          <div class="form-group">
+            <label>
+              <input type="checkbox" id="enable-third-place" checked>
+              Tạo trận tranh giải ba
+            </label>
+          </div>
+          <div class="form-group">
+            <label>
+              <input type="checkbox" id="enable-consolation">
+              Tạo trận tranh giải khuyến khích
+            </label>
+          </div>
+          <div id="matches-display" class="matches-list"></div>
+        </div>
+      </div>
+
+      <div class="wizard-footer">
+        <button class="btn btn-secondary" id="btn-back" onclick="previousStep()" style="display: none;">← Quay lại</button>
+        <div>
+          <button class="btn btn-secondary" onclick="closeWizard()">Hủy</button>
+          <button class="btn btn-primary" id="btn-next" onclick="nextStep()">Tiếp theo →</button>
+          <button class="btn btn-success" id="btn-finish" onclick="finishWizard()" style="display: none;">✓ Tạo Giải Đấu</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Restore Tournament Modal -->
+  <div id="restore-modal" class="wizard-modal">
+    <div class="wizard-content" style="max-width: 600px;">
+      <div class="wizard-header">
+        <h2>📥 Khôi Phục Giải Đấu</h2>
+        <button class="close-btn" onclick="closeRestoreModal()">&times;</button>
+      </div>
+      <div class="wizard-body">
+        <div class="form-group">
+          <label>Chọn file backup (JSON)</label>
+          <input type="file" id="restore-file" accept=".json" onchange="previewBackup()">
+        </div>
+        <div id="backup-preview" style="display: none; margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 4px;">
+          <h4>Thông tin giải đấu:</h4>
+          <div id="preview-content"></div>
+        </div>
+        <div class="form-group" style="margin-top: 20px;">
+          <label>Tên giải đấu mới (tùy chọn)</label>
+          <input type="text" id="restore-new-name" placeholder="Để trống để giữ tên gốc + (Restored)">
+        </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="restore-skip-matches">
+            Chỉ khôi phục cấu trúc (bỏ qua kết quả trận đấu)
+          </label>
+        </div>
+      </div>
+      <div class="wizard-footer">
+        <button class="btn btn-secondary" onclick="closeRestoreModal()">Hủy</button>
+        <button class="btn btn-primary" id="btn-restore" onclick="restoreTournament()" disabled>Khôi Phục</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="storage.js"></script>
+  <script src="members.js"></script>
+  <script src="pairing.js"></script>
+  <script src="tournaments.js"></script>
+  <script>
+    // Global variables
+    let storage, memberManager, tournamentManager;
+    let currentTab = 'upcoming';
+    let currentStep = 1;
+    let wizardData = {
+      tournament: null,
+      participants: [],
+      teams: [],
+      matches: []
+    };
+    let allMembers = [];
+    let allTournaments = [];
+
+    // Initialize
+    async function init() {
+      const SUPABASE_URL = "https://negwxhrkdypiopmmrxkf.supabase.co";
+      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5lZ3d4aHJrZHlwaW9wbW1yeGtmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0MzQwMjEsImV4cCI6MjA5MjAxMDAyMX0.5f_1qyXfEvcDxVQAtiaMVBT7K7nz7MtDM8sN50V0O14";
+
+      let supabaseClient = null;
+      if (SUPABASE_URL !== "REPLACE_ME") {
+        try {
+          supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } catch (e) {
+          console.warn("Using localStorage mode");
+        }
+      }
+
+      storage = new StorageAdapter(supabaseClient);
+      memberManager = new MemberManager(storage);
+      tournamentManager = new TournamentManager(storage);
+
+      await loadTournaments();
+    }
+
+    async function loadTournaments() {
+      try {
+        showLoading();
+        allTournaments = await tournamentManager.getAllTournaments();
+        renderTournaments();
+      } catch (error) {
+        showStatus('Lỗi: ' + error.message, 'error');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    function switchTab(tab) {
+      currentTab = tab;
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      event.target.classList.add('active');
+      renderTournaments();
+    }
+
+    function renderTournaments() {
+      let filtered = allTournaments;
+
+      if (currentTab === 'archived') {
+        filtered = filtered.filter(t => t.archived);
+      } else {
+        filtered = filtered.filter(t => !t.archived && t.status === currentTab);
+      }
+
+      const grid = document.getElementById('tournaments-grid');
+      const emptyState = document.getElementById('empty-state');
+
+      if (filtered.length === 0) {
+        grid.style.display = 'none';
+        emptyState.style.display = 'block';
+        return;
+      }
+
+      grid.style.display = 'grid';
+      emptyState.style.display = 'none';
+
+      grid.innerHTML = filtered.map(t => `
+        <div class="tournament-card">
+          <div class="tournament-header">
+            <h3 class="tournament-title">${escapeHtml(t.name)}</h3>
+            <span class="status-badge status-${t.status}">${getStatusText(t.status)}</span>
+          </div>
+          <div class="tournament-info">
+            <div>📅 ${formatDate(t.start_date)}</div>
+            <div>📊 ${t.config?.numGroups || 2} bảng</div>
+          </div>
+          <div class="tournament-actions">
+            <button class="btn btn-primary btn-sm" onclick="viewTournament('${t.id}')">👁️ Xem</button>
+            <button class="btn btn-secondary btn-sm" onclick="setActive('${t.id}')">⭐ Chọn</button>
+            <button class="btn btn-secondary btn-sm" onclick="backupTournament('${t.id}')">💾 Backup</button>
+            ${t.status !== 'ongoing' ? `<button class="btn btn-danger btn-sm" onclick="deleteTournament('${t.id}')">🗑️ Xóa</button>` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function getStatusText(status) {
+      const map = {
+        'upcoming': 'Sắp diễn ra',
+        'ongoing': 'Đang diễn ra',
+        'completed': 'Đã kết thúc'
+      };
+      return map[status] || status;
+    }
+
+    function formatDate(dateStr) {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('vi-VN');
+    }
+
+    async function setActive(id) {
+      await tournamentManager.setActiveTournament(id);
+      showStatus('Đã chọn giải đấu!', 'success');
+    }
+
+    async function deleteTournament(id) {
+      if (!confirm('Bạn có chắc chắn muốn xóa giải đấu này?')) return;
+      
+      try {
+        showLoading();
+        await tournamentManager.deleteTournament(id);
+        showStatus('Xóa thành công!', 'success');
+        await loadTournaments();
+      } catch (error) {
+        showStatus('Lỗi: ' + error.message, 'error');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    function viewTournament(id) {
+      // Navigate to admin page with this tournament
+      tournamentManager.setActiveTournament(id);
+      window.location.href = 'admin.html';
+    }
+
+    // Wizard functions
+    function openWizard() {
+      wizardData = { tournament: null, participants: [], teams: [], matches: [] };
+      currentStep = 1;
+      updateWizardStep();
+      document.getElementById('wizard-modal').classList.add('active');
+      loadMembersForWizard();
+    }
+
+    function closeWizard() {
+      document.getElementById('wizard-modal').classList.remove('active');
+    }
+
+    async function loadMembersForWizard() {
+      allMembers = await memberManager.getAllMembers();
+      renderParticipantsList();
+    }
+
+    function renderParticipantsList() {
+      const list = document.getElementById('participants-list');
+      const searchQuery = document.getElementById('participant-search').value.toLowerCase();
+      
+      const filtered = allMembers.filter(m => 
+        m.name.toLowerCase().includes(searchQuery)
+      );
+
+      list.innerHTML = filtered.map(m => `
+        <div class="participant-item">
+          <input type="checkbox" id="member-${m.id}" onchange="toggleParticipant('${m.id}')">
+          <label for="member-${m.id}" style="flex: 1; cursor: pointer;">
+            ${escapeHtml(m.name)} <span class="tier-badge tier-${m.tier}">T${m.tier}</span>
+          </label>
+          <select id="tier-override-${m.id}" style="width: 80px;">
+            <option value="">T${m.tier}</option>
+            <option value="1">T1</option>
+            <option value="2">T2</option>
+            <option value="3">T3</option>
+          </select>
+          <label>
+            <input type="checkbox" id="seeded-${m.id}"> ⭐
+          </label>
+        </div>
+      `).join('');
+
+      updateSelectedCount();
+    }
+
+    function filterParticipants() {
+      renderParticipantsList();
+    }
+
+    function toggleParticipant(memberId) {
+      updateSelectedCount();
+    }
+
+    function updateSelectedCount() {
+      const checkboxes = document.querySelectorAll('#participants-list input[type="checkbox"][id^="member-"]');
+      const count = Array.from(checkboxes).filter(cb => cb.checked).length;
+      document.getElementById('selected-count').textContent = count;
+    }
+
+    function updateWizardStep() {
+      // Update step indicators
+      for (let i = 1; i <= 4; i++) {
+        const indicator = document.getElementById(`step-indicator-${i}`);
+        indicator.classList.remove('active', 'completed');
+        if (i < currentStep) indicator.classList.add('completed');
+        if (i === currentStep) indicator.classList.add('active');
+      }
+
+      // Show/hide step content
+      for (let i = 1; i <= 4; i++) {
+        const content = document.getElementById(`step-${i}`);
+        content.classList.toggle('active', i === currentStep);
+      }
+
+      // Update buttons
+      document.getElementById('btn-back').style.display = currentStep > 1 ? 'inline-block' : 'none';
+      document.getElementById('btn-next').style.display = currentStep < 4 ? 'inline-block' : 'none';
+      document.getElementById('btn-finish').style.display = currentStep === 4 ? 'inline-block' : 'none';
+    }
+
+    async function nextStep() {
+      if (currentStep === 1) {
+        // Validate and create tournament
+        const name = document.getElementById('tournament-name').value;
+        const date = document.getElementById('tournament-date').value;
+        if (!name || !date) {
+          showStatus('Vui lòng điền đầy đủ thông tin', 'error');
+          return;
+        }
+
+        try {
+          wizardData.tournament = await tournamentManager.createTournament({
+            name: name,
+            start_date: date,
+            numGroups: parseInt(document.getElementById('num-groups').value),
+            teamsPerGroup: parseInt(document.getElementById('teams-per-group').value),
+            enableThirdPlace: true,
+            enableConsolation: false
+          });
+        } catch (error) {
+          showStatus('Lỗi: ' + error.message, 'error');
+          return;
+        }
+      } else if (currentStep === 2) {
+        // Save participants
+        const selected = [];
+        allMembers.forEach(m => {
+          const checkbox = document.getElementById(`member-${m.id}`);
+          if (checkbox && checkbox.checked) {
+            const tierOverride = document.getElementById(`tier-override-${m.id}`).value;
+            const isSeeded = document.getElementById(`seeded-${m.id}`).checked;
+            selected.push({
+              member_id: m.id,
+              tier_override: tierOverride ? parseInt(tierOverride) : null,
+              is_seeded: isSeeded
+            });
+          }
+        });
+
+        if (selected.length < 4) {
+          showStatus('Cần ít nhất 4 thành viên', 'error');
+          return;
+        }
+
+        try {
+          await tournamentManager.addParticipants(wizardData.tournament.id, selected);
+          wizardData.participants = selected;
+        } catch (error) {
+          showStatus('Lỗi: ' + error.message, 'error');
+          return;
+        }
+      }
+
+      currentStep++;
+      updateWizardStep();
+    }
+
+    function previousStep() {
+      currentStep--;
+      updateWizardStep();
+    }
+
+    async function autoPair() {
+      try {
+        const participants = await tournamentManager.getParticipantsWithMembers(wizardData.tournament.id);
+        const pairing = new PairingAlgorithm(participants, wizardData.tournament.config);
+        
+        const validation = pairing.validate();
+        if (!validation.valid) {
+          showStatus('Lỗi: ' + validation.errors.join(', '), 'error');
+          return;
+        }
+
+        wizardData.teams = pairing.generateTeams();
+        renderTeams();
+        showStatus('Ghép cặp thành công!', 'success');
+      } catch (error) {
+        showStatus('Lỗi: ' + error.message, 'error');
+      }
+    }
+
+    function rePair() {
+      autoPair();
+    }
+
+    function renderTeams() {
+      const display = document.getElementById('teams-display');
+      
+      // Group by group_name
+      const groups = {};
+      wizardData.teams.forEach(team => {
+        if (!groups[team.group_name]) groups[team.group_name] = [];
+        groups[team.group_name].push(team);
+      });
+
+      let html = '';
+      Object.entries(groups).forEach(([groupName, teams]) => {
+        html += `<div style="grid-column: 1/-1;"><h4>Bảng ${groupName}</h4></div>`;
+        teams.forEach((team, idx) => {
+          const member1 = allMembers.find(m => m.id == team.member1_id);
+          const member2 = allMembers.find(m => m.id == team.member2_id);
+          html += `
+            <div class="team-card ${team.is_seeded ? 'seeded' : ''}">
+              <strong>Đội ${idx + 1}</strong> ${team.is_seeded ? '⭐' : ''}
+              <div>${member1?.name || 'Unknown'}</div>
+              <div>${member2?.name || 'Unknown'}</div>
+            </div>
+          `;
+        });
+      });
+
+      display.innerHTML = html;
+    }
+
+    async function generateSchedule() {
+      try {
+        // Save teams first
+        const teamsToSave = wizardData.teams.map(t => ({
+          ...t,
+          tournament_id: wizardData.tournament.id
+        }));
+        await storage.create('teams', teamsToSave);
+
+        // Generate schedule
+        wizardData.matches = await tournamentManager.generateSchedule(wizardData.tournament.id);
+        renderMatches();
+        showStatus('Tạo lịch thành công!', 'success');
+      } catch (error) {
+        showStatus('Lỗi: ' + error.message, 'error');
+      }
+    }
+
+    function renderMatches() {
+      const display = document.getElementById('matches-display');
+      
+      // Group by group_name
+      const groups = {};
+      wizardData.matches.forEach(match => {
+        if (!groups[match.group_name]) groups[match.group_name] = [];
+        groups[match.group_name].push(match);
+      });
+
+      let html = '';
+      Object.entries(groups).forEach(([groupName, matches]) => {
+        html += `<h4>Bảng ${groupName} - ${matches.length} trận</h4>`;
+        matches.forEach((match, idx) => {
+          html += `
+            <div class="match-item">
+              <span>${idx + 1}. ${match.teamA} vs ${match.teamB}</span>
+            </div>
+          `;
+        });
+      });
+
+      display.innerHTML = html;
+    }
+
+    async function finishWizard() {
+      try {
+        showLoading();
+        // Update tournament config
+        await tournamentManager.updateTournament(wizardData.tournament.id, {
+          config: {
+            ...wizardData.tournament.config,
+            enableThirdPlace: document.getElementById('enable-third-place').checked,
+            enableConsolation: document.getElementById('enable-consolation').checked
+          }
+        });
+
+        showStatus('Tạo giải đấu thành công!', 'success');
+        closeWizard();
+        await loadTournaments();
+      } catch (error) {
+        showStatus('Lỗi: ' + error.message, 'error');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    function showStatus(message, type) {
+      const statusEl = document.getElementById('status-message');
+      statusEl.textContent = message;
+      statusEl.className = `status-message ${type} active`;
+      setTimeout(() => statusEl.classList.remove('active'), 5000);
+    }
+
+    function showLoading() {
+      document.getElementById('loading-overlay').classList.add('active');
+    }
+
+    function hideLoading() {
+      document.getElementById('loading-overlay').classList.remove('active');
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Backup & Restore functions
+    async function backupTournament(id) {
+      try {
+        showStatus('Đang tạo backup...', 'info');
+        await tournamentManager.downloadTournamentBackup(id);
+        showStatus('Backup thành công!', 'success');
+      } catch (error) {
+        showStatus('Lỗi: ' + error.message, 'error');
+      }
+    }
+
+    let backupData = null;
+
+    function openRestoreModal() {
+      document.getElementById('restore-modal').classList.add('active');
+    }
+
+    function closeRestoreModal() {
+      document.getElementById('restore-modal').classList.remove('active');
+      document.getElementById('restore-file').value = '';
+      document.getElementById('restore-new-name').value = '';
+      document.getElementById('restore-skip-matches').checked = false;
+      document.getElementById('backup-preview').style.display = 'none';
+      document.getElementById('btn-restore').disabled = true;
+      backupData = null;
+    }
+
+    async function previewBackup() {
+      const fileInput = document.getElementById('restore-file');
+      const file = fileInput.files[0];
+      
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        backupData = JSON.parse(text);
+
+        // Validate backup format
+        if (!backupData.version || !backupData.tournament) {
+          throw new Error('File backup không hợp lệ');
+        }
+
+        // Show preview
+        const preview = document.getElementById('backup-preview');
+        const content = document.getElementById('preview-content');
+        
+        content.innerHTML = `
+          <p><strong>Tên:</strong> ${escapeHtml(backupData.tournament.name)}</p>
+          <p><strong>Ngày:</strong> ${formatDate(backupData.tournament.start_date)}</p>
+          <p><strong>Thành viên:</strong> ${backupData.participants?.length || 0}</p>
+          <p><strong>Đội:</strong> ${backupData.teams?.length || 0}</p>
+          <p><strong>Trận đấu:</strong> ${backupData.matches?.length || 0}</p>
+          <p><strong>Backup lúc:</strong> ${new Date(backupData.exported_at).toLocaleString('vi-VN')}</p>
+        `;
+
+        preview.style.display = 'block';
+        document.getElementById('btn-restore').disabled = false;
+      } catch (error) {
+        showStatus('Lỗi đọc file: ' + error.message, 'error');
+        backupData = null;
+        document.getElementById('btn-restore').disabled = true;
+      }
+    }
+
+    async function restoreTournament() {
+      if (!backupData) {
+        showStatus('Chưa chọn file backup', 'error');
+        return;
+      }
+
+      try {
+        const newName = document.getElementById('restore-new-name').value.trim();
+        const skipMatches = document.getElementById('restore-skip-matches').checked;
+
+        showStatus('Đang khôi phục...', 'info');
+
+        const result = await tournamentManager.restoreTournamentFromBackup(backupData, {
+          newName: newName || null,
+          skipMatches: skipMatches
+        });
+
+        showStatus(`Khôi phục thành công! ${result.stats.participants} thành viên, ${result.stats.teams} đội, ${result.stats.matches} trận`, 'success');
+        closeRestoreModal();
+        await loadTournaments();
+      } catch (error) {
+        showStatus('Lỗi khôi phục: ' + error.message, 'error');
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
