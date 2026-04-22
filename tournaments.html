@@ -600,6 +600,13 @@
       window.memberManager = new MemberManager(window.storage);
       window.tournamentManager = new TournamentManager(window.storage);
 
+      // Debug logging
+      console.log('✅ Initialization complete:');
+      console.log('  - storage:', window.storage);
+      console.log('  - memberManager:', window.memberManager);
+      console.log('  - tournamentManager:', window.tournamentManager);
+      console.log('  - createTournament method:', typeof window.tournamentManager?.createTournament);
+
       await loadTournaments();
     }
 
@@ -796,6 +803,19 @@
         }
 
         try {
+          // Debug logging
+          console.log('Creating tournament...');
+          console.log('  - window.tournamentManager:', window.tournamentManager);
+          console.log('  - createTournament method:', typeof window.tournamentManager?.createTournament);
+          
+          if (!window.tournamentManager) {
+            throw new Error('tournamentManager chưa được khởi tạo');
+          }
+          
+          if (typeof window.tournamentManager.createTournament !== 'function') {
+            throw new Error('createTournament không phải là function');
+          }
+
           wizardData.tournament = await window.tournamentManager.createTournament({
             name: name,
             start_date: date,
@@ -804,7 +824,10 @@
             enableThirdPlace: true,
             enableConsolation: false
           });
+          
+          console.log('✅ Tournament created:', wizardData.tournament);
         } catch (error) {
+          console.error('❌ Error creating tournament:', error);
           showStatus('Lỗi: ' + error.message, 'error');
           return;
         }
