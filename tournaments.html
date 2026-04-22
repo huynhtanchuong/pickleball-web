@@ -583,6 +583,33 @@
 
     // Initialize
     async function init() {
+      console.log('🚀 Starting initialization...');
+      
+      // Check if classes are loaded
+      console.log('Checking classes:');
+      console.log('  - StorageAdapter:', typeof StorageAdapter);
+      console.log('  - MemberManager:', typeof MemberManager);
+      console.log('  - TournamentManager:', typeof TournamentManager);
+      console.log('  - PairingAlgorithm:', typeof PairingAlgorithm);
+      
+      if (typeof StorageAdapter === 'undefined') {
+        console.error('❌ StorageAdapter not loaded! Check storage.js');
+        alert('Lỗi: storage.js chưa được load. Vui lòng refresh trang.');
+        return;
+      }
+      
+      if (typeof TournamentManager === 'undefined') {
+        console.error('❌ TournamentManager not loaded! Check tournaments.js');
+        alert('Lỗi: tournaments.js chưa được load. Vui lòng refresh trang.');
+        return;
+      }
+      
+      if (typeof MemberManager === 'undefined') {
+        console.error('❌ MemberManager not loaded! Check members.js');
+        alert('Lỗi: members.js chưa được load. Vui lòng refresh trang.');
+        return;
+      }
+      
       const SUPABASE_URL = "https://negwxhrkdypiopmmrxkf.supabase.co";
       const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5lZ3d4aHJrZHlwaW9wbW1yeGtmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0MzQwMjEsImV4cCI6MjA5MjAxMDAyMX0.5f_1qyXfEvcDxVQAtiaMVBT7K7nz7MtDM8sN50V0O14";
 
@@ -596,6 +623,7 @@
       }
 
       // Use window object for global access
+      console.log('Creating instances...');
       window.storage = new StorageAdapter(supabaseClient);
       window.memberManager = new MemberManager(window.storage);
       window.tournamentManager = new TournamentManager(window.storage);
@@ -1097,7 +1125,12 @@
       }
     }
 
-    init();
+    // Call init when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
   </script>
 </body>
 </html>
