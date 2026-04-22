@@ -569,8 +569,7 @@
   <script src="pairing.js"></script>
   <script src="tournaments.js"></script>
   <script>
-    // Global variables
-    let storage, memberManager, tournamentManager;
+    // Global variables - Use window object for true global scope
     let currentTab = 'upcoming';
     let currentStep = 1;
     let wizardData = {
@@ -596,9 +595,10 @@
         }
       }
 
-      storage = new StorageAdapter(supabaseClient);
-      memberManager = new MemberManager(storage);
-      tournamentManager = new TournamentManager(storage);
+      // Use window object for global access
+      window.storage = new StorageAdapter(supabaseClient);
+      window.memberManager = new MemberManager(window.storage);
+      window.tournamentManager = new TournamentManager(window.storage);
 
       await loadTournaments();
     }
@@ -606,7 +606,7 @@
     async function loadTournaments() {
       try {
         showLoading();
-        allTournaments = await tournamentManager.getAllTournaments();
+        allTournaments = await window.tournamentManager.getAllTournaments();
         renderTournaments();
       } catch (error) {
         showStatus('Lỗi: ' + error.message, 'error');
@@ -678,7 +678,7 @@
     }
 
     async function setActive(id) {
-      await tournamentManager.setActiveTournament(id);
+      await window.tournamentManager.setActiveTournament(id);
       showStatus('Đã chọn giải đấu!', 'success');
     }
 
@@ -687,7 +687,7 @@
       
       try {
         showLoading();
-        await tournamentManager.deleteTournament(id);
+        await window.tournamentManager.deleteTournament(id);
         showStatus('Xóa thành công!', 'success');
         await loadTournaments();
       } catch (error) {
@@ -699,7 +699,7 @@
 
     function viewTournament(id) {
       // Navigate to admin page with this tournament
-      tournamentManager.setActiveTournament(id);
+      window.tournamentManager.setActiveTournament(id);
       window.location.href = 'admin.html';
     }
 
@@ -717,7 +717,7 @@
     }
 
     async function loadMembersForWizard() {
-      allMembers = await memberManager.getAllMembers();
+      allMembers = await window.memberManager.getAllMembers();
       renderParticipantsList();
     }
 
@@ -796,7 +796,7 @@
         }
 
         try {
-          wizardData.tournament = await tournamentManager.createTournament({
+          wizardData.tournament = await window.tournamentManager.createTournament({
             name: name,
             start_date: date,
             numGroups: parseInt(document.getElementById('num-groups').value),
@@ -830,7 +830,7 @@
         }
 
         try {
-          await tournamentManager.addParticipants(wizardData.tournament.id, selected);
+          await window.tournamentManager.addParticipants(wizardData.tournament.id, selected);
           wizardData.participants = selected;
         } catch (error) {
           showStatus('Lỗi: ' + error.message, 'error');
@@ -849,7 +849,7 @@
 
     async function autoPair() {
       try {
-        const participants = await tournamentManager.getParticipantsWithMembers(wizardData.tournament.id);
+        const participants = await window.tournamentManager.getParticipantsWithMembers(wizardData.tournament.id);
         const pairing = new PairingAlgorithm(participants, wizardData.tournament.config);
         
         const validation = pairing.validate();
@@ -906,10 +906,10 @@
           ...t,
           tournament_id: wizardData.tournament.id
         }));
-        await storage.create('teams', teamsToSave);
+        await window.storage.create('teams', teamsToSave);
 
         // Generate schedule
-        wizardData.matches = await tournamentManager.generateSchedule(wizardData.tournament.id);
+        wizardData.matches = await window.tournamentManager.generateSchedule(wizardData.tournament.id);
         renderMatches();
         showStatus('Tạo lịch thành công!', 'success');
       } catch (error) {
@@ -946,7 +946,7 @@
       try {
         showLoading();
         // Update tournament config
-        await tournamentManager.updateTournament(wizardData.tournament.id, {
+        await window.tournamentManager.updateTournament(wizardData.tournament.id, {
           config: {
             ...wizardData.tournament.config,
             enableThirdPlace: document.getElementById('enable-third-place').checked,
@@ -989,7 +989,7 @@
     async function backupTournament(id) {
       try {
         showStatus('Đang tạo backup...', 'info');
-        await tournamentManager.downloadTournamentBackup(id);
+        await window.tournamentManager.downloadTournamentBackup(id);
         showStatus('Backup thành công!', 'success');
       } catch (error) {
         showStatus('Lỗi: ' + error.message, 'error');
@@ -1061,7 +1061,7 @@
 
         showStatus('Đang khôi phục...', 'info');
 
-        const result = await tournamentManager.restoreTournamentFromBackup(backupData, {
+        const result = await window.tournamentManager.restoreTournamentFromBackup(backupData, {
           newName: newName || null,
           skipMatches: skipMatches
         });
