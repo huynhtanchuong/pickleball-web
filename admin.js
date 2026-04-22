@@ -34,7 +34,7 @@ function showAdminPanel() {
     window.storage = new StorageAdapter(db);
   }
   if (typeof tournamentManager === 'undefined' || !tournamentManager) {
-    window.tournamentManager = new TournamentManager(storage);
+    window.tournamentManager = new TournamentManager(window.storage);
   }
   
   // Run migration check
@@ -84,7 +84,7 @@ async function loadTournamentSelector() {
       window.storage = new StorageAdapter(db);
     }
     if (typeof tournamentManager === 'undefined' || !tournamentManager) {
-      window.tournamentManager = new TournamentManager(storage);
+      window.tournamentManager = new TournamentManager(window.storage);
     }
 
     const tournaments = await tournamentManager.getAllTournaments();
