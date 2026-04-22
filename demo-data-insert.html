@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Insert Demo Data - Pickleball</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #2c3e50;
+      margin-bottom: 20px;
+    }
+    .btn {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 10px 5px;
+    }
+    .btn:hover {
+      background: #2980b9;
+    }
+    .btn-danger {
+      background: #e74c3c;
+    }
+    .btn-danger:hover {
+      background: #c0392b;
+    }
+    .status {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 4px;
+      display: none;
+    }
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    .status.info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+    .member-list {
+      margin-top: 20px;
+      max-height: 400px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 10px;
+    }
+    .member-item {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .member-item:last-child {
+      border-bottom: none;
+    }
+    .tier-badge {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .tier-1 { background: #ffd700; color: #000; }
+    .tier-2 { background: #c0c0c0; color: #000; }
+    .tier-3 { background: #cd7f32; color: #fff; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎾 Insert Demo Data</h1>
+    <p>Trang này giúp bạn thêm dữ liệu demo vào hệ thống để test.</p>
+    
+    <div>
+      <button class="btn" onclick="insertDemoData()">📥 Insert 12 Thành Viên Demo</button>
+      <button class="btn btn-danger" onclick="clearAllData()">🗑️ Xóa Tất Cả Dữ Liệu</button>
+      <button class="btn" onclick="loadMembers()">🔄 Refresh Danh Sách</button>
+    </div>
+
+    <div id="status" class="status"></div>
+
+    <div id="member-list" class="member-list"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const SUPABASE_URL = "https://negwxhrkdypiopmmrxkf.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5lZ3d4aHJrZHlwaW9wbW1yeGtmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0MzQwMjEsImV4cCI6MjA5MjAxMDAyMX0.5f_1qyXfEvcDxVQAtiaMVBT7K7nz7MtDM8sN50V0O14";
+
+    const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const demoMembers = [
+      { name: 'Nguyễn Văn A', tier: 1, phone: '0901234567', email: 'nguyenvana@example.com', notes: 'Thành viên T1 - Kỹ năng cao' },
+      { name: 'Trần Thị B', tier: 1, phone: '0901234568', email: 'tranthib@example.com', notes: 'Thành viên T1 - Kinh nghiệm lâu năm' },
+      { name: 'Lê Văn C', tier: 2, phone: '0901234569', email: 'levanc@example.com', notes: 'Thành viên T2 - Trung bình khá' },
+      { name: 'Phạm Thị D', tier: 2, phone: '0901234570', email: 'phamthid@example.com', notes: 'Thành viên T2 - Đang tiến bộ' },
+      { name: 'Hoàng Văn E', tier: 2, phone: '0901234571', email: 'hoangvane@example.com', notes: 'Thành viên T2 - Ổn định' },
+      { name: 'Võ Thị F', tier: 3, phone: '0901234572', email: 'vothif@example.com', notes: 'Thành viên T3 - Mới bắt đầu' },
+      { name: 'Đặng Văn G', tier: 3, phone: '0901234573', email: 'dangvang@example.com', notes: 'Thành viên T3 - Đang học' },
+      { name: 'Bùi Thị H', tier: 3, phone: '0901234574', email: 'buithih@example.com', notes: 'Thành viên T3 - Nhiệt tình' },
+      { name: 'Đinh Văn I', tier: 1, phone: '0901234575', email: 'dinhvani@example.com', notes: 'Thành viên T1 - Chơi tốt' },
+      { name: 'Mai Thị K', tier: 2, phone: '0901234576', email: 'maithik@example.com', notes: 'Thành viên T2 - Khá ổn' },
+      { name: 'Dương Văn L', tier: 3, phone: '0901234577', email: 'duongvanl@example.com', notes: 'Thành viên T3 - Cần luyện tập' },
+      { name: 'Lý Thị M', tier: 1, phone: '0901234578', email: 'lythim@example.com', notes: 'Thành viên T1 - Xuất sắc' }
+    ];
+
+    async function insertDemoData() {
+      showStatus('Đang insert dữ liệu...', 'info');
+      
+      try {
+        const { data, error } = await db
+          .from('members')
+          .insert(demoMembers)
+          .select();
+
+        if (error) throw error;
+
+        showStatus(`✅ Đã insert thành công ${data.length} thành viên!`, 'success');
+        await loadMembers();
+      } catch (error) {
+        showStatus(`❌ Lỗi: ${error.message}`, 'error');
+        console.error('Insert error:', error);
+      }
+    }
+
+    async function clearAllData() {
+      if (!confirm('⚠️ Bạn có chắc chắn muốn XÓA TẤT CẢ dữ liệu?\n\nHành động này không thể hoàn tác!')) {
+        return;
+      }
+
+      showStatus('Đang xóa dữ liệu...', 'info');
+
+      try {
+        // Delete in order: matches -> teams -> tournament_participants -> tournaments -> members
+        await db.from('matches').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        await db.from('teams').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        await db.from('tournament_participants').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        await db.from('tournaments').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        await db.from('members').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+
+        showStatus('✅ Đã xóa tất cả dữ liệu!', 'success');
+        await loadMembers();
+      } catch (error) {
+        showStatus(`❌ Lỗi: ${error.message}`, 'error');
+        console.error('Delete error:', error);
+      }
+    }
+
+    async function loadMembers() {
+      try {
+        const { data, error } = await db
+          .from('members')
+          .select('*')
+          .order('tier', { ascending: true })
+          .order('name', { ascending: true });
+
+        if (error) throw error;
+
+        renderMembers(data || []);
+      } catch (error) {
+        showStatus(`❌ Lỗi load dữ liệu: ${error.message}`, 'error');
+        console.error('Load error:', error);
+      }
+    }
+
+    function renderMembers(members) {
+      const container = document.getElementById('member-list');
+      
+      if (members.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">Chưa có thành viên nào</p>';
+        return;
+      }
+
+      container.innerHTML = `
+        <h3>Danh sách thành viên (${members.length})</h3>
+        ${members.map(m => `
+          <div class="member-item">
+            <div>
+              <strong>${escapeHtml(m.name)}</strong>
+              <span class="tier-badge tier-${m.tier}">T${m.tier}</span>
+            </div>
+            <div style="font-size: 12px; color: #666;">
+              ${m.phone || 'N/A'} | ${m.email || 'N/A'}
+            </div>
+          </div>
+        `).join('')}
+      `;
+    }
+
+    function showStatus(message, type) {
+      const statusEl = document.getElementById('status');
+      statusEl.textContent = message;
+      statusEl.className = `status ${type}`;
+      statusEl.style.display = 'block';
+      
+      if (type === 'success') {
+        setTimeout(() => {
+          statusEl.style.display = 'none';
+        }, 5000);
+      }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Load members on page load
+    loadMembers();
+  </script>
+</body>
+</html>
