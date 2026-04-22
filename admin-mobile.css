@@ -722,3 +722,310 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
 .adm-reset-all-link:hover { color: var(--adm-red); }
 .adm-reset-all-link:active { opacity: 0.7; }
 
+
+/* ============================================================
+   INLINE SCORING UI — Tap-to-Score Interface
+   ============================================================ */
+
+.inline-scoring {
+  margin: 16px 0;
+}
+
+.scoring-teams {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.team-card {
+  min-width: 150px;
+  min-height: 150px;
+  padding: 20px;
+  border: 3px solid var(--adm-border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--adm-card2);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.team-card:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.team-card:active {
+  transform: scale(0.98);
+}
+
+.team-card.serving {
+  border-color: var(--adm-green);
+  background: linear-gradient(135deg, rgba(34,197,94,0.2) 0%, rgba(34,197,94,0.1) 100%);
+  box-shadow: 0 0 20px rgba(34,197,94,0.2);
+}
+
+.team-card[style*="opacity:0.5"] {
+  cursor: not-allowed;
+}
+
+.team-name {
+  font-size: 1rem;
+  font-weight: 800;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.team-score {
+  font-size: 72px;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.serving-badge {
+  background: rgba(34,197,94,0.3);
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--adm-green);
+  animation: servingPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes servingPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.vs-divider {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: var(--adm-muted);
+  flex-shrink: 0;
+}
+
+.score-info {
+  text-align: center;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: var(--adm-card2);
+  border-radius: 8px;
+  border: 1px solid var(--adm-border);
+}
+
+.score-call {
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: var(--adm-text);
+  margin-bottom: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.server-info {
+  font-size: 0.85rem;
+  color: var(--adm-muted);
+  font-weight: 600;
+}
+
+.scoring-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-serve-select {
+  flex: 1;
+  min-width: 150px;
+  padding: 14px;
+  font-size: 1rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  background: var(--adm-blue);
+  color: #fff;
+  transition: opacity 0.15s, transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-serve-select:active {
+  transform: scale(0.97);
+}
+
+.btn-undo {
+  flex: 1;
+  min-width: 100px;
+  padding: 14px;
+  font-size: 1rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  background: var(--adm-purple);
+  color: #fff;
+  transition: opacity 0.15s, transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-undo:active {
+  transform: scale(0.97);
+}
+
+.btn-undo:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ── Serve Selection Dialog ── */
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.7);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.dialog {
+  background: var(--adm-card);
+  border: 1px solid var(--adm-border);
+  border-radius: 16px;
+  padding: 30px;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+}
+
+.dialog h2 {
+  margin: 0 0 20px 0;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--adm-text);
+  text-align: center;
+}
+
+.serve-option {
+  width: 100%;
+  padding: 20px;
+  margin-bottom: 12px;
+  background: var(--adm-card2);
+  border: 2px solid var(--adm-border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.serve-option:hover {
+  border-color: var(--adm-green);
+  background: rgba(34,197,94,0.1);
+  transform: scale(1.02);
+}
+
+.serve-option:active {
+  transform: scale(0.98);
+}
+
+.serve-option .team-name {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--adm-text);
+}
+
+.serve-label {
+  font-size: 0.85rem;
+  color: var(--adm-muted);
+  font-weight: 600;
+}
+
+.serve-note {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--adm-muted);
+  margin: 10px 0;
+}
+
+.btn-secondary {
+  width: 100%;
+  padding: 12px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  border: 1px solid var(--adm-border);
+  border-radius: 10px;
+  cursor: pointer;
+  background: var(--adm-card2);
+  color: var(--adm-text);
+  transition: opacity 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-secondary:active {
+  opacity: 0.7;
+}
+
+/* ── Mobile Responsive ── */
+@media (max-width: 480px) {
+  .scoring-teams {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .team-card {
+    min-width: 100%;
+    min-height: 120px;
+  }
+  
+  .team-score {
+    font-size: 56px;
+  }
+  
+  .vs-divider {
+    transform: rotate(90deg);
+    margin: -10px 0;
+  }
+  
+  .dialog {
+    padding: 20px;
+  }
+}
+
+/* ── Tap Animation ── */
+@keyframes tapFeedback {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+.team-card.tap-active {
+  animation: tapFeedback 0.3s ease-out;
+}
+
+/* ── Score Change Animation ── */
+@keyframes scoreChange {
+  0% { transform: scale(1); color: var(--adm-text); }
+  50% { transform: scale(1.2); color: var(--adm-green); }
+  100% { transform: scale(1); color: var(--adm-text); }
+}
+
+.team-score.score-changed {
+  animation: scoreChange 0.5s ease-out;
+}

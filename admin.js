@@ -382,23 +382,57 @@ function matchHTML(m, stage) {
              <button class="adm-add-set-btn" onclick="showSet3('${m.id}')" ${dis}>${t("addSet3")}</button>
            </div>`}`;
   } else {
-    // Single score for group stage - with +/- buttons for BOTH teams
+    // Tap-to-score UI for group stage
+    const servingTeam = m.serving_team || null;
+    const serverNumber = m.server_number || 2;
+    const isServingA = servingTeam === 'A';
+    const isServingB = servingTeam === 'B';
+    const canStart = !servingTeam;
+    
     scoreSection = `
-      <div class="adm-score-row">
-        <div class="adm-score-inputs">
-          <div class="adm-score-ctrl">
-            <button class="adm-score-btn minus" ${dis} onclick="adjustScore('${m.id}','scoreA',-1)">−</button>
-            <input class="adm-score-input ${winnerA?"score-win":""}" type="number" min="0"
-              value="${m.scoreA||0}" data-field="scoreA" data-id="${m.id}" ${dis}>
-            <button class="adm-score-btn plus" ${dis} onclick="adjustScore('${m.id}','scoreA',1)">+</button>
+      <div class="inline-scoring">
+        <div class="scoring-teams">
+          <div class="team-card ${isServingA ? 'serving' : ''}" 
+               onclick="handleTeamTap('${m.id}', 'A')"
+               ${canStart || dis ? 'style="opacity:0.5;cursor:not-allowed;"' : ''}>
+            <div class="team-name">${esc(m.teamA)}</div>
+            ${isServingA ? '<div class="serving-badge">SERVING</div>' : ''}
+            <div class="team-score">${m.scoreA || 0}</div>
           </div>
-          <span class="adm-score-sep">—</span>
-          <div class="adm-score-ctrl">
-            <button class="adm-score-btn minus" ${dis} onclick="adjustScore('${m.id}','scoreB',-1)">−</button>
-            <input class="adm-score-input ${winnerB?"score-win":""}" type="number" min="0"
-              value="${m.scoreB||0}" data-field="scoreB" data-id="${m.id}" ${dis}>
-            <button class="adm-score-btn plus" ${dis} onclick="adjustScore('${m.id}','scoreB',1)">+</button>
+          
+          <div class="vs-divider">VS</div>
+          
+          <div class="team-card ${isServingB ? 'serving' : ''}" 
+               onclick="handleTeamTap('${m.id}', 'B')"
+               ${canStart || dis ? 'style="opacity:0.5;cursor:not-allowed;"' : ''}>
+            <div class="team-name">${esc(m.teamB)}</div>
+            ${isServingB ? '<div class="serving-badge">SERVING</div>' : ''}
+            <div class="team-score">${m.scoreB || 0}</div>
           </div>
+        </div>
+        
+        <div class="score-info">
+          <div class="score-call">
+            Score: ${m.scoreA || 0}-${m.scoreB || 0}${servingTeam ? '-' + serverNumber : ''}
+          </div>
+          <div class="server-info">
+            ${servingTeam ? 
+              'Server: Team ' + servingTeam + ' - Server ' + serverNumber : 
+              'Chưa chọn giao bóng'}
+          </div>
+        </div>
+        
+        <div class="scoring-actions">
+          ${canStart ? `
+            <button class="btn-serve-select" onclick="openServeDialog('${m.id}')">
+              Chọn Giao Bóng
+            </button>
+          ` : ''}
+          <button class="btn-undo" 
+                  onclick="handleUndo('${m.id}')"
+                  ${dis}>
+            ↶ Undo
+          </button>
         </div>
       </div>`;
   }
@@ -451,19 +485,10 @@ function matchHTML(m, stage) {
       </div>
       ${scoreSection}
       <div class="adm-actions">
-        <button class="adm-save-btn" ${dis} onclick="updateScore('${m.id}')">${t("save")}</button>
         <button class="adm-finish-btn ${done?"is-done":""}" ${finishDisabled} onclick="finishMatch('${m.id}')" title="${finishTitle}">
           ${done ? t("finished") : t("finish")}
         </button>
         ${done ? `<button class="adm-reset-btn" onclick="resetMatch('${m.id}')">${t("resetMatch")}</button>` : ""}
-      </div>
-      <div class="adm-actions" style="margin-top: 8px; border-top: 1px solid var(--border); padding-top: 8px;">
-        <a href="referee.html?matchId=${m.id}" class="adm-save-btn" style="text-decoration: none; text-align: center; display: inline-block;">
-          🎯 Start Scoring
-        </a>
-        <a href="viewer.html?matchId=${m.id}" class="adm-save-btn" style="text-decoration: none; text-align: center; display: inline-block; background: var(--adm-blue);">
-          👁 View Live
-        </a>
       </div>
     </div>`;
 
@@ -1213,4 +1238,316 @@ function renderSpecialMatches(matches) {
   }
 
   container.innerHTML = specialMatches.map(m => matchHTML(m, 'special')).join('');
+}
+
+
+// ============================================================
+//  INLINE SCORING UI — Tap-to-Score Implementation
+// ============================================================
+
+// Match state management
+const matchStates = new Map();
+const tapDebounce = new Map();
+
+/**
+ * Initialize match state for inline scoring
+ */
+function initMatchState(matchId, teamA, teamB, servingTeam, serverNumber) {
+  if (matchStates.has(matchId)) {
+    return matchStates.get(matchId);
+  }
+
+  const state = {
+    matchId,
+    teamA,
+    teamB,
+    scoreA: 0,
+    scoreB: 0,
+    servingTeam: servingTeam || null,
+    serverNumber: serverNumber || 2,
+    status: servingTeam ? 'playing' : 'not_started'
+  };
+
+  const history = new HistoryManager(10);
+  
+  matchStates.set(matchId, { current: state, history });
+  return matchStates.get(matchId);
+}
+
+/**
+ * Handle team tap for scoring
+ */
+async function handleTeamTap(matchId, team) {
+  // Debounce to prevent double-tap
+  if (tapDebounce.has(matchId)) {
+    return;
+  }
+  
+  tapDebounce.set(matchId, true);
+  setTimeout(() => tapDebounce.delete(matchId), 300);
+
+  try {
+    // Get or initialize match state
+    let matchState = matchStates.get(matchId);
+    
+    if (!matchState) {
+      // Load from database
+      const matches = db ? await fetchAllMatches() : (localMatches || []);
+      const match = matches.find(m => m.id === matchId);
+      
+      if (!match) {
+        setStatus('❌ Không tìm thấy trận đấu', 'err');
+        return;
+      }
+      
+      matchState = initMatchState(
+        matchId,
+        match.teamA,
+        match.teamB,
+        match.serving_team,
+        match.server_number
+      );
+      
+      matchState.current.scoreA = match.scoreA || 0;
+      matchState.current.scoreB = match.scoreB || 0;
+    }
+
+    const { current, history } = matchState;
+
+    // Check if match started
+    if (!current.servingTeam) {
+      setStatus('⚠️ Vui lòng chọn đội giao bóng trước', 'err');
+      return;
+    }
+
+    // Check if match completed
+    if (current.status === 'done') {
+      setStatus('⚠️ Trận đấu đã kết thúc', 'err');
+      return;
+    }
+
+    // Save to history
+    history.push(current);
+
+    // Determine action
+    let action;
+    
+    if (team === current.servingTeam) {
+      // Team đang giao → Score
+      action = {
+        type: team === 'A' ? ActionTypes.SCORE_TEAM_A : ActionTypes.SCORE_TEAM_B
+      };
+    } else {
+      // Team không giao → Fault (đổi giao)
+      action = {
+        type: team === 'A' ? ActionTypes.FAULT_TEAM_B : ActionTypes.FAULT_TEAM_A
+      };
+    }
+
+    // Apply action using gameStateReducer
+    const newState = gameStateReducer(current, action);
+    
+    // Update state
+    matchState.current = newState;
+
+    // Add tap animation
+    const teamCard = event?.target?.closest('.team-card');
+    if (teamCard) {
+      teamCard.classList.add('tap-active');
+      setTimeout(() => teamCard.classList.remove('tap-active'), 300);
+    }
+
+    // Sync to database
+    await syncMatchState(matchId, newState);
+
+    // Re-render
+    await fetchMatches();
+    
+    setStatus('✓ Đã cập nhật điểm', 'ok');
+  } catch (error) {
+    console.error('handleTeamTap error:', error);
+    setStatus('❌ Lỗi: ' + error.message, 'err');
+  }
+}
+
+/**
+ * Open serve selection dialog
+ */
+function openServeDialog(matchId) {
+  const matchState = matchStates.get(matchId);
+  
+  if (!matchState) {
+    // Load from database
+    fetchAllMatches().then(matches => {
+      const match = matches.find(m => m.id === matchId);
+      if (!match) return;
+      
+      const state = initMatchState(matchId, match.teamA, match.teamB);
+      showServeDialog(matchId, state.current);
+    });
+  } else {
+    showServeDialog(matchId, matchState.current);
+  }
+}
+
+/**
+ * Show serve selection dialog
+ */
+function showServeDialog(matchId, state) {
+  const dialog = `
+    <div class="dialog-overlay" id="serve-dialog-${matchId}" onclick="if(event.target===this) closeServeDialog('${matchId}')">
+      <div class="dialog">
+        <h2>Chọn Đội Giao Bóng Đầu Tiên</h2>
+        
+        <button class="serve-option" onclick="selectServe('${matchId}', 'A')">
+          <div class="team-name">${esc(state.teamA)}</div>
+          <div class="serve-label">Giao Bóng Trước</div>
+        </button>
+        
+        <button class="serve-option" onclick="selectServe('${matchId}', 'B')">
+          <div class="team-name">${esc(state.teamB)}</div>
+          <div class="serve-label">Giao Bóng Trước</div>
+        </button>
+        
+        <p class="serve-note">Mặc định: Server 2</p>
+        
+        <button class="btn-secondary" onclick="closeServeDialog('${matchId}')">
+          Hủy
+        </button>
+      </div>
+    </div>
+  `;
+  
+  document.body.insertAdjacentHTML('beforeend', dialog);
+}
+
+/**
+ * Select serving team
+ */
+async function selectServe(matchId, team) {
+  try {
+    let matchState = matchStates.get(matchId);
+    
+    if (!matchState) {
+      const matches = db ? await fetchAllMatches() : (localMatches || []);
+      const match = matches.find(m => m.id === matchId);
+      
+      if (!match) {
+        setStatus('❌ Không tìm thấy trận đấu', 'err');
+        return;
+      }
+      
+      matchState = initMatchState(matchId, match.teamA, match.teamB);
+      matchState.current.scoreA = match.scoreA || 0;
+      matchState.current.scoreB = match.scoreB || 0;
+    }
+
+    const { current, history } = matchState;
+
+    // Save to history
+    history.push(current);
+
+    // Update state
+    const newState = {
+      ...current,
+      servingTeam: team,
+      serverNumber: 2,
+      status: 'playing'
+    };
+
+    matchState.current = newState;
+
+    // Sync to database
+    await syncMatchState(matchId, newState);
+
+    // Close dialog
+    closeServeDialog(matchId);
+
+    // Re-render
+    await fetchMatches();
+    
+    setStatus(`✓ Đã chọn Team ${team} giao bóng`, 'ok');
+  } catch (error) {
+    console.error('selectServe error:', error);
+    setStatus('❌ Lỗi: ' + error.message, 'err');
+  }
+}
+
+/**
+ * Close serve selection dialog
+ */
+function closeServeDialog(matchId) {
+  const dialog = document.getElementById(`serve-dialog-${matchId}`);
+  if (dialog) {
+    dialog.remove();
+  }
+}
+
+/**
+ * Handle undo action
+ */
+async function handleUndo(matchId) {
+  try {
+    const matchState = matchStates.get(matchId);
+    
+    if (!matchState) {
+      setStatus('❌ Không tìm thấy trạng thái trận đấu', 'err');
+      return;
+    }
+
+    const { history } = matchState;
+
+    if (!history.canUndo()) {
+      setStatus('⚠️ Không có action nào để undo', 'err');
+      return;
+    }
+
+    const previousState = history.pop();
+    matchState.current = previousState;
+
+    // Sync to database
+    await syncMatchState(matchId, previousState);
+
+    // Re-render
+    await fetchMatches();
+    
+    setStatus('↶ Đã hoàn tác', 'ok');
+  } catch (error) {
+    console.error('handleUndo error:', error);
+    setStatus('❌ Lỗi: ' + error.message, 'err');
+  }
+}
+
+/**
+ * Sync match state to database
+ */
+async function syncMatchState(matchId, state) {
+  const payload = {
+    scoreA: state.scoreA,
+    scoreB: state.scoreB,
+    serving_team: state.servingTeam,
+    server_number: state.serverNumber,
+    status: state.status,
+    updated_at: new Date().toISOString()
+  };
+
+  if (!db) {
+    // localStorage mode
+    const stored = localStorage.getItem('pb_matches');
+    localMatches = stored ? JSON.parse(stored) : [];
+    const match = localMatches.find(m => m.id === matchId);
+    
+    if (match) {
+      Object.assign(match, payload);
+      saveLocal(localMatches);
+    }
+    return;
+  }
+
+  // Supabase mode
+  const { error } = await db.from('matches').update(payload).eq('id', matchId);
+  
+  if (error) {
+    throw new Error(`Failed to sync state: ${error.message}`);
+  }
 }
