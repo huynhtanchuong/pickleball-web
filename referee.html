@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Referee Scoring - Pickleball Tournament</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* Referee UI Specific Styles */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #f5f5f5;
+    }
+
+    .referee-ui {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: white;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .match-header {
+      text-align: center;
+      padding: 20px 0;
+      border-bottom: 2px solid #4CAF50;
+      margin-bottom: 30px;
+    }
+
+    .match-header h1 {
+      margin: 0 0 10px 0;
+      color: #333;
+    }
+
+    .match-info {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      font-size: 18px;
+      color: #666;
+    }
+
+    .sets-won {
+      font-weight: bold;
+      color: #4CAF50;
+    }
+
+    /* Score Display */
+    .score-display {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      margin: 30px 0;
+      gap: 20px;
+    }
+
+    .team {
+      flex: 1;
+      text-align: center;
+      padding: 30px 20px;
+      border-radius: 15px;
+      background: #f5f5f5;
+      transition: all 0.3s ease;
+    }
+
+    .team.serving {
+      background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+      transform: scale(1.05);
+    }
+
+    .team h2 {
+      margin: 0 0 15px 0;
+      font-size: 24px;
+    }
+
+    .team .score {
+      font-size: 96px;
+      font-weight: bold;
+      line-height: 1;
+      margin: 20px 0;
+    }
+
+    .serving-indicator {
+      font-size: 14px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      margin-top: 10px;
+      padding: 5px 15px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 20px;
+      display: inline-block;
+    }
+
+    .vs {
+      font-size: 36px;
+      font-weight: bold;
+      color: #999;
+    }
+
+    /* Score Call */
+    .score-call {
+      text-align: center;
+      margin: 30px 0;
+      padding: 20px;
+      background: #f9f9f9;
+      border-radius: 10px;
+    }
+
+    .score-call-label {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 10px;
+    }
+
+    .score-call-value {
+      font-size: 56px;
+      font-weight: bold;
+      color: #333;
+      font-family: 'Courier New', monospace;
+    }
+
+    /* Server Indicator */
+    .server-indicator {
+      text-align: center;
+      font-size: 18px;
+      color: #666;
+      margin: 20px 0;
+      padding: 15px;
+      background: #fff3cd;
+      border-radius: 8px;
+      border: 2px solid #ffc107;
+    }
+
+    /* Action Buttons */
+    .action-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin: 30px 0;
+    }
+
+    .btn-score {
+      padding: 30px;
+      font-size: 28px;
+      font-weight: bold;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      min-height: 100px;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-team-a {
+      background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+      color: white;
+    }
+
+    .btn-team-b {
+      background: linear-gradient(135deg, #FF5722 0%, #E64A19 100%);
+      color: white;
+    }
+
+    .btn-score:active:not(:disabled) {
+      transform: scale(0.98);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-score:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-fault {
+      padding: 20px;
+      font-size: 20px;
+      border: 2px solid #FF9800;
+      background: white;
+      color: #FF9800;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-fault:active:not(:disabled) {
+      background: #FF9800;
+      color: white;
+    }
+
+    .btn-undo {
+      padding: 20px;
+      font-size: 20px;
+      background: #9E9E9E;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-undo:active:not(:disabled) {
+      background: #757575;
+    }
+
+    .btn-undo:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    /* Completed Sets */
+    .completed-sets {
+      margin: 30px 0;
+      padding: 20px;
+      background: #f9f9f9;
+      border-radius: 10px;
+    }
+
+    .completed-sets h3 {
+      margin: 0 0 15px 0;
+      color: #333;
+    }
+
+    .sets-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .set-result {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      background: white;
+      border-radius: 8px;
+      font-size: 18px;
+    }
+
+    .set-result .winner {
+      font-weight: bold;
+      color: #4CAF50;
+    }
+
+    .set-winner {
+      margin-left: auto;
+      color: #666;
+      font-size: 14px;
+    }
+
+    /* Status Bar */
+    .status-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 15px;
+      background: #333;
+      color: white;
+      text-align: center;
+      font-size: 16px;
+    }
+
+    .status-text {
+      transition: all 0.3s ease;
+    }
+
+    .status-success {
+      color: #4CAF50;
+    }
+
+    .status-error {
+      color: #f44336;
+    }
+
+    .status-warning {
+      color: #FF9800;
+    }
+
+    /* Dialog */
+    .dialog-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .dialog {
+      background: white;
+      padding: 40px;
+      border-radius: 15px;
+      max-width: 500px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .dialog h2 {
+      margin: 0 0 20px 0;
+      color: #4CAF50;
+      font-size: 32px;
+    }
+
+    .dialog-message {
+      font-size: 24px;
+      margin: 20px 0;
+      color: #333;
+    }
+
+    .dialog-score {
+      font-size: 48px;
+      font-weight: bold;
+      margin: 20px 0;
+      color: #666;
+    }
+
+    .dialog-buttons {
+      display: flex;
+      gap: 15px;
+      margin-top: 30px;
+    }
+
+    .btn-primary {
+      flex: 1;
+      padding: 20px;
+      font-size: 20px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .btn-primary:active {
+      background: #45a049;
+    }
+
+    .btn-secondary {
+      flex: 1;
+      padding: 20px;
+      font-size: 20px;
+      background: #9E9E9E;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .btn-secondary:active {
+      background: #757575;
+    }
+
+    /* Loading */
+    .loading {
+      text-align: center;
+      padding: 100px 20px;
+    }
+
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #4CAF50;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Error */
+    .error {
+      text-align: center;
+      padding: 100px 20px;
+      color: #f44336;
+    }
+
+    .error button {
+      margin-top: 20px;
+      padding: 15px 30px;
+      font-size: 18px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    /* Mobile Optimizations */
+    @media (max-width: 768px) {
+      .referee-ui {
+        padding: 10px;
+      }
+
+      .team .score {
+        font-size: 72px;
+      }
+
+      .score-call-value {
+        font-size: 42px;
+      }
+
+      .btn-score {
+        font-size: 24px;
+        padding: 25px;
+        min-height: 80px;
+      }
+    }
+
+    /* Prevent text selection on buttons */
+    button {
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+</head>
+<body>
+  <div id="referee-container"></div>
+
+  <!-- Load dependencies -->
+  <script src="app.js"></script>
+  <script src="storage.js"></script>
+  <script src="i18n.js"></script>
+  <script src="referee-game-state.js"></script>
+  <script src="referee-sync-engine.js"></script>
+  <script src="referee-ui.js"></script>
+  
+  <script>
+    // Initialize referee UI
+    const urlParams = new URLSearchParams(window.location.search);
+    const matchId = urlParams.get('matchId');
+    
+    if (!matchId) {
+      document.getElementById('referee-container').innerHTML = `
+        <div class="error">
+          <h2>No Match Selected</h2>
+          <p>Please select a match from the admin page.</p>
+          <button onclick="window.location.href='admin.html'">Go to Admin</button>
+        </div>
+      `;
+    } else {
+      const container = document.getElementById('referee-container');
+      window.refereeUI = new RefereeUI(matchId, container);
+      
+      // Cleanup on page unload
+      window.addEventListener('beforeunload', () => {
+        if (window.refereeUI) {
+          window.refereeUI.cleanup();
+        }
+      });
+    }
+  </script>
+</body>
+</html>

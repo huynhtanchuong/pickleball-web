@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Match Viewer - Pickleball Tournament</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* Viewer Display Specific Styles */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #1a1a1a;
+      color: white;
+      overflow: hidden;
+    }
+
+    .viewer-display {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 40px;
+      box-sizing: border-box;
+    }
+
+    /* Header */
+    .match-header {
+      text-align: center;
+      padding: 20px 0;
+      margin-bottom: 40px;
+    }
+
+    .match-header h1 {
+      margin: 0 0 15px 0;
+      color: #4CAF50;
+      font-size: 48px;
+      font-weight: 300;
+      letter-spacing: 2px;
+    }
+
+    .match-info {
+      display: flex;
+      justify-content: center;
+      gap: 50px;
+      font-size: 32px;
+      color: #999;
+    }
+
+    .sets-won {
+      font-weight: bold;
+      color: #4CAF50;
+    }
+
+    /* Score Display */
+    .score-display {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 60px 0;
+      gap: 80px;
+    }
+
+    .team {
+      flex: 1;
+      max-width: 500px;
+      text-align: center;
+      padding: 60px 40px;
+      border-radius: 20px;
+      background: #2a2a2a;
+      transition: all 0.5s ease;
+      border: 4px solid transparent;
+    }
+
+    .team.serving {
+      background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+      border-color: #66BB6A;
+      box-shadow: 0 0 40px rgba(76, 175, 80, 0.6);
+      transform: scale(1.08);
+    }
+
+    .team h2 {
+      margin: 0 0 30px 0;
+      font-size: 48px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+    }
+
+    .team .score {
+      font-size: 180px;
+      font-weight: bold;
+      line-height: 1;
+      margin: 40px 0;
+      text-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .serving-indicator {
+      font-size: 24px;
+      font-weight: bold;
+      letter-spacing: 4px;
+      margin-top: 20px;
+      padding: 12px 30px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 30px;
+      display: inline-block;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
+    .vs {
+      font-size: 64px;
+      font-weight: bold;
+      color: #666;
+    }
+
+    /* Score Call */
+    .score-call {
+      text-align: center;
+      margin: 50px 0;
+      padding: 40px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 15px;
+      border: 2px solid rgba(76, 175, 80, 0.3);
+    }
+
+    .score-call-label {
+      font-size: 24px;
+      color: #999;
+      margin-bottom: 15px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .score-call-value {
+      font-size: 96px;
+      font-weight: bold;
+      color: #4CAF50;
+      font-family: 'Courier New', monospace;
+      text-shadow: 0 2px 10px rgba(76, 175, 80, 0.5);
+    }
+
+    /* Server Indicator */
+    .server-indicator {
+      text-align: center;
+      font-size: 32px;
+      color: #ccc;
+      margin: 30px 0;
+      padding: 25px;
+      background: rgba(255, 243, 205, 0.1);
+      border-radius: 12px;
+      border: 2px solid rgba(255, 193, 7, 0.3);
+    }
+
+    /* Completed Sets */
+    .completed-sets {
+      margin: 40px auto;
+      padding: 30px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 15px;
+      max-width: 800px;
+    }
+
+    .completed-sets h3 {
+      margin: 0 0 25px 0;
+      color: #4CAF50;
+      font-size: 32px;
+      text-align: center;
+    }
+
+    .sets-list {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .set-result {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      font-size: 28px;
+    }
+
+    .set-result .winner {
+      font-weight: bold;
+      color: #4CAF50;
+    }
+
+    .set-winner {
+      margin-left: auto;
+      color: #999;
+      font-size: 22px;
+    }
+
+    /* Match Status Badge */
+    .match-status {
+      position: fixed;
+      top: 30px;
+      right: 30px;
+      padding: 15px 30px;
+      border-radius: 30px;
+      font-size: 20px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .match-status.playing {
+      background: #4CAF50;
+      color: white;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .match-status.set-complete {
+      background: #FF9800;
+      color: white;
+    }
+
+    .match-status.match-complete {
+      background: #2196F3;
+      color: white;
+    }
+
+    /* Fullscreen Toggle */
+    .fullscreen-toggle {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      padding: 15px 25px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 10px;
+      color: white;
+      font-size: 18px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      z-index: 100;
+    }
+
+    .fullscreen-toggle:hover {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.5);
+    }
+
+    .fullscreen-toggle:active {
+      transform: scale(0.95);
+    }
+
+    /* Loading */
+    .loading {
+      text-align: center;
+      padding: 100px 20px;
+    }
+
+    .spinner {
+      border: 6px solid rgba(255, 255, 255, 0.1);
+      border-top: 6px solid #4CAF50;
+      border-radius: 50%;
+      width: 80px;
+      height: 80px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 30px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .loading p {
+      font-size: 24px;
+      color: #999;
+    }
+
+    /* Error */
+    .error {
+      text-align: center;
+      padding: 100px 20px;
+      color: #f44336;
+    }
+
+    .error h2 {
+      font-size: 48px;
+      margin-bottom: 20px;
+    }
+
+    .error p {
+      font-size: 24px;
+      margin-bottom: 40px;
+    }
+
+    .error button {
+      padding: 20px 40px;
+      font-size: 22px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .error button:hover {
+      background: #45a049;
+    }
+
+    /* Auto-refresh indicator */
+    .refresh-indicator {
+      position: fixed;
+      top: 30px;
+      left: 30px;
+      padding: 10px 20px;
+      background: rgba(76, 175, 80, 0.2);
+      border: 2px solid rgba(76, 175, 80, 0.5);
+      border-radius: 20px;
+      font-size: 16px;
+      color: #4CAF50;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .refresh-dot {
+      width: 10px;
+      height: 10px;
+      background: #4CAF50;
+      border-radius: 50%;
+      animation: blink 2s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* Tablet and Mobile Optimizations */
+    @media (max-width: 1024px) {
+      .viewer-display {
+        padding: 20px;
+      }
+
+      .match-header h1 {
+        font-size: 36px;
+      }
+
+      .match-info {
+        font-size: 24px;
+        gap: 30px;
+      }
+
+      .team .score {
+        font-size: 120px;
+      }
+
+      .score-call-value {
+        font-size: 72px;
+      }
+
+      .score-display {
+        gap: 40px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .viewer-display {
+        padding: 15px;
+      }
+
+      .match-header h1 {
+        font-size: 28px;
+      }
+
+      .match-info {
+        font-size: 20px;
+        gap: 20px;
+      }
+
+      .team {
+        padding: 40px 20px;
+      }
+
+      .team h2 {
+        font-size: 32px;
+      }
+
+      .team .score {
+        font-size: 96px;
+      }
+
+      .score-call-value {
+        font-size: 56px;
+      }
+
+      .server-indicator {
+        font-size: 24px;
+        padding: 20px;
+      }
+
+      .score-display {
+        gap: 20px;
+        margin: 40px 0;
+      }
+
+      .vs {
+        font-size: 48px;
+      }
+
+      .fullscreen-toggle {
+        bottom: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        font-size: 16px;
+      }
+
+      .match-status {
+        top: 20px;
+        right: 20px;
+        padding: 10px 20px;
+        font-size: 16px;
+      }
+
+      .refresh-indicator {
+        top: 20px;
+        left: 20px;
+        padding: 8px 15px;
+        font-size: 14px;
+      }
+    }
+
+    /* Fullscreen mode adjustments */
+    body:fullscreen .viewer-display,
+    body:-webkit-full-screen .viewer-display,
+    body:-moz-full-screen .viewer-display {
+      padding: 60px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Auto-refresh indicator -->
+  <div class="refresh-indicator">
+    <div class="refresh-dot"></div>
+    <span>LIVE</span>
+  </div>
+
+  <!-- Match status badge -->
+  <div class="match-status" id="match-status">LOADING</div>
+
+  <!-- Fullscreen toggle -->
+  <button class="fullscreen-toggle" id="fullscreen-toggle" onclick="toggleFullscreen()">
+    ⛶ Fullscreen
+  </button>
+
+  <div id="viewer-container"></div>
+
+  <!-- Load dependencies -->
+  <script src="app.js"></script>
+  <script src="storage.js"></script>
+  <script src="i18n.js"></script>
+  <script src="referee-game-state.js"></script>
+  <script src="referee-sync-engine.js"></script>
+  
+  <script>
+    // ViewerDisplay class - Read-only match viewer
+    class ViewerDisplay {
+      constructor(matchId, container) {
+        this.matchId = matchId;
+        this.container = container;
+        this.state = null;
+        this.sync = new SyncEngine(window.supabase || null);
+        this.refreshInterval = null;
+        
+        this.init();
+      }
+
+      async init() {
+        try {
+          // Show loading state
+          this.showLoading();
+          
+          // Load initial state
+          this.state = await this.sync.loadState(this.matchId);
+          
+          if (!this.state) {
+            this.showError('Match not found. Please check the match ID.');
+            return;
+          }
+          
+          // Subscribe to real-time updates
+          this.channel = this.sync.subscribe(this.matchId, (newState) => {
+            this.state = newState;
+            this.render();
+            this.updateStatusBadge();
+          });
+          
+          // Set up periodic refresh (fallback for missed updates)
+          this.refreshInterval = setInterval(() => {
+            this.refreshState();
+          }, 5000); // Refresh every 5 seconds
+          
+          // Initial render
+          this.render();
+          this.updateStatusBadge();
+          
+        } catch (error) {
+          console.error('ViewerDisplay: Initialization error:', error);
+          this.showError('Failed to load match. Please refresh the page.');
+        }
+      }
+
+      async refreshState() {
+        try {
+          const newState = await this.sync.loadState(this.matchId);
+          if (newState && JSON.stringify(newState) !== JSON.stringify(this.state)) {
+            this.state = newState;
+            this.render();
+            this.updateStatusBadge();
+          }
+        } catch (error) {
+          console.error('ViewerDisplay: Refresh error:', error);
+        }
+      }
+
+      render() {
+        if (!this.state) return;
+        
+        const scoreCall = generateScoreCall(this.state);
+        const { setsWonA, setsWonB } = getSetsWon(this.state);
+        
+        this.container.innerHTML = `
+          <div class="viewer-display">
+            <!-- Header -->
+            <div class="match-header">
+              <h1>PICKLEBALL MATCH</h1>
+              <div class="match-info">
+                <span>SET ${this.state.currentSet}</span>
+                <span class="sets-won">SETS: ${setsWonA} - ${setsWonB}</span>
+              </div>
+            </div>
+
+            <!-- Score Display -->
+            <div class="score-display">
+              <div class="team team-a ${this.state.servingTeam === 'A' ? 'serving' : ''}">
+                <h2>${this.state.teamA}</h2>
+                <div class="score">${this.state.scoreA}</div>
+                ${this.state.servingTeam === 'A' ? '<div class="serving-indicator">SERVING</div>' : ''}
+              </div>
+              
+              <div class="vs">VS</div>
+              
+              <div class="team team-b ${this.state.servingTeam === 'B' ? 'serving' : ''}">
+                <h2>${this.state.teamB}</h2>
+                <div class="score">${this.state.scoreB}</div>
+                ${this.state.servingTeam === 'B' ? '<div class="serving-indicator">SERVING</div>' : ''}
+              </div>
+            </div>
+
+            <!-- Score Call -->
+            <div class="score-call">
+              <div class="score-call-label">Score Call</div>
+              <div class="score-call-value">${scoreCall}</div>
+            </div>
+
+            <!-- Server Indicator -->
+            <div class="server-indicator">
+              SERVER: TEAM ${this.state.servingTeam} - SERVER ${this.state.serverNumber}
+            </div>
+
+            <!-- Completed Sets -->
+            ${this.renderCompletedSets()}
+          </div>
+        `;
+      }
+
+      renderCompletedSets() {
+        if (this.state.completedSets.length === 0) {
+          return '';
+        }
+        
+        return `
+          <div class="completed-sets">
+            <h3>COMPLETED SETS</h3>
+            <div class="sets-list">
+              ${this.state.completedSets.map(set => `
+                <div class="set-result">
+                  <span>SET ${set.setNumber}:</span>
+                  <span class="${set.winner === 'A' ? 'winner' : ''}">${set.scoreA}</span>
+                  <span>-</span>
+                  <span class="${set.winner === 'B' ? 'winner' : ''}">${set.scoreB}</span>
+                  <span class="set-winner">(${set.winner === 'A' ? this.state.teamA : this.state.teamB})</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      updateStatusBadge() {
+        const badge = document.getElementById('match-status');
+        if (!badge || !this.state) return;
+        
+        badge.className = 'match-status';
+        
+        switch (this.state.status) {
+          case 'not_started':
+            badge.textContent = 'NOT STARTED';
+            break;
+          case 'playing':
+            badge.textContent = 'LIVE';
+            badge.classList.add('playing');
+            break;
+          case 'set_complete':
+            badge.textContent = 'SET COMPLETE';
+            badge.classList.add('set-complete');
+            break;
+          case 'match_complete':
+            badge.textContent = 'MATCH COMPLETE';
+            badge.classList.add('match-complete');
+            break;
+          default:
+            badge.textContent = 'UNKNOWN';
+        }
+      }
+
+      showLoading() {
+        this.container.innerHTML = `
+          <div class="loading">
+            <div class="spinner"></div>
+            <p>Loading match...</p>
+          </div>
+        `;
+      }
+
+      showError(message) {
+        this.container.innerHTML = `
+          <div class="error">
+            <h2>Error</h2>
+            <p>${message}</p>
+            <button onclick="window.location.reload()">Reload</button>
+          </div>
+        `;
+      }
+
+      cleanup() {
+        if (this.channel) {
+          this.sync.unsubscribe(this.channel);
+        }
+        if (this.refreshInterval) {
+          clearInterval(this.refreshInterval);
+        }
+        this.sync.cleanup();
+      }
+    }
+
+    // Fullscreen toggle function
+    function toggleFullscreen() {
+      if (!document.fullscreenElement && 
+          !document.webkitFullscreenElement && 
+          !document.mozFullScreenElement) {
+        // Enter fullscreen
+        const elem = document.documentElement;
+        if (elem.requestFullscreen) {
+          elem.requestFullscreen();
+        } else if (elem.webkitRequestFullscreen) {
+          elem.webkitRequestFullscreen();
+        } else if (elem.mozRequestFullScreen) {
+          elem.mozRequestFullScreen();
+        }
+        document.getElementById('fullscreen-toggle').textContent = '⛶ Exit Fullscreen';
+      } else {
+        // Exit fullscreen
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        } else if (document.mozCancelFullScreen) {
+          document.mozCancelFullScreen();
+        }
+        document.getElementById('fullscreen-toggle').textContent = '⛶ Fullscreen';
+      }
+    }
+
+    // Listen for fullscreen changes
+    document.addEventListener('fullscreenchange', updateFullscreenButton);
+    document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
+    document.addEventListener('mozfullscreenchange', updateFullscreenButton);
+
+    function updateFullscreenButton() {
+      const button = document.getElementById('fullscreen-toggle');
+      if (document.fullscreenElement || 
+          document.webkitFullscreenElement || 
+          document.mozFullScreenElement) {
+        button.textContent = '⛶ Exit Fullscreen';
+      } else {
+        button.textContent = '⛶ Fullscreen';
+      }
+    }
+
+    // Initialize viewer display
+    const urlParams = new URLSearchParams(window.location.search);
+    const matchId = urlParams.get('matchId');
+    
+    if (!matchId) {
+      document.getElementById('viewer-container').innerHTML = `
+        <div class="error">
+          <h2>No Match Selected</h2>
+          <p>Please provide a valid match ID in the URL.</p>
+          <button onclick="window.location.href='admin.html'">Go to Admin</button>
+        </div>
+      `;
+      document.getElementById('match-status').style.display = 'none';
+      document.getElementById('fullscreen-toggle').style.display = 'none';
+    } else {
+      const container = document.getElementById('viewer-container');
+      window.viewerDisplay = new ViewerDisplay(matchId, container);
+      
+      // Cleanup on page unload
+      window.addEventListener('beforeunload', () => {
+        if (window.viewerDisplay) {
+          window.viewerDisplay.cleanup();
+        }
+      });
+    }
+  </script>
+</body>
+</html>

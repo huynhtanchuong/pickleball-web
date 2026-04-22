@@ -457,6 +457,14 @@ function matchHTML(m, stage) {
         </button>
         ${done ? `<button class="adm-reset-btn" onclick="resetMatch('${m.id}')">${t("resetMatch")}</button>` : ""}
       </div>
+      <div class="adm-actions" style="margin-top: 8px; border-top: 1px solid var(--border); padding-top: 8px;">
+        <a href="referee.html?matchId=${m.id}" target="_blank" class="adm-save-btn" style="text-decoration: none; text-align: center; display: inline-block;">
+          🎯 Start Scoring
+        </a>
+        <a href="viewer.html?matchId=${m.id}" target="_blank" class="adm-save-btn" style="text-decoration: none; text-align: center; display: inline-block; background: var(--adm-blue);">
+          👁 View Live
+        </a>
+      </div>
     </div>`;
 
   return `<div class="adm-match-card ${cardCls}" data-id="${m.id}" data-updated="${m.updated_at||''}">${summary}${body}</div>`;
