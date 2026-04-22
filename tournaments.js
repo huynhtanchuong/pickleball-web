@@ -591,88 +591,81 @@ class TournamentManager {
   }
 }
 
-// Export for use in other modules
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { TournamentManager };
+// ── Backward Compatibility & Migration ──────────────────────
+
+/**
+ * Ensure default tournament exists for backward compatibility
+ * Creates a default tournament if none exists
+ */
+async function ensureDefaultTournament() {
+  const tournaments = await this.storage.read('tournaments');
+  
+  // Check if default tournament exists
+  let defaultTournament = tournaments.find(t => t.name === 'Giải Đấu Mặc Định');
+  
+  if (!defaultTournament) {
+    // Create default tournament
+    defaultTournament = await this.storage.create('tournaments', {
+      name: 'Giải Đấu Mặc Định',
+      start_date: new Date().toISOString().split('T')[0],
+      status: 'ongoing',
+      archived: false,
+      config: {
+        numGroups: 2,
+        teamsPerGroup: 5,
+        enableConsolation: false,
+        enableThirdPlace: true
+      }
+    });
+  }
+  
+  return defaultTournament;
 }
 
-
-  // ── Backward Compatibility & Migration ──────────────────────
-
-  /**
-   * Ensure default tournament exists for backward compatibility
-   * Creates a default tournament if none exists
-   */
-  async function ensureDefaultTournament() {
-    const tournaments = await this.storage.read('tournaments');
+/**
+ * Migrate existing matches to default tournament
+ * Assigns tournament_id to all matches that don't have one
+ */
+async function migrateExistingMatches() {
+  try {
+    // Ensure default tournament exists
+    const defaultTournament = await this.ensureDefaultTournament();
     
-    // Check if default tournament exists
-    let defaultTournament = tournaments.find(t => t.name === 'Giải Đấu Mặc Định');
-    
-    if (!defaultTournament) {
-      // Create default tournament
-      defaultTournament = await this.storage.create('tournaments', {
-        name: 'Giải Đấu Mặc Định',
-        start_date: new Date().toISOString().split('T')[0],
-        status: 'ongoing',
-        archived: false,
-        config: {
-          numGroups: 2,
-          teamsPerGroup: 5,
-          enableConsolation: false,
-          enableThirdPlace: true
-        }
-      });
-    }
-    
-    return defaultTournament;
-  }
-
-  /**
-   * Migrate existing matches to default tournament
-   * Assigns tournament_id to all matches that don't have one
-   */
-  async migrateExistingMatches() {
-    try {
-      // Ensure default tournament exists
-      const defaultTournament = await this.ensureDefaultTournament();
-      
-      // Get all matches
-      const allMatches = await this.storage.read('matches');
-      
-      // Find matches without tournament_id
-      const matchesWithoutTournament = allMatches.filter(m => !m.tournament_id);
-      
-      if (matchesWithoutTournament.length === 0) {
-        return { migrated: 0, message: 'No matches to migrate' };
-      }
-
-      // Update each match with default tournament_id
-      const updates = matchesWithoutTournament.map(match => ({
-        action: 'update',
-        table: 'matches',
-        id: match.id,
-        data: { tournament_id: defaultTournament.id }
-      }));
-
-      await this.storage.transaction(updates);
-
-      return {
-        migrated: matchesWithoutTournament.length,
-        message: `Migrated ${matchesWithoutTournament.length} matches to default tournament`
-      };
-    } catch (error) {
-      throw new Error(`Migration failed: ${error.message}`);
-    }
-  }
-
-  /**
-   * Check if migration is needed
-   */
-  async needsMigration() {
+    // Get all matches
     const allMatches = await this.storage.read('matches');
-    return allMatches.some(m => !m.tournament_id);
+    
+    // Find matches without tournament_id
+    const matchesWithoutTournament = allMatches.filter(m => !m.tournament_id);
+    
+    if (matchesWithoutTournament.length === 0) {
+      return { migrated: 0, message: 'No matches to migrate' };
+    }
+
+    // Update each match with default tournament_id
+    const updates = matchesWithoutTournament.map(match => ({
+      action: 'update',
+      table: 'matches',
+      id: match.id,
+      data: { tournament_id: defaultTournament.id }
+    }));
+
+    await this.storage.transaction(updates);
+
+    return {
+      migrated: matchesWithoutTournament.length,
+      message: `Migrated ${matchesWithoutTournament.length} matches to default tournament`
+    };
+  } catch (error) {
+    throw new Error(`Migration failed: ${error.message}`);
   }
+}
+
+/**
+ * Check if migration is needed
+ */
+async function needsMigration() {
+  const allMatches = await this.storage.read('matches');
+  return allMatches.some(m => !m.tournament_id);
 }
 
 // Add methods to prototype
@@ -680,208 +673,211 @@ TournamentManager.prototype.ensureDefaultTournament = ensureDefaultTournament;
 TournamentManager.prototype.migrateExistingMatches = migrateExistingMatches;
 TournamentManager.prototype.needsMigration = needsMigration;
 
+// Export for use in other modules
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { TournamentManager };
+}
 
-  // ── Backup & Restore ─────────────────────────────────────────
+// ── Backup & Restore ─────────────────────────────────────────
 
-  /**
-   * Export tournament data as JSON backup
-   * @param {string|number} tournamentId - Tournament ID to backup
-   * @returns {Promise<object>} Backup data object
-   */
-  async exportTournamentBackup(tournamentId) {
-    try {
-      // Get tournament info
-      const tournament = await this.getTournament(tournamentId);
-      
-      // Get all related data
-      const participants = await this.getParticipantsWithMembers(tournamentId);
-      const teams = await this.getTeamsWithMembers(tournamentId);
-      const matches = await this.getMatches(tournamentId);
-      
-      // Create backup object
-      const backup = {
-        version: '1.0',
-        exported_at: new Date().toISOString(),
-        tournament: tournament,
-        participants: participants,
-        teams: teams,
-        matches: matches
-      };
-      
-      return backup;
-    } catch (error) {
-      throw new Error(`Backup failed: ${error.message}`);
-    }
+/**
+ * Export tournament data as JSON backup
+ * @param {string|number} tournamentId - Tournament ID to backup
+ * @returns {Promise<object>} Backup data object
+ */
+async function exportTournamentBackup(tournamentId) {
+  try {
+    // Get tournament info
+    const tournament = await this.getTournament(tournamentId);
+    
+    // Get all related data
+    const participants = await this.getParticipantsWithMembers(tournamentId);
+    const teams = await this.getTeamsWithMembers(tournamentId);
+    const matches = await this.getMatches(tournamentId);
+    
+    // Create backup object
+    const backup = {
+      version: '1.0',
+      exported_at: new Date().toISOString(),
+      tournament: tournament,
+      participants: participants,
+      teams: teams,
+      matches: matches
+    };
+    
+    return backup;
+  } catch (error) {
+    throw new Error(`Backup failed: ${error.message}`);
   }
+}
 
-  /**
-   * Download tournament backup as JSON file
-   * @param {string|number} tournamentId - Tournament ID to backup
-   */
-  async downloadTournamentBackup(tournamentId) {
-    try {
-      const backup = await this.exportTournamentBackup(tournamentId);
-      
-      // Generate filename
-      const tournament = backup.tournament;
-      const date = new Date().toISOString().split('T')[0];
-      const filename = `tournament_backup_${tournament.name.replace(/[^a-z0-9]/gi, '_')}_${date}.json`;
-      
-      // Create download
-      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
-      return { success: true, filename: filename };
-    } catch (error) {
-      throw new Error(`Download failed: ${error.message}`);
-    }
+/**
+ * Download tournament backup as JSON file
+ * @param {string|number} tournamentId - Tournament ID to backup
+ */
+async function downloadTournamentBackup(tournamentId) {
+  try {
+    const backup = await this.exportTournamentBackup(tournamentId);
+    
+    // Generate filename
+    const tournament = backup.tournament;
+    const date = new Date().toISOString().split('T')[0];
+    const filename = `tournament_backup_${tournament.name.replace(/[^a-z0-9]/gi, '_')}_${date}.json`;
+    
+    // Create download
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    return { success: true, filename: filename };
+  } catch (error) {
+    throw new Error(`Download failed: ${error.message}`);
   }
+}
 
-  /**
-   * Restore tournament from backup JSON
-   * @param {object} backupData - Backup data object
-   * @param {object} options - Restore options {newName?, skipMatches?}
-   * @returns {Promise<object>} Restored tournament
-   */
-  async restoreTournamentFromBackup(backupData, options = {}) {
-    try {
-      // Validate backup format
-      if (!backupData.version || !backupData.tournament) {
-        throw new Error('Invalid backup format');
-      }
-
-      // Create new tournament with optional new name
-      const tournamentData = {
-        ...backupData.tournament,
-        name: options.newName || `${backupData.tournament.name} (Restored)`,
-        status: 'upcoming',
-        archived: false
-      };
-      delete tournamentData.id;
-      delete tournamentData.created_at;
-      
-      const newTournament = await this.storage.create('tournaments', tournamentData);
-
-      // Restore participants (need to map member IDs)
-      const participantMap = new Map();
-      if (backupData.participants && backupData.participants.length > 0) {
-        const participantsToCreate = backupData.participants.map(p => {
-          const oldId = p.id;
-          const newParticipant = {
-            tournament_id: newTournament.id,
-            member_id: p.member_id,
-            tier_override: p.tier_override,
-            is_seeded: p.is_seeded
-          };
-          return { oldId, data: newParticipant };
-        });
-
-        const createdParticipants = await this.storage.create(
-          'tournament_participants',
-          participantsToCreate.map(p => p.data)
-        );
-
-        // Map old IDs to new IDs
-        participantsToCreate.forEach((p, idx) => {
-          participantMap.set(p.oldId, createdParticipants[idx].id);
-        });
-      }
-
-      // Restore teams (need to map team IDs)
-      const teamMap = new Map();
-      if (backupData.teams && backupData.teams.length > 0) {
-        const teamsToCreate = backupData.teams.map(t => {
-          const oldId = t.id;
-          const newTeam = {
-            tournament_id: newTournament.id,
-            name: t.name,
-            member1_id: t.member1_id,
-            member2_id: t.member2_id,
-            group_name: t.group_name,
-            is_seeded: t.is_seeded
-          };
-          return { oldId, data: newTeam };
-        });
-
-        const createdTeams = await this.storage.create(
-          'teams',
-          teamsToCreate.map(t => t.data)
-        );
-
-        // Map old IDs to new IDs
-        teamsToCreate.forEach((t, idx) => {
-          teamMap.set(t.oldId, createdTeams[idx].id);
-        });
-      }
-
-      // Restore matches (unless skipMatches is true)
-      if (!options.skipMatches && backupData.matches && backupData.matches.length > 0) {
-        const matchesToCreate = backupData.matches.map(m => {
-          const newMatch = {
-            tournament_id: newTournament.id,
-            teamA: m.teamA,
-            teamB: m.teamB,
-            scoreA: m.scoreA || 0,
-            scoreB: m.scoreB || 0,
-            group_name: m.group_name,
-            stage: m.stage,
-            match_type: m.match_type || 'group',
-            status: m.status || 'not_started',
-            s1a: m.s1a || 0,
-            s1b: m.s1b || 0,
-            s2a: m.s2a || 0,
-            s2b: m.s2b || 0,
-            s3a: m.s3a || 0,
-            s3b: m.s3b || 0,
-            s1_locked: m.s1_locked || false,
-            s2_locked: m.s2_locked || false,
-            s3_locked: m.s3_locked || false,
-            match_time: m.match_time,
-            court: m.court,
-            referee: m.referee
-          };
-          return newMatch;
-        });
-
-        await this.storage.create('matches', matchesToCreate);
-      }
-
-      return {
-        success: true,
-        tournament: newTournament,
-        stats: {
-          participants: backupData.participants?.length || 0,
-          teams: backupData.teams?.length || 0,
-          matches: options.skipMatches ? 0 : (backupData.matches?.length || 0)
-        }
-      };
-    } catch (error) {
-      throw new Error(`Restore failed: ${error.message}`);
+/**
+ * Restore tournament from backup JSON
+ * @param {object} backupData - Backup data object
+ * @param {object} options - Restore options {newName?, skipMatches?}
+ * @returns {Promise<object>} Restored tournament
+ */
+async function restoreTournamentFromBackup(backupData, options = {}) {
+  try {
+    // Validate backup format
+    if (!backupData.version || !backupData.tournament) {
+      throw new Error('Invalid backup format');
     }
+
+    // Create new tournament with optional new name
+    const tournamentData = {
+      ...backupData.tournament,
+      name: options.newName || `${backupData.tournament.name} (Restored)`,
+      status: 'upcoming',
+      archived: false
+    };
+    delete tournamentData.id;
+    delete tournamentData.created_at;
+    
+    const newTournament = await this.storage.create('tournaments', tournamentData);
+
+    // Restore participants (need to map member IDs)
+    const participantMap = new Map();
+    if (backupData.participants && backupData.participants.length > 0) {
+      const participantsToCreate = backupData.participants.map(p => {
+        const oldId = p.id;
+        const newParticipant = {
+          tournament_id: newTournament.id,
+          member_id: p.member_id,
+          tier_override: p.tier_override,
+          is_seeded: p.is_seeded
+        };
+        return { oldId, data: newParticipant };
+      });
+
+      const createdParticipants = await this.storage.create(
+        'tournament_participants',
+        participantsToCreate.map(p => p.data)
+      );
+
+      // Map old IDs to new IDs
+      participantsToCreate.forEach((p, idx) => {
+        participantMap.set(p.oldId, createdParticipants[idx].id);
+      });
+    }
+
+    // Restore teams (need to map team IDs)
+    const teamMap = new Map();
+    if (backupData.teams && backupData.teams.length > 0) {
+      const teamsToCreate = backupData.teams.map(t => {
+        const oldId = t.id;
+        const newTeam = {
+          tournament_id: newTournament.id,
+          name: t.name,
+          member1_id: t.member1_id,
+          member2_id: t.member2_id,
+          group_name: t.group_name,
+          is_seeded: t.is_seeded
+        };
+        return { oldId, data: newTeam };
+      });
+
+      const createdTeams = await this.storage.create(
+        'teams',
+        teamsToCreate.map(t => t.data)
+      );
+
+      // Map old IDs to new IDs
+      teamsToCreate.forEach((t, idx) => {
+        teamMap.set(t.oldId, createdTeams[idx].id);
+      });
+    }
+
+    // Restore matches (unless skipMatches is true)
+    if (!options.skipMatches && backupData.matches && backupData.matches.length > 0) {
+      const matchesToCreate = backupData.matches.map(m => {
+        const newMatch = {
+          tournament_id: newTournament.id,
+          teamA: m.teamA,
+          teamB: m.teamB,
+          scoreA: m.scoreA || 0,
+          scoreB: m.scoreB || 0,
+          group_name: m.group_name,
+          stage: m.stage,
+          match_type: m.match_type || 'group',
+          status: m.status || 'not_started',
+          s1a: m.s1a || 0,
+          s1b: m.s1b || 0,
+          s2a: m.s2a || 0,
+          s2b: m.s2b || 0,
+          s3a: m.s3a || 0,
+          s3b: m.s3b || 0,
+          s1_locked: m.s1_locked || false,
+          s2_locked: m.s2_locked || false,
+          s3_locked: m.s3_locked || false,
+          match_time: m.match_time,
+          court: m.court,
+          referee: m.referee
+        };
+        return newMatch;
+      });
+
+      await this.storage.create('matches', matchesToCreate);
+    }
+
+    return {
+      success: true,
+      tournament: newTournament,
+      stats: {
+        participants: backupData.participants?.length || 0,
+        teams: backupData.teams?.length || 0,
+        matches: options.skipMatches ? 0 : (backupData.matches?.length || 0)
+      }
+    };
+  } catch (error) {
+    throw new Error(`Restore failed: ${error.message}`);
   }
+}
 
-  /**
-   * Parse and restore tournament from JSON file
-   * @param {File} file - JSON file to restore from
-   * @param {object} options - Restore options
-   * @returns {Promise<object>} Restored tournament
-   */
-  async restoreTournamentFromFile(file, options = {}) {
-    try {
-      const text = await file.text();
-      const backupData = JSON.parse(text);
-      
-      return await this.restoreTournamentFromBackup(backupData, options);
-    } catch (error) {
-      throw new Error(`File restore failed: ${error.message}`);
-    }
+/**
+ * Parse and restore tournament from JSON file
+ * @param {File} file - JSON file to restore from
+ * @param {object} options - Restore options
+ * @returns {Promise<object>} Restored tournament
+ */
+async function restoreTournamentFromFile(file, options = {}) {
+  try {
+    const text = await file.text();
+    const backupData = JSON.parse(text);
+    
+    return await this.restoreTournamentFromBackup(backupData, options);
+  } catch (error) {
+    throw new Error(`File restore failed: ${error.message}`);
   }
 }
 
