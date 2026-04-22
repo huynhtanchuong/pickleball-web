@@ -200,6 +200,14 @@ class RefereeUI {
           ` : ''}
           
           <button 
+            class="btn-fault" 
+            onclick="window.refereeUI.handleChangeServe()"
+            ${this.state.status === 'match_complete' ? 'disabled' : ''}
+            style="background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%); color: white; border: none;">
+            🔄 Đổi Giao
+          </button>
+          
+          <button 
             class="btn-undo" 
             onclick="window.refereeUI.handleUndo()"
             ${!this.history.canUndo() ? 'disabled' : ''}>
@@ -333,6 +341,43 @@ class RefereeUI {
     this.render();
     
     this.showStatus('Fault recorded', 'success');
+  }
+
+  /**
+   * Handle change serve button click
+   * 
+   * Manually rotate the server without scoring
+   */
+  handleChangeServe() {
+    // Debounce
+    if (this.debounceTimers['change_serve']) {
+      return;
+    }
+    
+    this.debounceTimers['change_serve'] = setTimeout(() => {
+      delete this.debounceTimers['change_serve'];
+    }, 300);
+    
+    // Check if match is complete
+    if (this.state.status === 'match_complete') {
+      this.showStatus('Cannot change serve after match is complete', 'error');
+      return;
+    }
+    
+    // Save to history
+    this.history.push(this.state);
+    
+    // Apply action
+    const action = { type: ActionTypes.CHANGE_SERVE };
+    this.state = gameStateReducer(this.state, action);
+    
+    // Publish to sync
+    this.sync.publish(this.state);
+    
+    // Re-render
+    this.render();
+    
+    this.showStatus('Serve changed', 'success');
   }
 
   /**

@@ -398,6 +398,7 @@ const ActionTypes = {
   SCORE_TEAM_B: 'SCORE_TEAM_B',
   FAULT_TEAM_A: 'FAULT_TEAM_A',
   FAULT_TEAM_B: 'FAULT_TEAM_B',
+  CHANGE_SERVE: 'CHANGE_SERVE',
   UNDO: 'UNDO',
   NEXT_SET: 'NEXT_SET',
   END_MATCH: 'END_MATCH',
@@ -554,6 +555,8 @@ function gameStateReducer(state, action) {
       return handleFault(state, 'A');
     case ActionTypes.FAULT_TEAM_B:
       return handleFault(state, 'B');
+    case ActionTypes.CHANGE_SERVE:
+      return rotateServer(state);
     case ActionTypes.UNDO:
       // Undo is handled by HistoryManager, not reducer
       return state;
