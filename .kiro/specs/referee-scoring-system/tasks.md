@@ -169,14 +169,14 @@ The system consists of:
     - Handle field name mapping (camelCase ↔ snake_case)
     - _Requirements: 17.5_
 
-- [~] 8. Implement RefereeUI component
-  - [~] 8.1 Create RefereeUI class structure
+- [ ] 8. Implement RefereeUI component
+  - [ ] 8.1 Create RefereeUI class structure
     - Initialize with match ID
     - Store references to reducer, history, and sync engine
     - Load initial state from database or create new match
     - _Requirements: 1.1, 2.1_
   
-  - [~] 8.2 Implement render method
+  - [ ] 8.2 Implement render method
     - Display team names and current scores
     - Highlight serving team visually
     - Show server indicator (Team + Server 1/2)
@@ -185,7 +185,7 @@ The system consists of:
     - Display match status badge
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 8.3_
   
-  - [~] 8.3 Implement score button handlers
+  - [ ] 8.3 Implement score button handlers
     - Create handleScoreButton method for SCORE_TEAM_A and SCORE_TEAM_B
     - Push current state to history before action
     - Dispatch action to reducer
@@ -193,13 +193,13 @@ The system consists of:
     - Re-render UI
     - _Requirements: 1.5, 1.8, 3.1, 3.2, 3.3_
   
-  - [~] 8.4 Implement fault button handlers (optional feature)
+  - [ ] 8.4 Implement fault button handlers (optional feature)
     - Create handleFaultButton method for FAULT_TEAM_A and FAULT_TEAM_B
     - Only show buttons if config.enableFaultButtons is true
     - Push state to history, dispatch action, publish, re-render
     - _Requirements: 1.6, 6.1, 6.2, 6.3, 6.4, 6.5, 11.5_
   
-  - [~] 8.5 Implement undo button handler
+  - [ ] 8.5 Implement undo button handler
     - Create handleUndo method
     - Pop previous state from history
     - Publish restored state via SyncEngine
@@ -207,38 +207,38 @@ The system consists of:
     - Disable button when history is empty
     - _Requirements: 1.5, 7.2, 7.3, 7.4_
   
-  - [~] 8.6 Implement set completion UI
+  - [ ] 8.6 Implement set completion UI
     - Display popup when set is complete
     - Show which team won the set
     - Provide [Next Set] and [End Match] buttons
     - _Requirements: 9.2, 9.3_
   
-  - [~] 8.7 Implement match completion UI
+  - [ ] 8.7 Implement match completion UI
     - Display final result when match is complete
     - Show sets won by each team
     - Prevent further score changes
     - _Requirements: 10.2, 10.3_
   
-  - [~] 8.8 Add button debouncing and input validation
+  - [ ] 8.8 Add button debouncing and input validation
     - Debounce button clicks with 300ms delay
     - Prevent double-clicks
     - Validate actions before dispatching
     - _Requirements: 15.3, 15.5_
   
-  - [~] 8.9 Implement error handling and status indicators
+  - [ ] 8.9 Implement error handling and status indicators
     - Display sync status (connected, syncing, error)
     - Show conflict warnings
     - Provide manual sync retry button
     - _Requirements: 18.1, 18.2, 18.3, 18.4, 18.5_
 
-- [~] 9. Implement ViewerDisplay component
-  - [~] 9.1 Create ViewerDisplay class structure
+- [ ] 9. Implement ViewerDisplay component
+  - [ ] 9.1 Create ViewerDisplay class structure
     - Initialize with match ID
     - Store reference to SyncEngine
     - Subscribe to match updates on initialization
     - _Requirements: 12.3_
   
-  - [~] 9.2 Implement render method (read-only)
+  - [ ] 9.2 Implement render method (read-only)
     - Display team names and scores (no input controls)
     - Show serving team indicator
     - Display score call
@@ -246,16 +246,16 @@ The system consists of:
     - Display match status badge
     - _Requirements: 12.4, 12.5_
   
-  - [~] 9.3 Implement real-time update handler
+  - [ ] 9.3 Implement real-time update handler
     - Update state when sync callback fires
     - Re-render UI with new state
     - _Requirements: 13.1, 13.3_
 
-- [~] 10. Checkpoint - Ensure all UI components render correctly
+- [ ] 10. Checkpoint - Ensure all UI components render correctly
   - Ensure all tests pass, ask the user if questions arise.
 
-- [~] 11. Create HTML pages and integrate components
-  - [~] 11.1 Create referee.html page
+- [ ] 11. Create HTML pages and integrate components
+  - [ ] 11.1 Create referee.html page
     - Add HTML structure for RefereeUI
     - Include large touch-friendly buttons
     - Add score display, server indicator, score call
@@ -269,7 +269,7 @@ The system consists of:
     - Add fullscreen mode for TV displays
     - _Requirements: 12.3, 12.4, 16.1_
   
-  - [~] 11.3 Add CSS styling
+  - [ ] 11.3 Add CSS styling
     - Style score buttons (large, touch-friendly, minimum 44x44px)
     - Style serving team highlight
     - Style score call display (prominent, large font)
@@ -279,15 +279,15 @@ The system consists of:
     - Add focus indicators for keyboard navigation
     - _Requirements: 1.7_
   
-  - [~] 11.4 Wire up JavaScript modules
+  - [ ] 11.4 Wire up JavaScript modules
     - Import GameStateReducer, HistoryManager, SyncEngine
     - Initialize RefereeUI on referee.html
     - Initialize ViewerDisplay on viewer.html
     - Add event listeners for buttons
     - _Requirements: 17.1_
 
-- [~] 12. Implement match initialization and configuration
-  - [~] 12.1 Create initializeMatch function
+- [ ] 12. Implement match initialization and configuration
+  - [ ] 12.1 Create initializeMatch function
     - Set initial serving team to Team A
     - Set initial server number to 1
     - Set initial scores to 0
@@ -296,7 +296,7 @@ The system consists of:
     - Apply match configuration (format, target score, win-by margin, rules)
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 11.1, 11.2, 11.3, 11.4, 11.5_
   
-  - [~] 12.2 Add configuration UI (admin page integration)
+  - [ ] 12.2 Add configuration UI (admin page integration)
     - Add match format selector (BO1, BO3, BO5)
     - Add target score selector (11, 15, 21)
     - Add win-by margin input
@@ -304,7 +304,7 @@ The system consists of:
     - Add fault buttons enable checkbox
     - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5_
 
-- [~] 13. Implement database migration and integration
+- [ ] 13. Implement database migration and integration
   - [x] 13.1 Create Supabase migration script
     - Add serving_team column (TEXT, CHECK IN ('A', 'B'))
     - Add server_number column (INTEGER, CHECK IN (1, 2))
@@ -315,81 +315,81 @@ The system consists of:
     - Create indexes for tournament_id + status, updated_at
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8_
   
-  - [~] 13.2 Update StorageAdapter for new fields
+  - [ ] 13.2 Update StorageAdapter for new fields
     - Add field mappings for serving state
     - Add field mappings for set tracking
     - Add field mappings for match config
     - Handle serialization/deserialization of JSONB fields
     - _Requirements: 17.5_
   
-  - [~] 13.3 Integrate with existing TournamentManager
+  - [ ] 13.3 Integrate with existing TournamentManager
     - Update match creation to include default match_config
     - Update match listing to display serving state
     - Add referee assignment field to matches
     - _Requirements: 12.1_
 
-- [~] 14. Implement featured match display with rotation
-  - [~] 14.1 Create featured match rotation logic
+- [ ] 14. Implement featured match display with rotation
+  - [ ] 14.1 Create featured match rotation logic
     - Filter matches by status (playing > not_started > done)
     - Prioritize by stage (final > semi > group)
     - Rotate between multiple playing matches every 5 seconds
     - _Requirements: 16.1, 16.2, 16.3_
   
-  - [~] 14.2 Add fullscreen mode for viewer display
+  - [ ] 14.2 Add fullscreen mode for viewer display
     - Implement fullscreen toggle button
     - Optimize layout for TV displays
     - Increase font sizes for readability
     - _Requirements: 16.1, 16.4_
 
-- [~] 15. Checkpoint - Ensure all integration tests pass
+- [ ] 15. Checkpoint - Ensure all integration tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [~] 16. Add accessibility features
-  - [~] 16.1 Implement keyboard navigation
+- [ ] 16. Add accessibility features
+  - [ ] 16.1 Implement keyboard navigation
     - Add keyboard shortcuts for score buttons (A, B keys)
     - Add keyboard shortcut for undo (U or Ctrl+Z)
     - Add tab navigation for all interactive elements
     - _Requirements: Accessibility_
   
-  - [~] 16.2 Add ARIA labels and screen reader support
+  - [ ] 16.2 Add ARIA labels and screen reader support
     - Add aria-label to all buttons
     - Add aria-live regions for score updates
     - Add role attributes for semantic structure
     - _Requirements: Accessibility_
   
-  - [~] 16.3 Ensure touch target sizes
+  - [ ] 16.3 Ensure touch target sizes
     - Verify all buttons are minimum 44x44px
     - Add adequate spacing between buttons
     - _Requirements: 1.7, Accessibility_
 
-- [~] 17. Add internationalization support
-  - [~] 17.1 Extract all user-facing strings to i18n.js
+- [ ] 17. Add internationalization support
+  - [ ] 17.1 Extract all user-facing strings to i18n.js
     - Button labels (Score, Fault, Undo, Next Set, End Match)
     - Status messages (Playing, Set Complete, Match Complete)
     - Error messages (Conflict, Sync Failed, Invalid Action)
     - Score call format (may vary by locale)
     - _Requirements: Internationalization_
   
-  - [~] 17.2 Test with Vietnamese locale
+  - [ ] 17.2 Test with Vietnamese locale
     - Verify all strings display correctly
     - Test score call format
     - _Requirements: Internationalization_
 
-- [~] 18. Implement error handling and stability features
-  - [~] 18.1 Add network offline detection
+- [ ] 18. Implement error handling and stability features
+  - [ ] 18.1 Add network offline detection
     - Detect when network is offline
     - Show offline indicator
     - Continue with local state
     - Queue changes for sync when online
     - _Requirements: 18.2, 18.3_
   
-  - [~] 18.2 Add retry logic for failed syncs
+  - [ ] 18.2 Add retry logic for failed syncs
     - Implement exponential backoff
     - Queue failed operations
     - Retry automatically when online
     - _Requirements: 18.3, 18.5_
   
-  - [~] 18.3 Add rapid clicking protection
+  - [ ] 18.3 Add rapid clicking protection
     - Debounce all button clicks
     - Prevent duplicate actions
     - _Requirements: 15.3, 18.1_
@@ -400,7 +400,7 @@ The system consists of:
     - Test concurrent edits
     - _Requirements: 18.1, 18.2, 18.3, 19.3_
 
-- [~] 19. Final checkpoint - End-to-end testing
+- [ ] 19. Final checkpoint - End-to-end testing
   - [ ]* 19.1 Write E2E test for complete BO1 match
     - Test match from start to finish (11 points, win by 2)
     - Verify all state transitions
@@ -423,8 +423,8 @@ The system consists of:
   
   - Ensure all tests pass, ask the user if questions arise.
 
-- [~] 20. Integration and final wiring
-  - [~] 20.1 Add navigation links to existing pages
+- [ ] 20. Integration and final wiring
+  - [ ] 20.1 Add navigation links to existing pages
     - Add "Referee Scoring" link to admin.html
     - Add "Live Scores" link to index.html
     - Update navigation menu
@@ -435,18 +435,18 @@ The system consists of:
     - Link to referee.html with match ID parameter
     - _Requirements: Integration_
   
-  - [~] 20.3 Update existing match display to show serving state
+  - [ ] 20.3 Update existing match display to show serving state
     - Show serving team indicator on match cards
     - Display score call on match cards
     - _Requirements: Integration_
   
-  - [~] 20.4 Test cross-page synchronization
+  - [ ] 20.4 Test cross-page synchronization
     - Verify updates on referee.html appear on viewer.html
     - Verify updates appear on admin.html match cards
     - Verify updates appear on index.html featured match
     - _Requirements: 13.1, 13.3_
 
-- [~] 21. Final checkpoint - Complete system test
+- [ ] 21. Final checkpoint - Complete system test
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
