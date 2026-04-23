@@ -760,27 +760,34 @@
       const list = document.getElementById('participants-list');
       const searchQuery = document.getElementById('participant-search').value.toLowerCase();
       
+      console.log('All members:', allMembers); // DEBUG
+      
       const filtered = allMembers.filter(m => 
-        m.name.toLowerCase().includes(searchQuery)
+        m.name && m.name.toLowerCase().includes(searchQuery)
       );
 
-      list.innerHTML = filtered.map(m => `
-        <div class="participant-item">
-          <input type="checkbox" id="member-${m.id}" onchange="toggleParticipant('${m.id}')">
-          <label for="member-${m.id}" style="flex: 1; cursor: pointer;">
-            ${escapeHtml(m.name)} <span class="tier-badge tier-${m.tier}">T${m.tier}</span>
-          </label>
-          <select id="tier-override-${m.id}" style="width: 80px;">
-            <option value="">T${m.tier}</option>
-            <option value="1">T1</option>
-            <option value="2">T2</option>
-            <option value="3">T3</option>
-          </select>
-          <label>
-            <input type="checkbox" id="seeded-${m.id}"> ⭐
-          </label>
-        </div>
-      `).join('');
+      list.innerHTML = filtered.map(m => {
+        const memberName = m.name || 'Không có tên';
+        console.log('Rendering participant:', m); // DEBUG
+        
+        return `
+          <div class="participant-item">
+            <input type="checkbox" id="member-${m.id}" onchange="toggleParticipant('${m.id}')">
+            <label for="member-${m.id}" style="flex: 1; cursor: pointer; font-weight: 600; color: #333;">
+              ${escapeHtml(memberName)} <span class="tier-badge tier-${m.tier}">T${m.tier}</span>
+            </label>
+            <select id="tier-override-${m.id}" style="width: 80px;">
+              <option value="">T${m.tier}</option>
+              <option value="1">T1</option>
+              <option value="2">T2</option>
+              <option value="3">T3</option>
+            </select>
+            <label>
+              <input type="checkbox" id="seeded-${m.id}"> ⭐
+            </label>
+          </div>
+        `;
+      }).join('');
 
       updateSelectedCount();
     }
