@@ -1018,6 +1018,11 @@
     function renderTeams() {
       const display = document.getElementById('teams-display');
       
+      if (!wizardData.teams || wizardData.teams.length === 0) {
+        display.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">Chưa có đội nào. Nhấn "Ghép Cặp Tự Động" để tạo đội.</p>';
+        return;
+      }
+      
       // Group by group_name
       const groups = {};
       wizardData.teams.forEach(team => {
@@ -1026,16 +1031,34 @@
       });
 
       let html = '';
-      Object.entries(groups).forEach(([groupName, teams]) => {
-        html += `<div style="grid-column: 1/-1;"><h4>Bảng ${groupName}</h4></div>`;
+      Object.entries(groups).sort().forEach(([groupName, teams]) => {
+        html += `
+          <div style="grid-column: 1/-1; margin-top: 20px;">
+            <h4 style="color: #27ae60; border-bottom: 2px solid #27ae60; padding-bottom: 8px;">
+              📋 Bảng ${groupName} (${teams.length} đội)
+            </h4>
+          </div>
+        `;
         teams.forEach((team, idx) => {
           const member1 = allMembers.find(m => m.id == team.member1_id);
           const member2 = allMembers.find(m => m.id == team.member2_id);
+          const tier1 = member1?.tier || '?';
+          const tier2 = member2?.tier || '?';
+          
           html += `
             <div class="team-card ${team.is_seeded ? 'seeded' : ''}">
-              <strong>Đội ${idx + 1}</strong> ${team.is_seeded ? '⭐' : ''}
-              <div>${member1?.name || 'Unknown'}</div>
-              <div>${member2?.name || 'Unknown'}</div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <strong style="font-size: 1.1rem;">Đội ${idx + 1}</strong>
+                ${team.is_seeded ? '<span style="color: #ffd700; font-size: 1.2rem;">⭐ Hạt giống</span>' : ''}
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                <span style="flex: 1;">${member1?.name || 'Unknown'}</span>
+                <span class="tier-badge tier-${tier1}" style="font-size: 0.7rem; padding: 2px 8px;">T${tier1}</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="flex: 1;">${member2?.name || 'Unknown'}</span>
+                <span class="tier-badge tier-${tier2}" style="font-size: 0.7rem; padding: 2px 8px;">T${tier2}</span>
+              </div>
             </div>
           `;
         });
@@ -1065,6 +1088,11 @@
     function renderMatches() {
       const display = document.getElementById('matches-display');
       
+      if (!wizardData.matches || wizardData.matches.length === 0) {
+        display.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">Chưa có trận đấu nào. Nhấn "Tạo Lịch Tự Động" để tạo lịch thi đấu.</p>';
+        return;
+      }
+      
       // Group by group_name
       const groups = {};
       wizardData.matches.forEach(match => {
@@ -1072,17 +1100,33 @@
         groups[match.group_name].push(match);
       });
 
-      let html = '';
-      Object.entries(groups).forEach(([groupName, matches]) => {
-        html += `<h4>Bảng ${groupName} - ${matches.length} trận</h4>`;
+      let html = '<div style="display: flex; flex-direction: column; gap: 20px;">';
+      Object.entries(groups).sort().forEach(([groupName, matches]) => {
+        html += `
+          <div>
+            <h4 style="color: #27ae60; border-bottom: 2px solid #27ae60; padding-bottom: 8px; margin-bottom: 12px;">
+              🏆 Bảng ${groupName} - ${matches.length} trận đấu
+            </h4>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+        `;
         matches.forEach((match, idx) => {
           html += `
-            <div class="match-item">
-              <span>${idx + 1}. ${match.teamA} vs ${match.teamB}</span>
+            <div style="display: flex; align-items: center; padding: 12px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px;">
+              <span style="min-width: 40px; font-weight: 600; color: #666;">Trận ${idx + 1}</span>
+              <span style="flex: 1; text-align: center; font-size: 1rem;">
+                <strong>${match.teamA}</strong> 
+                <span style="color: #999; margin: 0 8px;">vs</span> 
+                <strong>${match.teamB}</strong>
+              </span>
             </div>
           `;
         });
+        html += `
+            </div>
+          </div>
+        `;
       });
+      html += '</div>';
 
       display.innerHTML = html;
     }
