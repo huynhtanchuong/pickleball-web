@@ -299,9 +299,6 @@ class TournamentManager {
             s1a: 0, s1b: 0,
             s2a: 0, s2b: 0,
             s3a: 0, s3b: 0,
-            s1_locked: false,
-            s2_locked: false,
-            s3_locked: false,
             // Optional fields
             match_time: null,
             court: null,
@@ -408,9 +405,6 @@ class TournamentManager {
       s1a: 0, s1b: 0,
       s2a: 0, s2b: 0,
       s3a: 0, s3b: 0,
-      s1_locked: false,
-      s2_locked: false,
-      s3_locked: false,
       updated_at: null
     };
 
@@ -457,9 +451,6 @@ class TournamentManager {
       s1a: 0, s1b: 0,
       s2a: 0, s2b: 0,
       s3a: 0, s3b: 0,
-      s1_locked: false,
-      s2_locked: false,
-      s3_locked: false,
       updated_at: null
     };
 
@@ -496,9 +487,6 @@ class TournamentManager {
       s1a: 0, s1b: 0,
       s2a: 0, s2b: 0,
       s3a: 0, s3b: 0,
-      s1_locked: false,
-      s2_locked: false,
-      s3_locked: false,
       updated_at: null
     };
 
@@ -837,9 +825,6 @@ async function restoreTournamentFromBackup(backupData, options = {}) {
           s2b: m.s2b || 0,
           s3a: m.s3a || 0,
           s3b: m.s3b || 0,
-          s1_locked: m.s1_locked || false,
-          s2_locked: m.s2_locked || false,
-          s3_locked: m.s3_locked || false,
           match_time: m.match_time,
           court: m.court,
           referee: m.referee
