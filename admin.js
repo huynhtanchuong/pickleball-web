@@ -1639,6 +1639,8 @@ async function openMemberRegistrationModal() {
     // Get all members
     const members = await window.memberManager.getAllMembers();
     
+    console.log('Members loaded:', members); // DEBUG
+    
     if (members.length === 0) {
       setStatus('❌ Chưa có thành viên nào. Vui lòng thêm thành viên trước.', 'err');
       return;
@@ -1663,13 +1665,15 @@ async function openMemberRegistrationModal() {
       const isRegistered = registeredMap.has(member.id);
       const registration = isRegistered ? registeredMap.get(member.id) : null;
       
+      console.log('Rendering member:', member); // DEBUG
+      
       return `
         <div class="member-item">
           <input type="checkbox" 
                  id="member-${member.id}" 
                  value="${member.id}"
                  ${isRegistered ? 'checked' : ''} />
-          <label for="member-${member.id}">${esc(member.name)}</label>
+          <label for="member-${member.id}">${esc(member.name || 'Không có tên')}</label>
           <span class="tier-badge tier-${member.tier}">Tier ${member.tier}</span>
           <select class="tier-override" data-member-id="${member.id}">
             <option value="">Giữ nguyên</option>
