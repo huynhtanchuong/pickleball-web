@@ -112,6 +112,12 @@ async function loadTournamentSelector() {
       await switchTournament(tournaments[0].id);
     } else {
       updateTournamentStatus();
+      
+      // Render tournament controls
+      const activeTournament = tournaments.find(t => t.id == activeId);
+      if (activeTournament) {
+        await renderTournamentControls(activeTournament);
+      }
     }
   } catch (error) {
     console.error('Error loading tournaments:', error);
@@ -137,6 +143,10 @@ async function switchTournament(tournamentId) {
     // Reload matches for selected tournament
     await fetchMatches();
     
+    // Render tournament controls
+    const tournament = await tournamentManager.getTournament(tournamentId);
+    await renderTournamentControls(tournament);
+    
     setStatus('Đã chuyển giải đấu', 'ok');
   } catch (error) {
     setStatus('Lỗi khi chuyển giải đấu: ' + error.message, 'err');
@@ -157,6 +167,53 @@ function updateTournamentStatus() {
       statusEl.className = 'status-chip';
     }
   }
+}
+
+// ── Tournament Controls Rendering ────────────────────────────
+async function renderTournamentControls(tournament) {
+  const container = document.getElementById('tournament-controls');
+  
+  if (!container) return;
+  
+  // Hide controls for non-admin users
+  if (!isAdmin()) {
+    container.style.display = 'none';
+    return;
+  }
+  
+  // Show container
+  container.style.display = 'block';
+  
+  let html = '<div class="tournament-controls-container">';
+  
+  if (tournament.status === 'upcoming') {
+    // Show registration and setup buttons
+    html += `
+      <button class="tournament-control-btn btn-add-members" onclick="openMemberRegistrationModal()">
+        👥 Thêm Thành viên
+      </button>
+      <button class="tournament-control-btn btn-generate-teams" onclick="generateRandomTeams()">
+        🎲 Tạo Đội Ngẫu nhiên
+      </button>
+      <button class="tournament-control-btn btn-generate-matches" onclick="generateRandomMatches()">
+        📅 Tạo Trận Đấu
+      </button>
+      <button class="tournament-control-btn btn-start-tournament" onclick="startTournament()">
+        ▶️ Bắt Đầu Giải Đấu
+      </button>
+    `;
+  } else if (tournament.status === 'ongoing' || tournament.status === 'completed') {
+    // Show reset button only
+    html += `
+      <button class="tournament-control-btn btn-reset-tournament" onclick="resetTournament()">
+        ↺ Reset Giải Đấu
+      </button>
+    `;
+  }
+  
+  html += '</div>';
+  
+  container.innerHTML = html;
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -1549,5 +1606,437 @@ async function syncMatchState(matchId, state) {
   
   if (error) {
     throw new Error(`Failed to sync state: ${error.message}`);
+  }
+}
+
+// ============================================================
+//  TOURNAMENT LIFECYCLE MANAGEMENT — Placeholder Functions
+// ============================================================
+
+/**
+ * Open member registration modal
+ */
+async function openMemberRegistrationModal() {
+  try {
+    const tournamentId = tournamentManager.getActiveTournamentId();
+    if (!tournamentId) {
+      setStatus('❌ Vui lòng chọn giải đấu', 'err');
+      return;
+    }
+
+    // Initialize memberManager if not already done
+    if (typeof window.memberManager === 'undefined' || !window.memberManager) {
+      window.memberManager = new MemberManager(window.storage);
+    }
+
+    // Get all members
+    const members = await window.memberManager.getAllMembers();
+    
+    if (members.length === 0) {
+      setStatus('❌ Chưa có thành viên nào. Vui lòng thêm thành viên trước.', 'err');
+      return;
+    }
+
+    // Get already registered participants
+    const participants = await tournamentManager.getParticipants(tournamentId);
+    const registeredMap = new Map();
+    
+    participants.forEach(p => {
+      registeredMap.set(p.member_id, {
+        tier_override: p.tier_override,
+        is_seeded: p.is_seeded
+      });
+    });
+
+    // Render modal with member list
+    const modal = document.getElementById('member-registration-modal');
+    const memberList = document.getElementById('member-list');
+
+    memberList.innerHTML = members.map(member => {
+      const isRegistered = registeredMap.has(member.id);
+      const registration = isRegistered ? registeredMap.get(member.id) : null;
+      
+      return `
+        <div class="member-item">
+          <input type="checkbox" 
+                 id="member-${member.id}" 
+                 value="${member.id}"
+                 ${isRegistered ? 'checked' : ''} />
+          <label for="member-${member.id}">${esc(member.name)}</label>
+          <span class="tier-badge tier-${member.tier}">Tier ${member.tier}</span>
+          <select class="tier-override" data-member-id="${member.id}">
+            <option value="">Giữ nguyên</option>
+            <option value="1" ${registration && registration.tier_override === 1 ? 'selected' : ''}>Tier 1</option>
+            <option value="2" ${registration && registration.tier_override === 2 ? 'selected' : ''}>Tier 2</option>
+            <option value="3" ${registration && registration.tier_override === 3 ? 'selected' : ''}>Tier 3</option>
+          </select>
+          <div class="seeded-checkbox-wrapper">
+            <input type="checkbox" 
+                   class="is-seeded" 
+                   data-member-id="${member.id}"
+                   ${registration && registration.is_seeded ? 'checked' : ''} />
+            <label>Hạt giống</label>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    modal.style.display = 'flex';
+  } catch (error) {
+    console.error('openMemberRegistrationModal error:', error);
+    setStatus('❌ Lỗi: ' + error.message, 'err');
+  }
+}
+
+/**
+ * Close member registration modal
+ */
+function closeMemberRegistrationModal() {
+  const modal = document.getElementById('member-registration-modal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+/**
+ * Save member registration
+ */
+async function saveMemberRegistration() {
+  try {
+    const tournamentId = tournamentManager.getActiveTournamentId();
+    
+    if (!tournamentId) {
+      setStatus('❌ Vui lòng chọn giải đấu', 'err');
+      return;
+    }
+
+    // Collect selected members
+    const checkboxes = document.querySelectorAll('#member-registration-modal input[type="checkbox"]:checked');
+    const participants = [];
+
+    checkboxes.forEach(cb => {
+      // Skip the seeded checkboxes (they have class 'is-seeded')
+      if (cb.classList.contains('is-seeded')) return;
+      
+      const memberId = cb.value;
+      const tierOverrideSelect = document.querySelector(`.tier-override[data-member-id="${memberId}"]`);
+      const isSeededCheckbox = document.querySelector(`.is-seeded[data-member-id="${memberId}"]`);
+      
+      const tierOverride = tierOverrideSelect ? tierOverrideSelect.value : '';
+      const isSeeded = isSeededCheckbox ? isSeededCheckbox.checked : false;
+
+      participants.push({
+        member_id: memberId,
+        tier_override: tierOverride ? parseInt(tierOverride) : null,
+        is_seeded: isSeeded
+      });
+    });
+
+    // Validation: minimum 4 members
+    if (participants.length < 4) {
+      setStatus('❌ Cần ít nhất 4 thành viên để tạo giải đấu', 'err');
+      alert('Cần ít nhất 4 thành viên để tạo giải đấu.\n\nVui lòng chọn thêm thành viên.');
+      return;
+    }
+
+    // Clear existing participants
+    const existing = await tournamentManager.getParticipants(tournamentId);
+    for (const p of existing) {
+      await storage.delete('tournament_participants', p.id);
+    }
+
+    // Add new participants
+    await tournamentManager.addParticipants(tournamentId, participants);
+
+    setStatus(`✓ Đã thêm ${participants.length} thành viên`, 'ok');
+    closeMemberRegistrationModal();
+  } catch (error) {
+    console.error('saveMemberRegistration error:', error);
+    setStatus(`❌ Lỗi: ${error.message}`, 'err');
+  }
+}
+
+/**
+ * Generate random teams using pairing algorithm
+ * Task 3: Implement Generate Random Teams Function
+ */
+async function generateRandomTeams() {
+  try {
+    // 3.1: Get active tournament
+    const tournamentId = tournamentManager.getActiveTournamentId();
+    if (!tournamentId) {
+      setStatus('❌ Vui lòng chọn giải đấu', 'err');
+      return;
+    }
+
+    const tournament = await tournamentManager.getTournament(tournamentId);
+    
+    // Check tournament status
+    if (tournament.status !== 'upcoming') {
+      setStatus('❌ Chỉ có thể tạo đội khi giải đấu chưa bắt đầu', 'err');
+      return;
+    }
+    
+    // Get participants
+    const participants = await tournamentManager.getParticipantsWithMembers(tournamentId);
+    
+    if (participants.length < 4) {
+      setStatus('❌ Cần ít nhất 4 thành viên để tạo đội', 'err');
+      alert('Cần ít nhất 4 thành viên để tạo đội.\n\nVui lòng thêm thành viên trước.');
+      return;
+    }
+    
+    // 3.2: Add confirmation dialog before generating teams
+    const existingTeams = await tournamentManager.getTeams(tournamentId);
+    const confirmMsg = existingTeams.length > 0
+      ? `Tạo đội ngẫu nhiên từ ${participants.length} thành viên?\n\n` +
+        `⚠️ CẢNH BÁO: ${existingTeams.length} đội hiện tại sẽ bị xóa!\n\n` +
+        `Hành động này không thể hoàn tác.`
+      : `Tạo đội ngẫu nhiên từ ${participants.length} thành viên?`;
+    
+    if (!confirm(confirmMsg)) {
+      return;
+    }
+    
+    // 3.3: Delete existing teams before generating new ones
+    if (existingTeams.length > 0) {
+      for (const team of existingTeams) {
+        await storage.delete('teams', team.id);
+      }
+      console.log(`Deleted ${existingTeams.length} existing teams`);
+    }
+    
+    // 3.4: Call tournamentManager.generateTeams(tournamentId)
+    const teams = await tournamentManager.generateTeams(tournamentId);
+    
+    // 3.5: Display success message with team count
+    setStatus(`✓ Đã tạo ${teams.length} đội thành công`, 'ok');
+    
+    // Log team distribution for debugging
+    const groupA = teams.filter(t => t.group_name === 'A');
+    const groupB = teams.filter(t => t.group_name === 'B');
+    console.log(`Team distribution: Group A = ${groupA.length}, Group B = ${groupB.length}`);
+    
+  } catch (error) {
+    // 3.6: Handle errors and display error messages
+    console.error('generateRandomTeams error:', error);
+    setStatus(`❌ Lỗi: ${error.message}`, 'err');
+    alert(`Không thể tạo đội!\n\nLỗi: ${error.message}\n\nVui lòng kiểm tra:\n` +
+          `• Số lượng thành viên mỗi tier\n` +
+          `• Tier 2 phải có số chẵn thành viên`);
+  }
+}
+
+/**
+ * Generate random matches using round-robin schedule
+ * Task 4: Implement Generate Random Matches Function
+ */
+async function generateRandomMatches() {
+  // 4.1: Implement generateRandomMatches() function in admin.js
+  const tournamentId = tournamentManager.getActiveTournamentId();
+  
+  if (!tournamentId) {
+    alert('Vui lòng chọn giải đấu');
+    return;
+  }
+  
+  try {
+    const tournament = await tournamentManager.getTournament(tournamentId);
+    
+    // Validate tournament status
+    if (tournament.status !== 'upcoming') {
+      alert('Chỉ có thể tạo trận đấu khi giải đấu chưa bắt đầu');
+      return;
+    }
+    
+    // 4.3: Validate that teams exist before generating
+    const teams = await tournamentManager.getTeams(tournamentId);
+    
+    if (teams.length === 0) {
+      alert('Vui lòng tạo đội trước khi tạo trận đấu');
+      return;
+    }
+    
+    // 4.2: Add confirmation dialog before generating matches
+    if (!confirm(`Tạo lịch thi đấu vòng tròn?\n\n` +
+                 `• ${teams.length} đội\n` +
+                 `• Mỗi đội sẽ đấu với tất cả đội khác trong bảng\n\n` +
+                 `Trận đấu cũ (nếu có) sẽ bị xóa.`)) {
+      return;
+    }
+    
+    // 4.4: Delete existing matches before generating new ones
+    const existingMatches = await tournamentManager.getMatches(tournamentId);
+    for (const match of existingMatches) {
+      await storage.delete('matches', match.id);
+    }
+    
+    // 4.5: Call tournamentManager.generateSchedule(tournamentId)
+    const matches = await tournamentManager.generateSchedule(tournamentId);
+    
+    // 4.6: Display success message with match count
+    setStatus(`✓ Đã tạo ${matches.length} trận đấu`, 'ok');
+    
+    // Reload matches to display
+    await fetchMatches();
+    
+  } catch (error) {
+    // 4.7: Handle errors and display error messages
+    console.error('generateRandomMatches error:', error);
+    setStatus(`❌ Lỗi: ${error.message}`, 'err');
+    alert(`Không thể tạo trận đấu!\n\nLỗi: ${error.message}\n\nVui lòng kiểm tra:\n` +
+          `• Đã tạo đội chưa\n` +
+          `• Giải đấu đang ở trạng thái "Sắp diễn ra"`);
+  }
+}
+
+/**
+ * Start tournament and change status to ongoing
+ * Task 5: Implement Start Tournament Function
+ */
+async function startTournament() {
+  // 5.1: Implement startTournament() function in admin.js
+  const tournamentId = tournamentManager.getActiveTournamentId();
+  
+  if (!tournamentId) {
+    alert('Vui lòng chọn giải đấu');
+    return;
+  }
+  
+  try {
+    const tournament = await tournamentManager.getTournament(tournamentId);
+    
+    // Validate tournament status
+    if (tournament.status !== 'upcoming') {
+      alert('Giải đấu đã bắt đầu');
+      return;
+    }
+    
+    // 5.2: Add validation for prerequisites (participants, teams, matches)
+    const participants = await tournamentManager.getParticipants(tournamentId);
+    const teams = await tournamentManager.getTeams(tournamentId);
+    const matches = await tournamentManager.getMatches(tournamentId);
+    
+    // Validate minimum requirements
+    if (participants.length < 4) {
+      alert('Cần ít nhất 4 thành viên để bắt đầu giải đấu');
+      return;
+    }
+    
+    if (teams.length < 1) {
+      alert('Vui lòng tạo đội trước khi bắt đầu giải đấu');
+      return;
+    }
+    
+    if (matches.length < 1) {
+      alert('Vui lòng tạo trận đấu trước khi bắt đầu giải đấu');
+      return;
+    }
+    
+    // 5.3: Add confirmation dialog with tournament summary
+    if (!confirm(`Bắt đầu giải đấu "${tournament.name}"?\n\n` +
+                 `• ${participants.length} thành viên\n` +
+                 `• ${teams.length} đội\n` +
+                 `• ${matches.length} trận đấu\n\n` +
+                 `Sau khi bắt đầu, bạn không thể thêm/xóa thành viên, đội, hoặc trận đấu.`)) {
+      return;
+    }
+    
+    // 5.4: Call tournamentManager.updateStatus(tournamentId, 'ongoing')
+    await tournamentManager.updateStatus(tournamentId, 'ongoing');
+    
+    setStatus('✓ Giải đấu đã bắt đầu!', 'ok');
+    
+    // 5.5: Reload tournament selector and UI after status change
+    await loadTournamentSelector();
+    
+    // 5.6: Verify registration buttons are hidden after start
+    // This is handled by renderTournamentControls() which is called by loadTournamentSelector()
+    
+    // Reload matches to display
+    await fetchMatches();
+    
+  } catch (error) {
+    // 5.7: Handle errors and display error messages
+    console.error('startTournament error:', error);
+    setStatus(`❌ Lỗi: ${error.message}`, 'err');
+    alert(`Không thể bắt đầu giải đấu!\n\nLỗi: ${error.message}\n\nVui lòng kiểm tra:\n` +
+          `• Đã thêm đủ thành viên (tối thiểu 4)\n` +
+          `• Đã tạo đội\n` +
+          `• Đã tạo trận đấu\n` +
+          `• Giải đấu đang ở trạng thái "Sắp diễn ra"`);
+  }
+}
+
+/**
+ * Reset tournament to upcoming state
+ * Task 6: Implement Reset Tournament Function
+ */
+async function resetTournament() {
+  // 6.1: Implement resetTournament() function in admin.js
+  const tournamentId = tournamentManager.getActiveTournamentId();
+  
+  if (!tournamentId) {
+    alert('Vui lòng chọn giải đấu');
+    return;
+  }
+  
+  try {
+    const tournament = await tournamentManager.getTournament(tournamentId);
+    
+    // Validate tournament status - only allow reset for ongoing or completed tournaments
+    if (tournament.status === 'upcoming') {
+      alert('Giải đấu chưa bắt đầu, không cần reset');
+      return;
+    }
+    
+    // 6.2: Add confirmation dialog with warning message
+    if (!confirm(`Reset giải đấu "${tournament.name}"?\n\n` +
+                 `⚠️ CẢNH BÁO: Hành động này sẽ:\n` +
+                 `• Xóa tất cả trận đấu\n` +
+                 `• Xóa tất cả đội\n` +
+                 `• Giữ nguyên danh sách thành viên\n` +
+                 `• Đặt trạng thái về "Sắp diễn ra"\n\n` +
+                 `Bạn có chắc chắn muốn tiếp tục?`)) {
+      return;
+    }
+    
+    // 6.3: Delete all matches for tournament
+    const matches = await tournamentManager.getMatches(tournamentId);
+    for (const match of matches) {
+      await storage.delete('matches', match.id);
+    }
+    console.log(`Deleted ${matches.length} matches`);
+    
+    // 6.4: Delete all teams for tournament
+    const teams = await tournamentManager.getTeams(tournamentId);
+    for (const team of teams) {
+      await storage.delete('teams', team.id);
+    }
+    console.log(`Deleted ${teams.length} teams`);
+    
+    // 6.5: Keep participants unchanged (no deletion of participants)
+    const participants = await tournamentManager.getParticipants(tournamentId);
+    console.log(`Kept ${participants.length} participants unchanged`);
+    
+    // 6.6: Call tournamentManager.updateStatus(tournamentId, 'upcoming')
+    await tournamentManager.updateStatus(tournamentId, 'upcoming');
+    
+    setStatus('✓ Giải đấu đã được reset', 'ok');
+    
+    // 6.7: Reload tournament selector and UI after reset
+    await loadTournamentSelector();
+    
+    // 6.8: Verify registration buttons reappear after reset
+    // This is handled by renderTournamentControls() which is called by loadTournamentSelector()
+    
+    // Reload matches to display (should be empty now)
+    await fetchMatches();
+    
+  } catch (error) {
+    // Handle errors and display error messages
+    console.error('resetTournament error:', error);
+    setStatus(`❌ Lỗi: ${error.message}`, 'err');
+    alert(`Không thể reset giải đấu!\n\nLỗi: ${error.message}\n\nVui lòng thử lại hoặc liên hệ quản trị viên.`);
   }
 }

@@ -66,6 +66,11 @@
       </div>
     </div>
 
+    <!-- Tournament Controls -->
+    <div id="tournament-controls" class="adm-section" style="display: none;">
+      <!-- Buttons will be rendered dynamically by renderTournamentControls() -->
+    </div>
+
     <!-- Group Stage -->
     <div class="adm-section">
       <div class="adm-section-title" data-i18n="groupStageSection">📋 Vòng Bảng</div>
@@ -132,6 +137,24 @@
       <button class="adm-reset-all-link" onclick="resetDemo()">↺ Reset all data</button>
     </div>
 
+  </div>
+
+  <!-- Member Registration Modal -->
+  <div id="member-registration-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 8px; padding: 30px; max-width: 700px; width: 90%; max-height: 90vh; overflow-y: auto;">
+      <h2 style="margin-top: 0; color: #333;">👥 Đăng ký Thành viên</h2>
+      <div id="member-list" class="member-list">
+        <!-- Member items will be rendered here -->
+      </div>
+      <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+        <button onclick="closeMemberRegistrationModal()" style="padding: 10px 20px; border: 1px solid #ddd; background: white; color: #333; border-radius: 4px; cursor: pointer; font-weight: 600;">
+          Hủy
+        </button>
+        <button onclick="saveMemberRegistration()" style="padding: 10px 20px; border: none; background: #27ae60; color: white; border-radius: 4px; cursor: pointer; font-weight: 600;">
+          Lưu
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- Show Match Modal -->
