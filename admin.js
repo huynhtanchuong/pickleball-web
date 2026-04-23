@@ -1322,7 +1322,14 @@ function initMatchState(matchId, teamA, teamB, servingTeam, serverNumber) {
     scoreB: 0,
     servingTeam: servingTeam || null,
     serverNumber: serverNumber || 2,
-    status: servingTeam ? 'playing' : 'not_started'
+    status: servingTeam ? 'playing' : 'not_started',
+    config: {
+      matchFormat: 'BO1',
+      targetScore: 11,
+      winByMargin: 2,
+      firstServeSingle: true,
+      enableFaultButtons: false
+    }
   };
 
   const history = new HistoryManager(10);
