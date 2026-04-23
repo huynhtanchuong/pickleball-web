@@ -227,23 +227,107 @@
     }
 
     .participant-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin: 20px 0;
       max-height: 400px;
       overflow-y: auto;
-      border: 1px solid #ddd;
-      border-radius: 4px;
       padding: 10px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      background: #f9f9f9;
     }
 
     .participant-item {
-      display: flex;
+      display: grid;
+      grid-template-columns: auto 1fr auto auto auto;
       align-items: center;
-      gap: 10px;
-      padding: 10px;
-      border-bottom: 1px solid #eee;
+      gap: 12px;
+      padding: 12px;
+      background: white;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      transition: border-color 0.2s;
     }
 
-    .participant-item:last-child {
-      border-bottom: none;
+    .participant-item:hover {
+      border-color: #27ae60;
+    }
+
+    .participant-item input[type="checkbox"] {
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      margin: 0;
+    }
+
+    .participant-item label {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #333;
+      cursor: pointer;
+      margin: 0;
+    }
+
+    .participant-item .tier-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      min-width: 60px;
+      text-align: center;
+    }
+
+    .participant-item .tier-badge.tier-1 {
+      background: linear-gradient(135deg, #ffd700, #ffed4e);
+      color: #856404;
+      border: 1px solid #ffc107;
+    }
+
+    .participant-item .tier-badge.tier-2 {
+      background: linear-gradient(135deg, #c0c0c0, #e8e8e8);
+      color: #495057;
+      border: 1px solid #adb5bd;
+    }
+
+    .participant-item .tier-badge.tier-3 {
+      background: linear-gradient(135deg, #cd7f32, #e8a87c);
+      color: #6c4a2a;
+      border: 1px solid #b8860b;
+    }
+
+    .participant-item .tier-override {
+      padding: 6px 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      background: white;
+      min-width: 100px;
+    }
+
+    .participant-item .seeded-checkbox-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .participant-item .seeded-checkbox-wrapper input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+    }
+
+    .participant-item .seeded-checkbox-wrapper label {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #666;
+      margin: 0;
     }
 
     .teams-display {
@@ -768,23 +852,26 @@
 
       list.innerHTML = filtered.map(m => {
         const memberName = m.name || 'Không có tên';
+        const currentTier = m.tier || 1;
         console.log('Rendering participant:', m); // DEBUG
         
         return `
           <div class="participant-item">
             <input type="checkbox" id="member-${m.id}" onchange="toggleParticipant('${m.id}')">
-            <label for="member-${m.id}" style="flex: 1; cursor: pointer; font-weight: 600; color: #333;">
-              ${escapeHtml(memberName)} <span class="tier-badge tier-${m.tier}">T${m.tier}</span>
+            <label for="member-${m.id}" style="flex: 1; cursor: pointer;">
+              ${escapeHtml(memberName)}
             </label>
-            <select id="tier-override-${m.id}" style="width: 80px;">
-              <option value="">T${m.tier}</option>
-              <option value="1">T1</option>
-              <option value="2">T2</option>
-              <option value="3">T3</option>
+            <span class="tier-badge tier-${currentTier}">Tier ${currentTier}</span>
+            <select class="tier-override" id="tier-override-${m.id}">
+              <option value="">Giữ nguyên</option>
+              <option value="1">Tier 1</option>
+              <option value="2">Tier 2</option>
+              <option value="3">Tier 3</option>
             </select>
-            <label>
-              <input type="checkbox" id="seeded-${m.id}"> ⭐
-            </label>
+            <div class="seeded-checkbox-wrapper">
+              <input type="checkbox" id="seeded-${m.id}">
+              <label for="seeded-${m.id}">Hạt giống</label>
+            </div>
           </div>
         `;
       }).join('');
