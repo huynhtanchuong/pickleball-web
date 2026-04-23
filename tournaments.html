@@ -858,7 +858,7 @@
         return `
           <div class="participant-item">
             <input type="checkbox" id="member-${m.id}" onchange="toggleParticipant('${m.id}')">
-            <label for="member-${m.id}" style="flex: 1; cursor: pointer;">
+            <label for="member-${m.id}">
               ${escapeHtml(memberName)}
             </label>
             <span class="tier-badge tier-${currentTier}">Tier ${currentTier}</span>
