@@ -1664,6 +1664,7 @@ async function openMemberRegistrationModal() {
     memberList.innerHTML = members.map(member => {
       const isRegistered = registeredMap.has(member.id);
       const registration = isRegistered ? registeredMap.get(member.id) : null;
+      const memberName = member.name || 'Không có tên';
       
       console.log('Rendering member:', member); // DEBUG
       
@@ -1673,7 +1674,7 @@ async function openMemberRegistrationModal() {
                  id="member-${member.id}" 
                  value="${member.id}"
                  ${isRegistered ? 'checked' : ''} />
-          <label for="member-${member.id}">${esc(member.name || 'Không có tên')}</label>
+          <span class="member-name" style="font-size: 1rem; font-weight: 600; color: #333; cursor: pointer;">${esc(memberName)}</span>
           <span class="tier-badge tier-${member.tier}">Tier ${member.tier}</span>
           <select class="tier-override" data-member-id="${member.id}">
             <option value="">Giữ nguyên</option>
