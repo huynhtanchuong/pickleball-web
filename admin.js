@@ -2190,8 +2190,8 @@ async function loadMembersTab() {
       return;
     }
     
-    // Get participants for this tournament
-    const participants = await tournamentManager.getParticipants(tournamentId);
+    // Get participants WITH member details for this tournament
+    const participants = await tournamentManager.getParticipantsWithMembers(tournamentId);
     
     if (participants.length === 0) {
       container.innerHTML = '<p class="empty">Chưa có thành viên nào. Bấm "Thêm/Xóa Thành viên" để thêm.</p>';
@@ -2201,9 +2201,11 @@ async function loadMembersTab() {
     // Group by tier
     const byTier = { T1: [], T2: [], T3: [] };
     participants.forEach(p => {
-      const tier = p.tier_override || p.tier || 'T2';
-      if (byTier[tier]) {
-        byTier[tier].push(p);
+      const tier = p.effective_tier || p.tier_override || (p.member ? p.member.tier : null) || 'T2';
+      // Normalize tier format
+      const tierKey = typeof tier === 'string' ? tier : `T${tier}`;
+      if (byTier[tierKey]) {
+        byTier[tierKey].push(p);
       }
     });
     
@@ -2216,17 +2218,23 @@ async function loadMembersTab() {
               ${tier} (${byTier[tier].length} người)
             </h3>
             <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">
-              ${byTier[tier].map(p => `
+              ${byTier[tier].map(p => {
+                const member = p.member;
+                const memberName = member?.name || member?.phone || `Thành viên ${p.member_id}`;
+                const memberPhone = member?.phone || 'Chưa có SĐT';
+                
+                return `
                 <div style="background: #1a2235; padding: 15px; border-radius: 8px; border-left: 4px solid ${tier === 'T1' ? '#ef4444' : tier === 'T2' ? '#3b82f6' : '#22c55e'};">
                   <div style="font-weight: 600; font-size: 16px; margin-bottom: 5px;">
-                    ${p.name || 'Không có tên'}
+                    ${memberName}
                     ${p.is_seeded ? ' 🌟' : ''}
                   </div>
                   <div style="font-size: 13px; color: #94a3b8;">
-                    ${p.phone || 'Chưa có SĐT'}
+                    ${memberPhone}
                   </div>
                 </div>
-              `).join('')}
+              `;
+              }).join('')}
             </div>
           </div>
         `;
