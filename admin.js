@@ -1331,7 +1331,11 @@ function initMatchState(matchId, teamA, teamB, servingTeam, serverNumber) {
     scoreB: 0,
     servingTeam: servingTeam || null,
     serverNumber: serverNumber || 2,
+    currentSet: 1,
+    completedSets: [],
     status: servingTeam ? 'playing' : 'not_started',
+    updatedAt: new Date().toISOString(),
+    updatedBy: '',
     config: {
       matchFormat: 'BO1',
       targetScore: 11,
@@ -1373,6 +1377,7 @@ async function handleTeamTap(matchId, team) {
     let matchState = matchStates.get(matchId);
     
     if (!matchState) {
+      // Create new match state with history
       matchState = initMatchState(
         matchId,
         match.teamA,
@@ -1380,6 +1385,11 @@ async function handleTeamTap(matchId, team) {
         match.serving_team,
         match.server_number
       );
+    }
+    
+    // Ensure history exists (in case of corrupted state)
+    if (!matchState.history) {
+      matchState.history = new HistoryManager(10);
     }
     
     // Always sync current scores from database
@@ -1404,7 +1414,7 @@ async function handleTeamTap(matchId, team) {
     }
 
     // Save to history
-    history.push(current);
+    history.push(cloneGameState(current));
 
     // Determine action
     let action;
