@@ -2262,8 +2262,8 @@ async function loadTeamsTab() {
       return;
     }
     
-    // Get teams for this tournament
-    const teams = await tournamentManager.getTeams(tournamentId);
+    // Get teams WITH member details for this tournament
+    const teams = await tournamentManager.getTeamsWithMembers(tournamentId);
     
     if (teams.length === 0) {
       container.innerHTML = '<p class="empty">Chưa có đội nào. Bấm "Tạo Đội Ngẫu nhiên" để tạo đội.</p>';
@@ -2288,21 +2288,32 @@ async function loadTeamsTab() {
             Bảng ${group} (${byGroup[group].length} đội)
           </h3>
           <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px;">
-            ${byGroup[group].map(team => `
+            ${byGroup[group].map(team => {
+              // Use helper function if available, otherwise fallback
+              const member1Name = typeof getMemberDisplayName === 'function' 
+                ? getMemberDisplayName(team.member1)
+                : (team.member1?.name || team.member1?.phone || `Thành viên ${team.member1_id}`);
+              
+              const member2Name = typeof getMemberDisplayName === 'function'
+                ? getMemberDisplayName(team.member2)
+                : (team.member2?.name || team.member2?.phone || `Thành viên ${team.member2_id}`);
+              
+              return `
               <div style="background: #1a2235; padding: 15px; border-radius: 8px; border-left: 4px solid #3b82f6;">
                 <div style="font-weight: 600; font-size: 16px; margin-bottom: 8px;">
-                  ${team.name}
+                  ${team.display_name || team.name || 'Đội'}
                   ${team.is_seeded ? ' 🌟' : ''}
                 </div>
                 <div style="font-size: 13px; color: #94a3b8; line-height: 1.6;">
-                  <div>👤 ${team.member1_name || 'N/A'}</div>
-                  <div>👤 ${team.member2_name || 'N/A'}</div>
+                  <div>👤 ${esc(member1Name)}</div>
+                  <div>👤 ${esc(member2Name)}</div>
                   <div style="margin-top: 5px; color: #64748b;">
                     Tier: ${team.tier || 'N/A'}
                   </div>
                 </div>
               </div>
-            `).join('')}
+            `;
+            }).join('')}
           </div>
         </div>
       `;
