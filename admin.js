@@ -202,16 +202,21 @@ async function renderTournamentControls(tournament) {
         ▶️ Bắt Đầu Giải Đấu
       </button>
     `;
-  } else if (tournament.status === 'ongoing' || tournament.status === 'completed') {
-    // Show reset button only
-    html += `
-      <button class="tournament-control-btn btn-reset-tournament" onclick="resetTournament()">
-        ↺ Reset Giải Đấu
-      </button>
-    `;
   }
   
   html += '</div>';
+  
+  // Add reset link at bottom (for ongoing/completed tournaments)
+  if (tournament.status === 'ongoing' || tournament.status === 'completed') {
+    html += `
+      <div style="text-align: center; margin-top: 40px; padding: 20px;">
+        <a href="#" onclick="resetTournament(); return false;" 
+           style="font-size: 12px; color: #999; text-decoration: none; border-bottom: 1px dashed #999;">
+          ↺ Reset giải đấu
+        </a>
+      </div>
+    `;
+  }
   
   container.innerHTML = html;
 }
