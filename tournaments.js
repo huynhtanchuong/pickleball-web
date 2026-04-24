@@ -208,13 +208,38 @@ class TournamentManager {
     const pairing = new PairingAlgorithm(participants, tournament.config);
     const teams = pairing.generateTeams();
     
-    // Add tournament_id to each team
-    const teamsWithTournament = teams.map(team => ({
-      ...team,
-      tournament_id: tournamentId
-    }));
+    // Get all members to populate names
+    const allMembers = await this.storage.read('members');
+    
+    // Add tournament_id and member names to each team
+    const teamsWithDetails = teams.map(team => {
+      const member1 = allMembers.find(m => m.id == team.member1_id);
+      const member2 = allMembers.find(m => m.id == team.member2_id);
+      
+      return {
+        ...team,
+        tournament_id: tournamentId,
+        member1_name: member1?.name || null,
+        member2_name: member2?.name || null,
+        tier: this.calculateTeamTier(member1, member2)
+      };
+    });
 
-    return await this.storage.create('teams', teamsWithTournament);
+    return await this.storage.create('teams', teamsWithDetails);
+  }
+  
+  /**
+   * Calculate team tier based on member tiers
+   */
+  calculateTeamTier(member1, member2) {
+    if (!member1 || !member2) return null;
+    
+    const tier1 = parseInt(member1.tier?.replace('T', '') || '2');
+    const tier2 = parseInt(member2.tier?.replace('T', '') || '2');
+    
+    // Average tier, rounded
+    const avgTier = Math.round((tier1 + tier2) / 2);
+    return `T${avgTier}`;
   }
 
   /**
