@@ -121,15 +121,15 @@
 **Description**: Implement function to reset tournament to upcoming state
 
 **Subtasks**:
-- [~] 6.1: Implement `resetTournament()` function in admin.js
-- [~] 6.2: Add confirmation dialog with warning message
-- [~] 6.3: Delete all matches for tournament
-- [~] 6.4: Delete all teams for tournament
-- [~] 6.5: Keep participants unchanged
-- [~] 6.6: Call `tournamentManager.updateStatus(tournamentId, 'upcoming')`
-- [~] 6.7: Reload tournament selector and UI after reset
-- [~] 6.8: Verify registration buttons reappear after reset
-- [~] 6.9: Test reset functionality and data cleanup
+- [ ] 6.1: Implement `resetTournament()` function in admin.js
+- [ ] 6.2: Add confirmation dialog with warning message
+- [ ] 6.3: Delete all matches for tournament
+- [ ] 6.4: Delete all teams for tournament
+- [ ] 6.5: Keep participants unchanged
+- [ ] 6.6: Call `tournamentManager.updateStatus(tournamentId, 'upcoming')`
+- [ ] 6.7: Reload tournament selector and UI after reset
+- [ ] 6.8: Verify registration buttons reappear after reset
+- [ ] 6.9: Test reset functionality and data cleanup
 
 **Acceptance Criteria**:
 - Confirmation dialog warns about data deletion
@@ -149,11 +149,11 @@
 **Description**: Update tournament selector to sort by status (ongoing → upcoming → completed)
 
 **Subtasks**:
-- [~] 7.1: Update `loadTournamentSelector()` function in admin.js
-- [~] 7.2: Implement status-based sorting logic
-- [~] 7.3: Add secondary sort by start_date descending
-- [~] 7.4: Update `switchTournament()` to call `renderTournamentControls()`
-- [~] 7.5: Test tournament selector with multiple tournaments of different statuses
+- [ ] 7.1: Update `loadTournamentSelector()` function in admin.js
+- [ ] 7.2: Implement status-based sorting logic
+- [ ] 7.3: Add secondary sort by start_date descending
+- [ ] 7.4: Update `switchTournament()` to call `renderTournamentControls()`
+- [ ] 7.5: Test tournament selector with multiple tournaments of different statuses
 
 **Acceptance Criteria**:
 - Tournaments are sorted: ongoing first, then upcoming, then completed
@@ -168,11 +168,11 @@
 **Description**: Ensure all tournament management features are hidden from public users
 
 **Subtasks**:
-- [~] 8.1: Add `isAdmin()` check in `renderTournamentControls()`
-- [~] 8.2: Hide tournament controls container for non-admin users
-- [~] 8.3: Verify member registration modal is not accessible to public users
-- [~] 8.4: Test as public user (without ADMIN_KEY) to verify all admin features hidden
-- [~] 8.5: Test as admin user to verify all features visible
+- [ ] 8.1: Add `isAdmin()` check in `renderTournamentControls()`
+- [ ] 8.2: Hide tournament controls container for non-admin users
+- [ ] 8.3: Verify member registration modal is not accessible to public users
+- [ ] 8.4: Test as public user (without ADMIN_KEY) to verify all admin features hidden
+- [ ] 8.5: Test as admin user to verify all features visible
 
 **Acceptance Criteria**:
 - Tournament control buttons are hidden for public users
@@ -188,11 +188,11 @@
 **Description**: Create HTML structure and CSS styles for member registration modal
 
 **Subtasks**:
-- [~] 9.1: Add modal HTML structure to admin.html (before closing body tag)
-- [~] 9.2: Add modal overlay and container styles in admin-mobile.css
-- [~] 9.3: Add member list item styles with checkbox, tier badge, and controls
-- [~] 9.4: Add responsive styles for mobile devices
-- [~] 9.5: Test modal appearance and responsiveness
+- [ ] 9.1: Add modal HTML structure to admin.html (before closing body tag)
+- [ ] 9.2: Add modal overlay and container styles in admin-mobile.css
+- [ ] 9.3: Add member list item styles with checkbox, tier badge, and controls
+- [ ] 9.4: Add responsive styles for mobile devices
+- [ ] 9.5: Test modal appearance and responsiveness
 
 **Acceptance Criteria**:
 - Modal appears centered on screen with overlay
@@ -209,12 +209,12 @@
 **Description**: Create CSS styles for tournament control buttons
 
 **Subtasks**:
-- [~] 10.1: Add button container styles in admin-mobile.css
-- [~] 10.2: Add individual button styles with icons
-- [~] 10.3: Add hover and active states
-- [~] 10.4: Add disabled state styles
-- [~] 10.5: Add responsive styles for mobile devices
-- [~] 10.6: Test button appearance and interactions
+- [ ] 10.1: Add button container styles in admin-mobile.css
+- [ ] 10.2: Add individual button styles with icons
+- [ ] 10.3: Add hover and active states
+- [ ] 10.4: Add disabled state styles
+- [ ] 10.5: Add responsive styles for mobile devices
+- [ ] 10.6: Test button appearance and interactions
 
 **Acceptance Criteria**:
 - Buttons have consistent styling with existing admin buttons
@@ -231,12 +231,12 @@
 **Description**: Implement comprehensive error handling and validation for all functions
 
 **Subtasks**:
-- [~] 11.1: Add validation for minimum member count (4) in `saveMemberRegistration()`
-- [~] 11.2: Add validation for teams existence in `generateRandomMatches()`
-- [~] 11.3: Add validation for prerequisites in `startTournament()`
-- [~] 11.4: Add try-catch blocks for all async functions
-- [~] 11.5: Display user-friendly error messages using `setStatus()`
-- [~] 11.6: Test error scenarios and verify error messages
+- [ ] 11.1: Add validation for minimum member count (4) in `saveMemberRegistration()`
+- [ ] 11.2: Add validation for teams existence in `generateRandomMatches()`
+- [ ] 11.3: Add validation for prerequisites in `startTournament()`
+- [ ] 11.4: Add try-catch blocks for all async functions
+- [ ] 11.5: Display user-friendly error messages using `setStatus()`
+- [ ] 11.6: Test error scenarios and verify error messages
 
 **Acceptance Criteria**:
 - All validation rules are enforced
@@ -252,11 +252,11 @@
 **Description**: Add confirmation dialogs for destructive actions
 
 **Subtasks**:
-- [~] 12.1: Add confirmation dialog for `generateRandomTeams()` with warning about deleting old teams
-- [~] 12.2: Add confirmation dialog for `generateRandomMatches()` with warning about deleting old matches
-- [~] 12.3: Add confirmation dialog for `startTournament()` with tournament summary
-- [~] 12.4: Add confirmation dialog for `resetTournament()` with detailed warning
-- [~] 12.5: Test all confirmation dialogs and verify cancel functionality
+- [ ] 12.1: Add confirmation dialog for `generateRandomTeams()` with warning about deleting old teams
+- [ ] 12.2: Add confirmation dialog for `generateRandomMatches()` with warning about deleting old matches
+- [ ] 12.3: Add confirmation dialog for `startTournament()` with tournament summary
+- [ ] 12.4: Add confirmation dialog for `resetTournament()` with detailed warning
+- [ ] 12.5: Test all confirmation dialogs and verify cancel functionality
 
 **Acceptance Criteria**:
 - Confirmation dialogs appear before destructive actions
@@ -272,12 +272,12 @@
 **Description**: Test complete tournament lifecycle workflow
 
 **Subtasks**:
-- [~] 13.1: Test full workflow: create tournament → add members → generate teams → generate matches → start
-- [~] 13.2: Test reset workflow: start tournament → reset → verify cleanup
-- [~] 13.3: Test tournament switching with different statuses
-- [~] 13.4: Test as admin user and verify all features work
-- [~] 13.5: Test as public user and verify admin features hidden
-- [~] 13.6: Test with both Supabase and localStorage (demo mode)
+- [ ] 13.1: Test full workflow: create tournament → add members → generate teams → generate matches → start
+- [ ] 13.2: Test reset workflow: start tournament → reset → verify cleanup
+- [ ] 13.3: Test tournament switching with different statuses
+- [ ] 13.4: Test as admin user and verify all features work
+- [ ] 13.5: Test as public user and verify admin features hidden
+- [ ] 13.6: Test with both Supabase and localStorage (demo mode)
 - [ ] 13.7: Test error scenarios and edge cases
 
 **Acceptance Criteria**:

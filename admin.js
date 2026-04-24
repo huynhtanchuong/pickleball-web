@@ -516,17 +516,26 @@ function matchHTML(m, stage) {
   let canFinish = true;
   let finishTitle = "";
   
-  if (!done && stage === "semi" || stage === "final") {
+  if (!done && (stage === "semi" || stage === "final")) {
     const { winsA, winsB } = computeSetWins(m);
     canFinish = winsA >= 2 || winsB >= 2;
     if (!canFinish) {
       finishTitle = "Cần ít nhất 1 đội thắng 2 sets";
     }
   } else if (!done) {
-    // Group stage: cannot finish with tie
-    canFinish = m.scoreA !== m.scoreB;
+    // Group stage: check if one team has reached target score (11) with 2-point margin
+    const targetScore = 11;
+    const winByMargin = 2;
+    const maxScore = Math.max(m.scoreA, m.scoreB);
+    const scoreDiff = Math.abs(m.scoreA - m.scoreB);
+    
+    canFinish = maxScore >= targetScore && scoreDiff >= winByMargin;
     if (!canFinish) {
-      finishTitle = "Không thể kết thúc khi điểm hòa";
+      if (maxScore < targetScore) {
+        finishTitle = `Cần đạt ít nhất ${targetScore} điểm`;
+      } else if (scoreDiff < winByMargin) {
+        finishTitle = `Cần cách biệt ít nhất ${winByMargin} điểm`;
+      }
     }
   }
   

@@ -1072,6 +1072,12 @@
 
     async function autoPair() {
       try {
+        // Ensure allMembers is loaded before pairing
+        if (!allMembers || allMembers.length === 0) {
+          console.log('Loading members for pairing...');
+          allMembers = await window.memberManager.getAllMembers();
+        }
+        
         const participants = await window.tournamentManager.getParticipantsWithMembers(wizardData.tournament.id);
         const pairing = new PairingAlgorithm(participants, wizardData.tournament.config);
         
@@ -1082,9 +1088,14 @@
         }
 
         wizardData.teams = pairing.generateTeams();
+        
+        console.log('Teams generated:', wizardData.teams);
+        console.log('All members available:', allMembers);
+        
         renderTeams();
         showStatus('Ghép cặp thành công!', 'success');
       } catch (error) {
+        console.error('autoPair error:', error);
         showStatus('Lỗi: ' + error.message, 'error');
       }
     }
