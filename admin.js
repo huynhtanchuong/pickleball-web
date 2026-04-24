@@ -1865,6 +1865,11 @@ async function generateRandomTeams() {
     const groupB = teams.filter(t => t.group_name === 'B');
     console.log(`Team distribution: Group A = ${groupA.length}, Group B = ${groupB.length}`);
     
+    // Reload page to show teams
+    setTimeout(() => {
+      location.reload();
+    }, 1000);
+    
   } catch (error) {
     // 3.6: Handle errors and display error messages
     console.error('generateRandomTeams error:', error);
