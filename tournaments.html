@@ -866,24 +866,45 @@
     }
 
     async function loadMembersForWizard() {
-      allMembers = await window.memberManager.getAllMembers();
-      renderParticipantsList();
+      try {
+        allMembers = await window.memberManager.getAllMembers();
+        console.log('✅ Loaded members for wizard:', allMembers.length);
+        console.log('Sample member:', allMembers[0]);
+        
+        // Check if members have names
+        const membersWithoutNames = allMembers.filter(m => !m.name);
+        if (membersWithoutNames.length > 0) {
+          console.warn(`⚠️ ${membersWithoutNames.length} members without names:`, membersWithoutNames);
+        }
+        
+        renderParticipantsList();
+      } catch (error) {
+        console.error('❌ Error loading members:', error);
+        showStatus('Lỗi khi tải danh sách thành viên: ' + error.message, 'error');
+      }
     }
 
     function renderParticipantsList() {
       const list = document.getElementById('participants-list');
       const searchQuery = document.getElementById('participant-search').value.toLowerCase();
       
-      console.log('All members:', allMembers); // DEBUG
+      console.log('Rendering participants, allMembers count:', allMembers?.length);
       
-      const filtered = allMembers.filter(m => 
-        m.name && m.name.toLowerCase().includes(searchQuery)
-      );
+      if (!allMembers || allMembers.length === 0) {
+        list.innerHTML = '<p style="text-align: center; padding: 40px; color: #999;">Chưa có thành viên nào. Vui lòng thêm thành viên trước.</p>';
+        return;
+      }
+      
+      const filtered = allMembers.filter(m => {
+        const name = m.name || m.phone || `ID: ${m.id}`;
+        return name.toLowerCase().includes(searchQuery);
+      });
 
       list.innerHTML = filtered.map(m => {
-        const memberName = m.name || 'Không có tên';
-        const currentTier = m.tier || 1;
-        console.log('Rendering participant:', m); // DEBUG
+        const memberName = m.name || m.phone || `Thành viên ${m.id}`;
+        // Handle tier format: could be 'T1', 'T2', 'T3' or 1, 2, 3
+        const currentTier = m.tier || 2;
+        const tierNum = typeof currentTier === 'string' ? currentTier.replace('T', '') : currentTier;
         
         return `
           <div class="participant-item">
@@ -891,7 +912,7 @@
             <label for="member-${m.id}">
               ${escapeHtml(memberName)}
             </label>
-            <span class="tier-badge tier-${currentTier}">Tier ${currentTier}</span>
+            <span class="tier-badge tier-${tierNum}">Tier ${tierNum}</span>
             <select class="tier-override" id="tier-override-${m.id}">
               <option value="">Giữ nguyên</option>
               <option value="1">Tier 1</option>
@@ -928,7 +949,10 @@
         const memberId = cb.id.replace('member-', '');
         const member = allMembers.find(m => m.id === memberId);
         if (member) {
-          const tier = member.tier || 1;
+          // Handle tier format: could be 'T1', 'T2', 'T3' or 1, 2, 3
+          const tierValue = member.tier || 2;
+          const tier = typeof tierValue === 'string' ? parseInt(tierValue.replace('T', '')) : tierValue;
+          
           if (tier === 1) tier1++;
           else if (tier === 2) tier2++;
           else if (tier === 3) tier3++;
@@ -1151,16 +1175,24 @@
         teams.forEach((team, idx) => {
           const member1 = allMembers?.find(m => m.id == team.member1_id);
           const member2 = allMembers?.find(m => m.id == team.member2_id);
-          const tier1 = member1?.tier || '?';
-          const tier2 = member2?.tier || '?';
+          
+          // Get member names with fallback: name -> phone -> ID
+          const member1Name = member1?.name || member1?.phone || `Thành viên ${team.member1_id}`;
+          const member2Name = member2?.name || member2?.phone || `Thành viên ${team.member2_id}`;
+          
+          // Get tier with proper formatting
+          const tier1 = member1?.tier ? (typeof member1.tier === 'string' ? member1.tier.replace('T', '') : member1.tier) : '2';
+          const tier2 = member2?.tier ? (typeof member2.tier === 'string' ? member2.tier.replace('T', '') : member2.tier) : '2';
           
           console.log(`Team ${idx + 1}:`, {
             member1_id: team.member1_id,
             member2_id: team.member2_id,
             member1_found: !!member1,
             member2_found: !!member2,
-            member1_name: member1?.name,
-            member2_name: member2?.name
+            member1_name: member1Name,
+            member2_name: member2Name,
+            member1_tier: tier1,
+            member2_tier: tier2
           });
           
           html += `
@@ -1170,11 +1202,11 @@
                 ${team.is_seeded ? '<span style="color: #ffd700; font-size: 1.2rem;">⭐ Hạt giống</span>' : ''}
               </div>
               <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                <span style="flex: 1;">${member1?.name || 'ID: ' + team.member1_id}</span>
+                <span style="flex: 1;">${escapeHtml(member1Name)}</span>
                 <span class="tier-badge tier-${tier1}" style="font-size: 0.7rem; padding: 2px 8px;">T${tier1}</span>
               </div>
               <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="flex: 1;">${member2?.name || 'ID: ' + team.member2_id}</span>
+                <span style="flex: 1;">${escapeHtml(member2Name)}</span>
                 <span class="tier-badge tier-${tier2}" style="font-size: 0.7rem; padding: 2px 8px;">T${tier2}</span>
               </div>
             </div>

@@ -49,7 +49,16 @@ class PairingAlgorithm {
    * Get effective tier for a participant
    */
   getTier(participant) {
-    return participant.tier_override || (participant.member ? participant.member.tier : null);
+    const tierValue = participant.tier_override || (participant.member ? participant.member.tier : null);
+    
+    // Handle tier format: could be 'T1', 'T2', 'T3' or 1, 2, 3
+    if (tierValue === null || tierValue === undefined) return 2; // default to tier 2
+    
+    if (typeof tierValue === 'string') {
+      return parseInt(tierValue.replace('T', ''));
+    }
+    
+    return tierValue;
   }
 
   /**
