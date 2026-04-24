@@ -234,8 +234,23 @@ class TournamentManager {
   calculateTeamTier(member1, member2) {
     if (!member1 || !member2) return null;
     
-    const tier1 = parseInt(member1.tier?.replace('T', '') || '2');
-    const tier2 = parseInt(member2.tier?.replace('T', '') || '2');
+    // Use helper function if available
+    if (typeof getTierNumber === 'function') {
+      const tier1 = getTierNumber(member1.tier);
+      const tier2 = getTierNumber(member2.tier);
+      const avgTier = Math.round((tier1 + tier2) / 2);
+      return `T${avgTier}`;
+    }
+    
+    // Fallback logic - handle both string and number formats
+    const getTier = (tier) => {
+      if (tier === null || tier === undefined) return 2;
+      if (typeof tier === 'string') return parseInt(tier.replace('T', ''));
+      return tier;
+    };
+    
+    const tier1 = getTier(member1.tier);
+    const tier2 = getTier(member2.tier);
     
     // Average tier, rounded
     const avgTier = Math.round((tier1 + tier2) / 2);
@@ -274,7 +289,18 @@ class TournamentManager {
    */
   getTeamName(member1, member2) {
     if (!member1 || !member2) return 'Unknown Team';
-    return `${member1.name} & ${member2.name}`;
+    
+    // Use helper function if available, otherwise fallback
+    if (typeof getMemberDisplayName === 'function') {
+      const name1 = getMemberDisplayName(member1);
+      const name2 = getMemberDisplayName(member2);
+      return `${name1} & ${name2}`;
+    }
+    
+    // Fallback logic
+    const name1 = member1.name || member1.phone || `Thành viên ${member1.id}`;
+    const name2 = member2.name || member2.phone || `Thành viên ${member2.id}`;
+    return `${name1} & ${name2}`;
   }
 
   // ── Schedule Generation ──────────────────────────────────────
