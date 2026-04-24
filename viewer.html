@@ -571,7 +571,12 @@
 
             <!-- Server Indicator -->
             <div class="server-indicator">
-              SERVER: TEAM ${this.state.servingTeam} - SERVER ${this.state.serverNumber}
+              <div style="font-size: 1.2rem; font-weight: 600; margin-bottom: 4px;">
+                ĐANG GIAO: TEAM ${this.state.servingTeam}
+              </div>
+              <div style="font-size: 1rem; color: #ffd700;">
+                🏓 GIAO ${this.state.serverNumber === 1 ? 'THỨ NHẤT' : 'THỨ HAI'}
+              </div>
             </div>
 
             <!-- Completed Sets -->

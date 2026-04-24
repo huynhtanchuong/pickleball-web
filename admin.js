@@ -474,7 +474,7 @@ function matchHTML(m, stage) {
           </div>
           <div class="server-info">
             ${servingTeam ? 
-              'Server: Team ' + servingTeam + ' - Server ' + serverNumber : 
+              `<strong>Đang giao:</strong> Team ${servingTeam} - Giao ${serverNumber === 1 ? '1️⃣' : '2️⃣'}` : 
               'Chưa chọn giao bóng'}
           </div>
         </div>
@@ -1394,7 +1394,7 @@ async function handleTeamTap(matchId, team) {
     }
 
     // Check if match completed
-    if (current.status === 'done') {
+    if (current.status === 'done' || current.status === 'match_complete') {
       setStatus('⚠️ Trận đấu đã kết thúc', 'err');
       return;
     }
@@ -1595,12 +1595,27 @@ async function handleUndo(matchId) {
  * Sync match state to database
  */
 async function syncMatchState(matchId, state) {
+  // Map internal status to database status
+  let dbStatus = state.status;
+  if (state.status === 'set_complete' || state.status === 'match_complete') {
+    // For BO1 matches (group stage), set_complete means match is done
+    // For BO3/BO5, only match_complete means done
+    if (state.config.matchFormat === 'BO1' && state.status === 'set_complete') {
+      dbStatus = 'done';
+    } else if (state.status === 'match_complete') {
+      dbStatus = 'done';
+    } else {
+      // set_complete but not match_complete → keep as 'playing'
+      dbStatus = 'playing';
+    }
+  }
+  
   const payload = {
     scoreA: state.scoreA,
     scoreB: state.scoreB,
     serving_team: state.servingTeam,
     server_number: state.serverNumber,
-    status: state.status,
+    status: dbStatus,
     updated_at: new Date().toISOString()
   };
 
