@@ -1360,19 +1360,19 @@ async function handleTeamTap(matchId, team) {
   setTimeout(() => tapDebounce.delete(matchId), 300);
 
   try {
+    // Always load fresh data from database
+    const matches = db ? await fetchAllMatches() : (localMatches || []);
+    const match = matches.find(m => m.id === matchId);
+    
+    if (!match) {
+      setStatus('❌ Không tìm thấy trận đấu', 'err');
+      return;
+    }
+    
     // Get or initialize match state
     let matchState = matchStates.get(matchId);
     
     if (!matchState) {
-      // Load from database
-      const matches = db ? await fetchAllMatches() : (localMatches || []);
-      const match = matches.find(m => m.id === matchId);
-      
-      if (!match) {
-        setStatus('❌ Không tìm thấy trận đấu', 'err');
-        return;
-      }
-      
       matchState = initMatchState(
         matchId,
         match.teamA,
@@ -1380,10 +1380,14 @@ async function handleTeamTap(matchId, team) {
         match.serving_team,
         match.server_number
       );
-      
-      matchState.current.scoreA = match.scoreA || 0;
-      matchState.current.scoreB = match.scoreB || 0;
     }
+    
+    // Always sync current scores from database
+    matchState.current.scoreA = match.scoreA || 0;
+    matchState.current.scoreB = match.scoreB || 0;
+    matchState.current.servingTeam = match.serving_team;
+    matchState.current.serverNumber = match.server_number;
+    matchState.current.status = match.status === 'done' ? 'match_complete' : (match.status || 'playing');
 
     const { current, history } = matchState;
 
