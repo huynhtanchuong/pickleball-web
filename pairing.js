@@ -31,13 +31,13 @@ class PairingAlgorithm {
     // 2. Pair Tier 1 + Tier 3
     const teams13 = this.pairTiers(tier1, tier3);
 
-    // 3. Pair Tier 2 + Tier 2
-    const teams22 = this.pairTiers(tier2, tier2);
+    // 3. Pair Tier 2 + Tier 2 (split into two halves)
+    const teams22 = this.pairSameTier(tier2);
 
     // 4. Combine all teams
     const allTeams = [...teams13, ...teams22];
 
-    console.log(`Generated ${allTeams.length} teams`);
+    console.log(`Generated ${allTeams.length} teams (T1+T3: ${teams13.length}, T2+T2: ${teams22.length})`);
 
     // 5. Distribute teams to groups with seeded player balancing
     const teamsWithGroups = this.distributeToGroups(allTeams);
@@ -85,6 +85,46 @@ class PairingAlgorithm {
       console.warn(`${shuffledB.length - maxPairs} participants from listB remain unpaired`);
     }
 
+    return teams;
+  }
+
+  /**
+   * Pair participants from the same tier
+   * Splits the list in half and pairs them
+   * @param {array} list - List of participants from same tier
+   * @returns {array} Array of team objects
+   */
+  pairSameTier(list) {
+    if (list.length < 2) {
+      console.warn('Not enough participants to form teams');
+      return [];
+    }
+
+    // Shuffle for randomness
+    const shuffled = this.shuffle([...list]);
+    
+    // Split into two halves
+    const halfPoint = Math.floor(shuffled.length / 2);
+    const firstHalf = shuffled.slice(0, halfPoint);
+    const secondHalf = shuffled.slice(halfPoint, halfPoint * 2);
+    
+    // Pair the two halves
+    const teams = [];
+    for (let i = 0; i < firstHalf.length; i++) {
+      const team = {
+        member1_id: firstHalf[i].member_id,
+        member2_id: secondHalf[i].member_id,
+        is_seeded: firstHalf[i].is_seeded || secondHalf[i].is_seeded,
+        name: null // Will be auto-generated
+      };
+      teams.push(team);
+    }
+    
+    // Handle odd number (one person left unpaired)
+    if (shuffled.length % 2 === 1) {
+      console.warn(`1 participant from same tier remains unpaired (odd number: ${shuffled.length})`);
+    }
+    
     return teams;
   }
 

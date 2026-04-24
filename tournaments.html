@@ -566,8 +566,43 @@
           <div class="form-group">
             <input type="text" id="participant-search" placeholder="🔍 Tìm kiếm thành viên..." oninput="filterParticipants()">
           </div>
+          
+          <!-- Select All Checkbox -->
+          <div style="padding: 12px; background: #f8f9fa; border: 2px solid #dee2e6; border-radius: 8px; margin-bottom: 12px;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600;">
+              <input type="checkbox" id="select-all-participants" onchange="toggleSelectAll()" style="width: 20px; height: 20px;">
+              Chọn tất cả
+            </label>
+          </div>
+          
           <div id="participants-list" class="participant-list"></div>
-          <p>Đã chọn: <strong id="selected-count">0</strong> thành viên</p>
+          
+          <!-- Selection Summary -->
+          <div id="selection-summary" style="margin-top: 20px; padding: 16px; background: #e8f5e9; border: 2px solid #4caf50; border-radius: 8px;">
+            <h4 style="margin: 0 0 12px 0; color: #2e7d32;">📊 Thống kê lựa chọn</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
+              <div>
+                <div style="font-size: 0.85rem; color: #666;">Tổng số</div>
+                <div style="font-size: 1.5rem; font-weight: 700; color: #2e7d32;" id="summary-total">0</div>
+              </div>
+              <div>
+                <div style="font-size: 0.85rem; color: #666;">Tier 1</div>
+                <div style="font-size: 1.5rem; font-weight: 700; color: #f57c00;" id="summary-tier1">0</div>
+              </div>
+              <div>
+                <div style="font-size: 0.85rem; color: #666;">Tier 2</div>
+                <div style="font-size: 1.5rem; font-weight: 700; color: #757575;" id="summary-tier2">0</div>
+              </div>
+              <div>
+                <div style="font-size: 0.85rem; color: #666;">Tier 3</div>
+                <div style="font-size: 1.5rem; font-weight: 700; color: #8d6e63;" id="summary-tier3">0</div>
+              </div>
+              <div>
+                <div style="font-size: 0.85rem; color: #666;">Hạt giống</div>
+                <div style="font-size: 1.5rem; font-weight: 700; color: #ffd700;" id="summary-seeded">0</div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Step 3: Team Pairing -->
@@ -889,8 +924,51 @@
 
     function updateSelectedCount() {
       const checkboxes = document.querySelectorAll('#participants-list input[type="checkbox"][id^="member-"]');
-      const count = Array.from(checkboxes).filter(cb => cb.checked).length;
-      document.getElementById('selected-count').textContent = count;
+      const checked = Array.from(checkboxes).filter(cb => cb.checked);
+      
+      // Count by tier and seeded
+      let tier1 = 0, tier2 = 0, tier3 = 0, seeded = 0;
+      
+      checked.forEach(cb => {
+        const memberId = cb.id.replace('member-', '');
+        const member = allMembers.find(m => m.id === memberId);
+        if (member) {
+          const tier = member.tier || 1;
+          if (tier === 1) tier1++;
+          else if (tier === 2) tier2++;
+          else if (tier === 3) tier3++;
+          
+          const seededCheckbox = document.getElementById(`seeded-${memberId}`);
+          if (seededCheckbox && seededCheckbox.checked) {
+            seeded++;
+          }
+        }
+      });
+      
+      // Update summary
+      document.getElementById('summary-total').textContent = checked.length;
+      document.getElementById('summary-tier1').textContent = tier1;
+      document.getElementById('summary-tier2').textContent = tier2;
+      document.getElementById('summary-tier3').textContent = tier3;
+      document.getElementById('summary-seeded').textContent = seeded;
+      
+      // Update select all checkbox state
+      const selectAllCheckbox = document.getElementById('select-all-participants');
+      if (selectAllCheckbox) {
+        selectAllCheckbox.checked = checked.length === checkboxes.length && checkboxes.length > 0;
+        selectAllCheckbox.indeterminate = checked.length > 0 && checked.length < checkboxes.length;
+      }
+    }
+    
+    function toggleSelectAll() {
+      const selectAllCheckbox = document.getElementById('select-all-participants');
+      const checkboxes = document.querySelectorAll('#participants-list input[type="checkbox"][id^="member-"]');
+      
+      checkboxes.forEach(cb => {
+        cb.checked = selectAllCheckbox.checked;
+      });
+      
+      updateSelectedCount();
     }
 
     function updateWizardStep() {
