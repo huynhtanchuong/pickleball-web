@@ -682,4 +682,9 @@ if (typeof module !== 'undefined' && module.exports) {
 // Export to window for browser environment
 if (typeof window !== 'undefined') {
   window.HistoryManager = HistoryManager;
+  window.cloneGameState = cloneGameState;
+  window.ActionTypes = ActionTypes;
+  window.gameStateReducer = gameStateReducer;
+  window.checkSetWin = checkSetWin;
+  window.checkMatchWin = checkMatchWin;
 }
