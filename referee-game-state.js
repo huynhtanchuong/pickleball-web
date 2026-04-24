@@ -409,7 +409,7 @@ const ActionTypes = {
  * Handle scoring action
  * 
  * Awards a point to the specified team if they are serving.
- * Checks for set/match completion after scoring.
+ * Does NOT auto-complete set - referee must manually finish.
  * 
  * @param {GameState} state - Current game state
  * @param {'A'|'B'} team - Team that scored
@@ -432,25 +432,12 @@ function handleScore(state, team) {
   // Update timestamp
   newState.updatedAt = new Date().toISOString();
   
-  // Check for set completion
-  const setCheck = checkSetWin(newState);
-  if (setCheck.complete) {
-    newState.status = 'set_complete';
-    newState.completedSets.push({
-      setNumber: newState.currentSet,
-      scoreA: newState.scoreA,
-      scoreB: newState.scoreB,
-      winner: setCheck.winner
-    });
-    
-    // Check for match completion
-    const matchCheck = checkMatchWin(newState);
-    if (matchCheck.complete) {
-      newState.status = 'match_complete';
-    }
-  } else if (newState.status === 'not_started') {
+  // Update status to playing if not started
+  if (newState.status === 'not_started') {
     newState.status = 'playing';
   }
+  
+  // NOTE: Do NOT auto-complete set - referee will manually finish
   
   return newState;
 }
