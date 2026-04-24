@@ -570,14 +570,22 @@
             </div>
 
             <!-- Server Indicator -->
-            <div class="server-indicator">
-              <div style="font-size: 1.2rem; font-weight: 600; margin-bottom: 4px;">
-                ĐANG GIAO: TEAM ${this.state.servingTeam}
+            ${this.state.servingTeam ? `
+              <div class="server-indicator">
+                <div style="font-size: 1.2rem; font-weight: 600; margin-bottom: 4px;">
+                  ĐANG GIAO: TEAM ${this.state.servingTeam}
+                </div>
+                <div style="font-size: 1rem; color: #ffd700;">
+                  🏓 GIAO ${this.state.serverNumber === 1 ? 'THỨ NHẤT' : 'THỨ HAI'}
+                </div>
               </div>
-              <div style="font-size: 1rem; color: #ffd700;">
-                🏓 GIAO ${this.state.serverNumber === 1 ? 'THỨ NHẤT' : 'THỨ HAI'}
+            ` : `
+              <div class="server-indicator" style="background: rgba(255, 152, 0, 0.1); border-color: rgba(255, 152, 0, 0.3);">
+                <div style="font-size: 1.2rem; font-weight: 600; color: #FF9800;">
+                  ⏳ Chưa chọn đội giao bóng
+                </div>
               </div>
-            </div>
+            `}
 
             <!-- Completed Sets -->
             ${this.renderCompletedSets()}
