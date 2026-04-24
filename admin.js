@@ -2037,19 +2037,61 @@ async function resetTournament() {
       return;
     }
     
-    // 6.3: Delete all matches for tournament
-    const matches = await tournamentManager.getMatches(tournamentId);
-    for (const match of matches) {
-      await storage.delete('matches', match.id);
-    }
-    console.log(`Deleted ${matches.length} matches`);
+    setStatus('🔄 Đang reset giải đấu...', 'ok');
     
-    // 6.4: Delete all teams for tournament
-    const teams = await tournamentManager.getTeams(tournamentId);
-    for (const team of teams) {
-      await storage.delete('teams', team.id);
+    // 6.3: Delete all matches for tournament (batch delete)
+    try {
+      if (storage.provider.client) {
+        // Supabase: Use batch delete
+        const { error: matchError } = await storage.provider.client
+          .from('matches')
+          .delete()
+          .eq('tournament_id', tournamentId);
+        
+        if (matchError) {
+          console.error('Error deleting matches:', matchError);
+          throw new Error(`Không thể xóa trận đấu: ${matchError.message}`);
+        }
+        console.log('Deleted all matches for tournament');
+      } else {
+        // localStorage: Delete one by one
+        const matches = await tournamentManager.getMatches(tournamentId);
+        for (const match of matches) {
+          await storage.delete('matches', match.id);
+        }
+        console.log(`Deleted ${matches.length} matches`);
+      }
+    } catch (error) {
+      console.error('Error deleting matches:', error);
+      throw new Error(`Lỗi khi xóa trận đấu: ${error.message}`);
     }
-    console.log(`Deleted ${teams.length} teams`);
+    
+    // 6.4: Delete all teams for tournament (batch delete)
+    try {
+      if (storage.provider.client) {
+        // Supabase: Use batch delete
+        const { error: teamError } = await storage.provider.client
+          .from('teams')
+          .delete()
+          .eq('tournament_id', tournamentId);
+        
+        if (teamError) {
+          console.error('Error deleting teams:', teamError);
+          throw new Error(`Không thể xóa đội: ${teamError.message}`);
+        }
+        console.log('Deleted all teams for tournament');
+      } else {
+        // localStorage: Delete one by one
+        const teams = await tournamentManager.getTeams(tournamentId);
+        for (const team of teams) {
+          await storage.delete('teams', team.id);
+        }
+        console.log(`Deleted ${teams.length} teams`);
+      }
+    } catch (error) {
+      console.error('Error deleting teams:', error);
+      throw new Error(`Lỗi khi xóa đội: ${error.message}`);
+    }
     
     // 6.5: Keep participants unchanged (no deletion of participants)
     const participants = await tournamentManager.getParticipants(tournamentId);
