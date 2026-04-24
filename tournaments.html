@@ -156,7 +156,7 @@
     }
 
     .wizard-header {
-      padding: 20px;
+      padding: 16px 20px;
       border-bottom: 1px solid #ddd;
       display: flex;
       justify-content: space-between;
@@ -527,7 +527,7 @@
     <div class="wizard-content">
       <div class="wizard-header">
         <div>
-          <h2 id="wizard-title">Tạo Giải Đấu Mới</h2>
+          <h2 id="wizard-title" style="margin: 0 0 12px 0;">Tạo Giải Đấu Mới</h2>
           <div class="wizard-steps">
             <div class="wizard-step active" id="step-indicator-1"></div>
             <div class="wizard-step" id="step-indicator-2"></div>
@@ -567,42 +567,29 @@
             <input type="text" id="participant-search" placeholder="🔍 Tìm kiếm thành viên..." oninput="filterParticipants()">
           </div>
           
+          <!-- Selection Summary - Compact, Always on Top -->
+          <div id="selection-summary" style="position: sticky; top: 0; z-index: 10; margin-bottom: 12px; padding: 10px 12px; background: linear-gradient(135deg, #e8f5e9, #c8e6c9); border: 2px solid #4caf50; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+              <div style="font-weight: 600; color: #2e7d32; font-size: 0.9rem;">📊 Đã chọn:</div>
+              <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                <span style="font-size: 0.85rem; color: #666;">Tổng: <strong id="summary-total" style="color: #2e7d32;">0</strong></span>
+                <span style="font-size: 0.85rem; color: #666;">T1: <strong id="summary-tier1" style="color: #f57c00;">0</strong></span>
+                <span style="font-size: 0.85rem; color: #666;">T2: <strong id="summary-tier2" style="color: #757575;">0</strong></span>
+                <span style="font-size: 0.85rem; color: #666;">T3: <strong id="summary-tier3" style="color: #8d6e63;">0</strong></span>
+                <span style="font-size: 0.85rem; color: #666;">⭐ <strong id="summary-seeded" style="color: #ffd700;">0</strong></span>
+              </div>
+            </div>
+          </div>
+          
           <!-- Select All Checkbox -->
-          <div style="padding: 12px; background: #f8f9fa; border: 2px solid #dee2e6; border-radius: 8px; margin-bottom: 12px;">
-            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600;">
-              <input type="checkbox" id="select-all-participants" onchange="toggleSelectAll()" style="width: 20px; height: 20px;">
-              Chọn tất cả
+          <div style="padding: 10px 12px; background: #f8f9fa; border: 2px solid #dee2e6; border-radius: 6px; margin-bottom: 12px;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem;">
+              <input type="checkbox" id="select-all-participants" onchange="toggleSelectAll()" style="width: 18px; height: 18px; cursor: pointer;">
+              <span>Chọn tất cả thành viên</span>
             </label>
           </div>
           
           <div id="participants-list" class="participant-list"></div>
-          
-          <!-- Selection Summary -->
-          <div id="selection-summary" style="margin-top: 20px; padding: 16px; background: #e8f5e9; border: 2px solid #4caf50; border-radius: 8px;">
-            <h4 style="margin: 0 0 12px 0; color: #2e7d32;">📊 Thống kê lựa chọn</h4>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
-              <div>
-                <div style="font-size: 0.85rem; color: #666;">Tổng số</div>
-                <div style="font-size: 1.5rem; font-weight: 700; color: #2e7d32;" id="summary-total">0</div>
-              </div>
-              <div>
-                <div style="font-size: 0.85rem; color: #666;">Tier 1</div>
-                <div style="font-size: 1.5rem; font-weight: 700; color: #f57c00;" id="summary-tier1">0</div>
-              </div>
-              <div>
-                <div style="font-size: 0.85rem; color: #666;">Tier 2</div>
-                <div style="font-size: 1.5rem; font-weight: 700; color: #757575;" id="summary-tier2">0</div>
-              </div>
-              <div>
-                <div style="font-size: 0.85rem; color: #666;">Tier 3</div>
-                <div style="font-size: 1.5rem; font-weight: 700; color: #8d6e63;" id="summary-tier3">0</div>
-              </div>
-              <div>
-                <div style="font-size: 0.85rem; color: #666;">Hạt giống</div>
-                <div style="font-size: 1.5rem; font-weight: 700; color: #ffd700;" id="summary-seeded">0</div>
-              </div>
-            </div>
-          </div>
         </div>
 
         <!-- Step 3: Team Pairing -->
@@ -904,7 +891,7 @@
               <option value="3">Tier 3</option>
             </select>
             <div class="seeded-checkbox-wrapper">
-              <input type="checkbox" id="seeded-${m.id}">
+              <input type="checkbox" id="seeded-${m.id}" onchange="updateSelectedCount()">
               <label for="seeded-${m.id}">Hạt giống</label>
             </div>
           </div>
