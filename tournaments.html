@@ -1079,7 +1079,11 @@
         console.log('Teams generated:', wizardData.teams);
         console.log('All members available:', allMembers);
         
-        renderTeams();
+        // Ensure renderTeams is called after teams are generated
+        setTimeout(() => {
+          renderTeams();
+        }, 100);
+        
         showStatus('Ghép cặp thành công!', 'success');
       } catch (error) {
         console.error('autoPair error:', error);
@@ -1087,20 +1091,35 @@
       }
     }
 
-    function rePair() {
-      autoPair();
+    async function rePair() {
+      // Clear old teams first
+      wizardData.teams = [];
+      
+      // Show loading message
+      const display = document.getElementById('teams-display');
+      display.innerHTML = '<p style="text-align: center; color: #3498db; padding: 40px;">🔄 Đang ghép lại...</p>';
+      
+      // Generate new teams
+      await autoPair();
     }
 
     function renderTeams() {
       const display = document.getElementById('teams-display');
       
-      console.log('renderTeams called:', {
-        teamsCount: wizardData.teams?.length,
-        allMembersCount: allMembers?.length
-      });
+      console.log('=== renderTeams DEBUG ===');
+      console.log('wizardData.teams:', wizardData.teams);
+      console.log('teams count:', wizardData.teams?.length);
+      console.log('allMembers:', allMembers);
+      console.log('allMembers count:', allMembers?.length);
       
       if (!wizardData.teams || wizardData.teams.length === 0) {
         display.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">Chưa có đội nào. Nhấn "Ghép Cặp Tự Động" để tạo đội.</p>';
+        return;
+      }
+      
+      if (!allMembers || allMembers.length === 0) {
+        display.innerHTML = '<p style="text-align: center; color: #e74c3c; padding: 40px;">⚠️ Lỗi: Không tìm thấy danh sách thành viên. Vui lòng thử lại.</p>';
+        console.error('allMembers is empty or undefined');
         return;
       }
       
@@ -1129,6 +1148,8 @@
           console.log(`Team ${idx + 1}:`, {
             member1_id: team.member1_id,
             member2_id: team.member2_id,
+            member1_found: !!member1,
+            member2_found: !!member2,
             member1_name: member1?.name,
             member2_name: member2?.name
           });
@@ -1152,7 +1173,9 @@
         });
       });
 
+      console.log('HTML generated, length:', html.length);
       display.innerHTML = html;
+      console.log('=== renderTeams COMPLETE ===');
     }
 
     async function generateSchedule() {
