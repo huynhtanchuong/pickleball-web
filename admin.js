@@ -2130,3 +2130,217 @@ async function resetTournament() {
     alert(`Không thể reset giải đấu!\n\nLỗi: ${error.message}\n\nVui lòng thử lại hoặc liên hệ quản trị viên.`);
   }
 }
+
+
+// ============================================================
+//  TAB MANAGEMENT
+// ============================================================
+
+/**
+ * Switch between admin tabs
+ */
+function switchAdminTab(tabName) {
+  // Hide all tab contents
+  const allContents = document.querySelectorAll('.admin-tab-content');
+  allContents.forEach(content => {
+    content.style.display = 'none';
+  });
+  
+  // Remove active class from all tabs
+  const allTabs = document.querySelectorAll('.admin-tab');
+  allTabs.forEach(tab => {
+    tab.classList.remove('active');
+  });
+  
+  // Show selected tab content
+  const selectedContent = document.getElementById(`tab-${tabName}`);
+  if (selectedContent) {
+    selectedContent.style.display = 'block';
+  }
+  
+  // Add active class to selected tab
+  const selectedTab = document.querySelector(`.admin-tab[data-tab="${tabName}"]`);
+  if (selectedTab) {
+    selectedTab.classList.add('active');
+  }
+  
+  // Load content for specific tabs
+  if (tabName === 'members') {
+    loadMembersTab();
+  } else if (tabName === 'teams') {
+    loadTeamsTab();
+  }
+}
+
+/**
+ * Load members tab content
+ */
+async function loadMembersTab() {
+  const container = document.getElementById('members-list-container');
+  
+  try {
+    const tournamentId = tournamentManager.getActiveTournamentId();
+    if (!tournamentId) {
+      container.innerHTML = '<p class="empty">Vui lòng chọn giải đấu</p>';
+      return;
+    }
+    
+    // Get participants for this tournament
+    const participants = await tournamentManager.getParticipants(tournamentId);
+    
+    if (participants.length === 0) {
+      container.innerHTML = '<p class="empty">Chưa có thành viên nào. Bấm "Thêm/Xóa Thành viên" để thêm.</p>';
+      return;
+    }
+    
+    // Group by tier
+    const byTier = { T1: [], T2: [], T3: [] };
+    participants.forEach(p => {
+      const tier = p.tier_override || p.tier || 'T2';
+      if (byTier[tier]) {
+        byTier[tier].push(p);
+      }
+    });
+    
+    let html = '';
+    ['T1', 'T2', 'T3'].forEach(tier => {
+      if (byTier[tier].length > 0) {
+        html += `
+          <div style="margin-bottom: 30px;">
+            <h3 style="color: #3b82f6; margin-bottom: 15px; font-size: 18px;">
+              ${tier} (${byTier[tier].length} người)
+            </h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">
+              ${byTier[tier].map(p => `
+                <div style="background: #1a2235; padding: 15px; border-radius: 8px; border-left: 4px solid ${tier === 'T1' ? '#ef4444' : tier === 'T2' ? '#3b82f6' : '#22c55e'};">
+                  <div style="font-weight: 600; font-size: 16px; margin-bottom: 5px;">
+                    ${p.name || 'Không có tên'}
+                    ${p.is_seeded ? ' 🌟' : ''}
+                  </div>
+                  <div style="font-size: 13px; color: #94a3b8;">
+                    ${p.phone || 'Chưa có SĐT'}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+    });
+    
+    container.innerHTML = html;
+    
+  } catch (error) {
+    console.error('Error loading members:', error);
+    container.innerHTML = '<p class="empty" style="color: #ef4444;">Lỗi khi tải danh sách thành viên</p>';
+  }
+}
+
+/**
+ * Load teams tab content
+ */
+async function loadTeamsTab() {
+  const container = document.getElementById('teams-list-container');
+  
+  try {
+    const tournamentId = tournamentManager.getActiveTournamentId();
+    if (!tournamentId) {
+      container.innerHTML = '<p class="empty">Vui lòng chọn giải đấu</p>';
+      return;
+    }
+    
+    // Get teams for this tournament
+    const teams = await tournamentManager.getTeams(tournamentId);
+    
+    if (teams.length === 0) {
+      container.innerHTML = '<p class="empty">Chưa có đội nào. Bấm "Tạo Đội Ngẫu nhiên" để tạo đội.</p>';
+      return;
+    }
+    
+    // Group by bảng
+    const byGroup = {};
+    teams.forEach(team => {
+      const group = team.group_name || 'Chưa phân bảng';
+      if (!byGroup[group]) {
+        byGroup[group] = [];
+      }
+      byGroup[group].push(team);
+    });
+    
+    let html = '';
+    Object.keys(byGroup).sort().forEach(group => {
+      html += `
+        <div style="margin-bottom: 30px;">
+          <h3 style="color: #3b82f6; margin-bottom: 15px; font-size: 18px;">
+            Bảng ${group} (${byGroup[group].length} đội)
+          </h3>
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px;">
+            ${byGroup[group].map(team => `
+              <div style="background: #1a2235; padding: 15px; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                <div style="font-weight: 600; font-size: 16px; margin-bottom: 8px;">
+                  ${team.name}
+                  ${team.is_seeded ? ' 🌟' : ''}
+                </div>
+                <div style="font-size: 13px; color: #94a3b8; line-height: 1.6;">
+                  <div>👤 ${team.member1_name || 'N/A'}</div>
+                  <div>👤 ${team.member2_name || 'N/A'}</div>
+                  <div style="margin-top: 5px; color: #64748b;">
+                    Tier: ${team.tier || 'N/A'}
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    });
+    
+    container.innerHTML = html;
+    
+  } catch (error) {
+    console.error('Error loading teams:', error);
+    container.innerHTML = '<p class="empty" style="color: #ef4444;">Lỗi khi tải danh sách đội</p>';
+  }
+}
+
+/**
+ * Clear all teams
+ */
+async function clearTeams() {
+  const tournamentId = tournamentManager.getActiveTournamentId();
+  
+  if (!tournamentId) {
+    alert('Vui lòng chọn giải đấu');
+    return;
+  }
+  
+  if (!confirm('Bạn có chắc muốn xóa tất cả đội?\n\nHành động này không thể hoàn tác!')) {
+    return;
+  }
+  
+  try {
+    setStatus('🔄 Đang xóa đội...', 'ok');
+    
+    // Delete all teams
+    if (storage.provider.client) {
+      const { error } = await storage.provider.client
+        .from('teams')
+        .delete()
+        .eq('tournament_id', tournamentId);
+      
+      if (error) throw error;
+    } else {
+      const teams = await tournamentManager.getTeams(tournamentId);
+      for (const team of teams) {
+        await storage.delete('teams', team.id);
+      }
+    }
+    
+    setStatus('✓ Đã xóa tất cả đội', 'ok');
+    loadTeamsTab();
+    
+  } catch (error) {
+    console.error('Error clearing teams:', error);
+    setStatus('❌ Lỗi khi xóa đội', 'err');
+  }
+}
