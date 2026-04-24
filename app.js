@@ -851,15 +851,6 @@ async function finishMatch(id) {
   
   // Force refresh to update standings and re-sort matches
   await fetchMatches();
-  
-  // Redirect to viewer page after finishing match (admin only)
-  const isAdminPage = window.location.pathname.includes("admin");
-  if (isAdminPage) {
-    // Show success message briefly before redirect
-    setTimeout(() => {
-      window.location.href = "index.html";
-    }, 1500); // 1.5 second delay to show success message
-  }
 }
 
 // ── Mark done (legacy alias → finishMatch) ────────────────────

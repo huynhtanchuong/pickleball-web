@@ -532,6 +532,10 @@
       render() {
         if (!this.state) return;
         
+        console.log('ViewerDisplay: Rendering state:', this.state);
+        console.log('ViewerDisplay: servingTeam:', this.state.servingTeam);
+        console.log('ViewerDisplay: serverNumber:', this.state.serverNumber);
+        
         const scoreCall = generateScoreCall(this.state);
         const { setsWonA, setsWonB } = getSetsWon(this.state);
         
