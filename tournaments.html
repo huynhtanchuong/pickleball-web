@@ -1096,6 +1096,11 @@
     function renderTeams() {
       const display = document.getElementById('teams-display');
       
+      console.log('renderTeams called:', {
+        teamsCount: wizardData.teams?.length,
+        allMembersCount: allMembers?.length
+      });
+      
       if (!wizardData.teams || wizardData.teams.length === 0) {
         display.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">Chưa có đội nào. Nhấn "Ghép Cặp Tự Động" để tạo đội.</p>';
         return;
@@ -1118,10 +1123,17 @@
           </div>
         `;
         teams.forEach((team, idx) => {
-          const member1 = allMembers.find(m => m.id == team.member1_id);
-          const member2 = allMembers.find(m => m.id == team.member2_id);
+          const member1 = allMembers?.find(m => m.id == team.member1_id);
+          const member2 = allMembers?.find(m => m.id == team.member2_id);
           const tier1 = member1?.tier || '?';
           const tier2 = member2?.tier || '?';
+          
+          console.log(`Team ${idx + 1}:`, {
+            member1_id: team.member1_id,
+            member2_id: team.member2_id,
+            member1_name: member1?.name,
+            member2_name: member2?.name
+          });
           
           html += `
             <div class="team-card ${team.is_seeded ? 'seeded' : ''}">
@@ -1130,11 +1142,11 @@
                 ${team.is_seeded ? '<span style="color: #ffd700; font-size: 1.2rem;">⭐ Hạt giống</span>' : ''}
               </div>
               <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                <span style="flex: 1;">${member1?.name || 'Unknown'}</span>
+                <span style="flex: 1;">${member1?.name || 'ID: ' + team.member1_id}</span>
                 <span class="tier-badge tier-${tier1}" style="font-size: 0.7rem; padding: 2px 8px;">T${tier1}</span>
               </div>
               <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="flex: 1;">${member2?.name || 'Unknown'}</span>
+                <span style="flex: 1;">${member2?.name || 'ID: ' + team.member2_id}</span>
                 <span class="tier-badge tier-${tier2}" style="font-size: 0.7rem; padding: 2px 8px;">T${tier2}</span>
               </div>
             </div>
