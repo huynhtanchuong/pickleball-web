@@ -208,10 +208,10 @@ class TournamentManager {
     const pairing = new PairingAlgorithm(participants, tournament.config);
     const teams = pairing.generateTeams();
     
-    // Get all members to populate names
+    // Get all members to populate tier calculation
     const allMembers = await this.storage.read('members');
     
-    // Add tournament_id and member names to each team
+    // Add tournament_id and tier to each team
     const teamsWithDetails = teams.map(team => {
       const member1 = allMembers.find(m => m.id == team.member1_id);
       const member2 = allMembers.find(m => m.id == team.member2_id);
@@ -219,8 +219,6 @@ class TournamentManager {
       return {
         ...team,
         tournament_id: tournamentId,
-        member1_name: member1?.name || null,
-        member2_name: member2?.name || null,
         tier: this.calculateTeamTier(member1, member2)
       };
     });
