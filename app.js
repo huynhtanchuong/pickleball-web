@@ -461,12 +461,20 @@ function publicMatchHTML(m, stage) {
     }
   }
 
-  // Match info: time, court, referee
-  const infoHtml = (m.match_time||m.court||m.referee) ? `
+  // Match info: time, court, referee, server
+  let serverInfo = "";
+  if (playing && m.serving_team) {
+    const serverTeam = m.serving_team === 'A' ? m.teamA : m.teamB;
+    const serverNum = m.server_number || 1;
+    serverInfo = `<span style="color: #ffd700; font-weight: 600;">🏓 ${esc(serverTeam)} - Giao ${serverNum === 1 ? '1️⃣' : '2️⃣'}</span>`;
+  }
+  
+  const infoHtml = (m.match_time||m.court||m.referee||serverInfo) ? `
     <div class="mc-info">
       ${m.match_time ? `<span>🕐 ${esc(m.match_time)}</span>` : ""}
       ${m.court      ? `<span>🏟 ${esc(m.court)}</span>`      : ""}
       ${m.referee    ? `<span>👤 ${esc(m.referee)}</span>`    : ""}
+      ${serverInfo}
     </div>` : "";
 
   return `
@@ -1385,15 +1393,27 @@ async function loadPublicTournamentSelector() {
       activeId = (ongoing || upcoming || tournaments[0]).id;
     }
 
-    // Populate dropdown (exclude archived)
-    select.innerHTML = tournaments
-      .filter(t => !t.archived)
+    // Populate dropdown (only show ongoing tournaments for public view)
+    const ongoingTournaments = tournaments.filter(t => !t.archived && t.status === 'ongoing');
+    
+    if (ongoingTournaments.length === 0) {
+      select.innerHTML = '<option value="">Không có giải đấu nào đang diễn ra</option>';
+      return;
+    }
+    
+    select.innerHTML = ongoingTournaments
       .map(t => `
         <option value="${t.id}" ${t.id == activeId ? 'selected' : ''}>
           ${t.name}
         </option>
       `).join('');
 
+    // Set active tournament to first ongoing if current active is not ongoing
+    const currentTournament = tournaments.find(t => t.id == activeId);
+    if (!currentTournament || currentTournament.status !== 'ongoing') {
+      activeId = ongoingTournaments[0].id;
+    }
+    
     // Set active tournament
     if (activeId) {
       await switchPublicTournament(activeId);
