@@ -801,8 +801,15 @@ async function finishMatch(id) {
     
     Object.assign(payload, { s1a:s1A, s1b:s1B, s2a:s2A, s2b:s2B, s3a:s3A, s3b:s3B, scoreA:winsA, scoreB:winsB });
   } else {
-    payload.scoreA = parseInt(getInput(id, "scoreA"), 10) || 0;
-    payload.scoreB = parseInt(getInput(id, "scoreB"), 10) || 0;
+    // For group stage matches with inline scoring, get scores from database/state
+    if (m) {
+      payload.scoreA = m.scoreA || 0;
+      payload.scoreB = m.scoreB || 0;
+    } else {
+      // Fallback: try to get from input fields (legacy scoring)
+      payload.scoreA = parseInt(getInput(id, "scoreA"), 10) || 0;
+      payload.scoreB = parseInt(getInput(id, "scoreB"), 10) || 0;
+    }
     
     // Validate: cannot finish with tied score
     if (payload.scoreA === payload.scoreB) {
