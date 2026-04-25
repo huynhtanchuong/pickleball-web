@@ -1049,6 +1049,26 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
   .lineup-swap  { grid-column: 1 / -1; padding: 8px; }
 }
 
+/* End-of-set CTA: appears in BO3 when current set has a clear winner
+   (max >= 11 AND diff >= 2). Referee taps it to either advance to next
+   set or end the match — no auto-advance. */
+.btn-end-set {
+  flex: 1;
+  padding: 12px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #fde047, #f59e0b);
+  color: #422006;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);
+  animation: ctaGlow 2.4s ease-in-out infinite;
+}
+.btn-end-set:hover { opacity: 0.95; }
+.btn-end-set:active { transform: scale(0.97); }
+
 /* ============================================================
    BO3 CONTEXT — "Set N · sets won · history" strip above tap-score
    ============================================================ */

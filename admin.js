@@ -88,6 +88,67 @@ async function refreshTeamsCache() {
 
 // Swap member1 ↔ member2 of a team. Allowed for referee + admin
 // (trọng tài cần đổi vị trí ngay tại sân khi vào trận).
+// Manual "Kết thúc Set" for BO3 (semi/final). Determines set winner from
+// current set scores, bumps that team's set wins, and either advances to
+// the next set or finishes the match if a team reaches 2 set wins. Always
+// requires referee click (no auto-advance).
+async function endSet(matchId) {
+  if (typeof canScore !== 'function' || !canScore()) {
+    setStatus(t('errOnlyReferee'), 'err');
+    return;
+  }
+  try {
+    const matches = db ? await fetchAllMatches() : (localMatches || []);
+    const m = matches.find(x => x.id === matchId);
+    if (!m) { setStatus(t('errMatchNotFound'), 'err'); return; }
+
+    const cs = m.current_set || 1;
+    const setA = m[`s${cs}a`] || 0;
+    const setB = m[`s${cs}b`] || 0;
+    if (setA === setB) {
+      setStatus('Set đang hòa — chưa có người thắng', 'err');
+      return;
+    }
+    const setWinner = setA > setB ? 'A' : 'B';
+    const newWinsA = (m.scoreA || 0) + (setWinner === 'A' ? 1 : 0);
+    const newWinsB = (m.scoreB || 0) + (setWinner === 'B' ? 1 : 0);
+
+    const payload = {
+      score_a: newWinsA,
+      score_b: newWinsB,
+      updated_at: new Date().toISOString()
+    };
+    if (newWinsA >= 2 || newWinsB >= 2) {
+      payload.status = 'done';
+    } else if (cs < 3) {
+      payload.current_set = cs + 1;
+    } else {
+      // 3 sets played, no 2-set winner — shouldn't happen normally
+      payload.status = 'done';
+    }
+
+    if (db) {
+      const { error } = await db.from('matches').update(payload).eq('id', matchId);
+      if (error) { showError(error, t('errSaveScore')); return; }
+    } else {
+      const stored = localStorage.getItem('pb_matches');
+      localMatches = stored ? JSON.parse(stored) : [];
+      const lm = localMatches.find(x => x.id === matchId);
+      if (lm) Object.assign(lm, payload);
+      saveLocal(localMatches);
+    }
+
+    if (payload.status === 'done') {
+      showOk('🏆 Trận đấu kết thúc');
+    } else {
+      showOk(`✓ Hết Set ${cs} — bắt đầu Set ${cs + 1}`);
+    }
+    await fetchMatches();
+  } catch (e) {
+    showError(e);
+  }
+}
+
 async function swapTeamMembers(teamId) {
   if (typeof isReferee !== 'function' || !isReferee()) {
     setStatus(t('errPermission'), 'err');
@@ -766,6 +827,16 @@ function matchHTML(m, stage) {
               Chọn Giao Bóng
             </button>
           ` : ''}
+          ${isBO3 && (() => {
+            const csA = m[`s${currentSet}a`] || 0;
+            const csB = m[`s${currentSet}b`] || 0;
+            const max = Math.max(csA, csB), diff = Math.abs(csA - csB);
+            const setReady = max >= 11 && diff >= 2;
+            return setReady ? `
+              <button class="btn-end-set" onclick="endSet('${m.id}')">
+                ✓ Kết thúc Set ${currentSet}
+              </button>` : '';
+          })()}
           <button class="btn-undo"
                   onclick="handleUndo('${m.id}')"
                   ${dis}>
@@ -1309,11 +1380,21 @@ async function generateSemifinals(silent=false) {
   const A1 = tops[g1][0]?.name || "TBD", A2 = tops[g1][1]?.name || "TBD";
   const B1 = tops[g2][0]?.name || "TBD", B2 = tops[g2][1]?.name || "TBD";
 
+  // Look up team_a_id / team_b_id by team name so the lineup row +
+  // tap-to-score player slots show actual member names in the semis.
+  const idForName = (name) => {
+    if (!name || name === 'TBD') return null;
+    for (const tm of (teamById?.values() || [])) {
+      if (tm.name === name) return tm.id;
+    }
+    return null;
+  };
+
   const semis = [
-    { tournament_id: tournamentId, team_a:A1, team_b:B2, score_a:0, score_b:0,
-      group_name:"SF", stage:"semi", status:"not_started" },
-    { tournament_id: tournamentId, team_a:B1, team_b:A2, score_a:0, score_b:0,
-      group_name:"SF", stage:"semi", status:"not_started" },
+    { tournament_id: tournamentId, team_a:A1, team_b:B2, team_a_id: idForName(A1), team_b_id: idForName(B2),
+      score_a:0, score_b:0, group_name:"SF", stage:"semi", status:"not_started", current_set: 1 },
+    { tournament_id: tournamentId, team_a:B1, team_b:A2, team_a_id: idForName(B1), team_b_id: idForName(A2),
+      score_a:0, score_b:0, group_name:"SF", stage:"semi", status:"not_started", current_set: 1 },
   ];
 
   if (!db) {
@@ -1356,10 +1437,20 @@ async function generateFinal(silent=false) {
   const getWinner = m => (m.score_a ?? m.scoreA ?? 0) >= (m.score_b ?? m.scoreB ?? 0)
     ? (m.team_a || m.teamA)
     : (m.team_b || m.teamB);
+  const finalA = getWinner(semis[0]);
+  const finalB = getWinner(semis[1]);
+  const idForName = (name) => {
+    if (!name) return null;
+    for (const tm of (teamById?.values() || [])) {
+      if (tm.name === name) return tm.id;
+    }
+    return null;
+  };
   const finalMatch = {
     tournament_id: tournamentId,
-    team_a: getWinner(semis[0]), team_b: getWinner(semis[1]),
-    score_a: 0, score_b: 0, group_name: "F", stage: "final", status: "not_started"
+    team_a: finalA, team_b: finalB,
+    team_a_id: idForName(finalA), team_b_id: idForName(finalB),
+    score_a: 0, score_b: 0, group_name: "F", stage: "final", status: "not_started", current_set: 1
   };
 
   if (!db) {
@@ -1813,38 +1904,17 @@ async function handleTeamTap(matchId, team) {
     // Save to history
     history.push(cloneGameState(current));
 
-    // Best-of-3 (semi/final): increment current set's points instead of
-    // touching score_a/score_b (which represent SETS WON).
+    // Best-of-3 (semi/final): increment current set's points only — DO NOT
+    // auto-advance set or auto-end match. Referee uses the dedicated
+    // "Kết thúc Set" / "Kết thúc trận" buttons (see endSet / finishMatch).
     const isBO3 = (match.stage === 'semi' || match.stage === 'final');
     if (isBO3 && team === current.servingTeam) {
       const cs = match.current_set || 1;
-      const setKey   = team === 'A' ? `s${cs}a` : `s${cs}b`;
-      const otherKey = team === 'A' ? `s${cs}b` : `s${cs}a`;
-      const newSetA  = (match[`s${cs}a`] || 0) + (team === 'A' ? 1 : 0);
-      const newSetB  = (match[`s${cs}b`] || 0) + (team === 'B' ? 1 : 0);
-
-      const TARGET = 11, MARGIN = 2;
-      const max  = Math.max(newSetA, newSetB);
-      const diff = Math.abs(newSetA - newSetB);
-
+      const newSetA = (match[`s${cs}a`] || 0) + (team === 'A' ? 1 : 0);
+      const newSetB = (match[`s${cs}b`] || 0) + (team === 'B' ? 1 : 0);
       const payload = { [`s${cs}a`]: newSetA, [`s${cs}b`]: newSetB,
+                        status: 'playing',
                         updated_at: new Date().toISOString() };
-
-      if (max >= TARGET && diff >= MARGIN) {
-        // Set won — bump set wins, advance set or finish match
-        const setWinner = newSetA > newSetB ? 'A' : 'B';
-        const newWinsA = (match.scoreA || 0) + (setWinner === 'A' ? 1 : 0);
-        const newWinsB = (match.scoreB || 0) + (setWinner === 'B' ? 1 : 0);
-        payload.score_a = newWinsA;
-        payload.score_b = newWinsB;
-        if (newWinsA >= 2 || newWinsB >= 2) {
-          payload.status = 'done';
-          showOk('🏆 Trận đấu kết thúc!');
-        } else if (cs < 3) {
-          payload.current_set = cs + 1;
-          showOk(`✓ Hết Set ${cs} — bắt đầu Set ${cs + 1}`);
-        }
-      }
 
       if (db) {
         const { error } = await db.from('matches').update(payload).eq('id', matchId);
@@ -1856,7 +1926,6 @@ async function handleTeamTap(matchId, team) {
         if (lm) Object.assign(lm, payload);
         saveLocal(localMatches);
       }
-      // Tap animation
       const teamCard = event?.target?.closest('.team-card');
       if (teamCard) {
         teamCard.classList.add('tap-active');
