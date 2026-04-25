@@ -1159,6 +1159,16 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
   max-width: 100%;
 }
 
+/* Original-identity stripe on the left edge — green = was Ô 1 at start,
+   red = was Ô 2. Stays the same color for that player no matter which
+   court side they swap to during play. */
+.player-slot.orig-1 {
+  border-left: 4px solid #22c55e; /* green */
+}
+.player-slot.orig-2 {
+  border-left: 4px solid #ef4444; /* red */
+}
+
 /* Server highlight: gold ring + soft glow */
 .player-slot.is-serving {
   background: rgba(253, 224, 71, 0.18);

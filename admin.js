@@ -755,16 +755,18 @@ function matchHTML(m, stage) {
       const m2 = tm?.member2_id ? (memberById?.get(tm.member2_id)?.name || '') : '';
       // Each team's positions swap every time THAT team scores.
       //   - Visual ORDER of cards changes (left/right swap)
-      //   - But BADGE label "1/2" stays with the player's IDENTITY
-      //     (m1 is forever badge "1", m2 forever badge "2") so admin/referee
-      //     can always tell who's who regardless of court side.
+      //   - BADGE label "1/2" tracks the CURRENT court position
+      //     (left card always shows "1", right card always shows "2")
+      //   - LEFT BORDER color marks the ORIGINAL identity (green = was Ô 1
+      //     at start, red = was Ô 2). So admin/referee can still tell who's
+      //     who regardless of which court side they're on.
       const teamSwapped = score % 2 === 1;
-      // Whoever is in the LEFT position of this card right now:
-      const leftName  = teamSwapped ? m2 : m1;
-      const leftBadge = teamSwapped ? 2 : 1;
-      // Whoever is in the RIGHT position right now:
-      const rightName  = teamSwapped ? m1 : m2;
-      const rightBadge = teamSwapped ? 1 : 2;
+      // Whoever is in the LEFT position right now + their original slot
+      const leftName     = teamSwapped ? m2 : m1;
+      const leftOrigCls  = teamSwapped ? 'orig-2' : 'orig-1';
+      // Whoever is in the RIGHT position right now + their original slot
+      const rightName    = teamSwapped ? m1 : m2;
+      const rightOrigCls = teamSwapped ? 'orig-1' : 'orig-2';
       const highlightSlot = (slot) => {
         if (isServing && slot === baseServerSlot) return 'is-serving';
         if (opponentServing && slot === receiverSlot) return 'is-receiving';
@@ -777,18 +779,20 @@ function matchHTML(m, stage) {
           <div class="team-name">${esc(teamName)}</div>
           ${isServing ? `<div class="serving-badge">${pickleballBalls(serverNumber)}</div>` : ''}
           ${(m1 || m2) ? (() => {
-            // data-slot is the COURT POSITION (1 = left of A's row / right of
-            // B's row mirror = pickleball "Ô 1"). slot-num shows the player's
-            // IDENTITY badge (1 = original m1, 2 = original m2). Highlight
-            // follows position; badge follows identity.
+            // data-slot = court position (1 = left of A's row / mirrored
+            // right of B's row). slot-num shows the CURRENT position
+            // badge (1 / 2). Original identity surfaces via the
+            // .orig-1 (green) / .orig-2 (red) left border stripe.
+            // Highlight (is-serving / is-receiving) frames the rest of
+            // the card.
             const leftSlot = `
-              <div class="player-slot ${highlightSlot(1)}" data-slot="1">
-                <span class="slot-num">${leftBadge}</span>
+              <div class="player-slot ${highlightSlot(1)} ${leftOrigCls}" data-slot="1">
+                <span class="slot-num">1</span>
                 <span class="slot-name">${esc(leftName || '—')}</span>
               </div>`;
             const rightSlot = `
-              <div class="player-slot ${highlightSlot(2)}" data-slot="2">
-                <span class="slot-num">${rightBadge}</span>
+              <div class="player-slot ${highlightSlot(2)} ${rightOrigCls}" data-slot="2">
+                <span class="slot-num">2</span>
                 <span class="slot-name">${esc(rightName || '—')}</span>
               </div>`;
             return `<div class="team-players">${side === 'A' ? leftSlot + rightSlot : rightSlot + leftSlot}</div>`;
