@@ -30,7 +30,7 @@ function submitLogin() {
 let _activeTournament = null;     // current tournament object (status, config…)
 let _allMembersList   = [];       // members list for referee dropdown
 
-function showAdminPanel() {
+async function showAdminPanel() {
   document.getElementById("login-screen").style.display = "none";
   document.getElementById("admin-panel").style.display  = "block";
   applyRoleVisibility(); // auth.js — refresh role badge + hide admin-only elements
@@ -44,19 +44,19 @@ function showAdminPanel() {
     window.tournamentManager = new TournamentManager(window.storage);
   }
 
-  // Run migration check
+  // Run migration check (fire-and-forget)
   checkAndMigrate();
-
-  // Cache members for referee dropdown
   refreshMembersCache();
 
-  // Load tournament selector
-  loadTournamentSelector();
+  // CRITICAL: await loadTournamentSelector so _activeTournament is cached
+  // BEFORE the first fetchMatches → renderMatches → gateScoringByRole runs.
+  // Otherwise referees on first login see scoring controls hidden because
+  // _activeTournament is still null when the gate evaluates status.
+  await loadTournamentSelector();
 
   fetchMatches();
   subscribeRealtime();
 
-  // Initialize auto-backup toggle (loads saved preference)
   if (typeof initAutoBackupToggle === 'function') {
     initAutoBackupToggle();
   }
