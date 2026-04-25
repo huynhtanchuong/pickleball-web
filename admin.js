@@ -1682,9 +1682,14 @@ function showServeDialog(matchId, state) {
           <div class="team-name">${esc(state.teamB)}</div>
           <div class="serve-label">Giao Bóng Trước</div>
         </button>
-        
+
+        <button class="serve-option serve-random" onclick="selectServe('${matchId}', Math.random() < 0.5 ? 'A' : 'B')">
+          <div class="team-name">🎲 Random</div>
+          <div class="serve-label">Hệ thống chọn ngẫu nhiên</div>
+        </button>
+
         <p class="serve-note">Mặc định: Server 2</p>
-        
+
         <button class="btn-secondary" onclick="closeServeDialog('${matchId}')">
           Hủy
         </button>
@@ -2651,13 +2656,14 @@ async function autoScheduleMatches() {
   const allTeams   = await storage.read('teams',   { tournament_id: tournamentId });
   const allMembers = await storage.read('members');
   const memberById = new Map(allMembers.map(m => [m.id, m]));
-  // team name → {member1_id, member2_id}
+  // Look up by ID first (always unique), fall back to name (may have stale rows)
+  const teamById   = new Map();
   const teamByName = new Map();
-  // group_name → array of member ids (all 10 players in that group)
-  const playersByGroup = {};
+  const playersByGroup = {};       // group_name → Set of all 10 member ids
   allTeams.forEach(t => {
     if (t.tournament_id !== tournamentId && t.tournament_id != tournamentId) return;
-    teamByName.set(t.name, t);
+    teamById.set(t.id, t);
+    if (t.name) teamByName.set(t.name, t);
     if (!playersByGroup[t.group_name]) playersByGroup[t.group_name] = new Set();
     if (t.member1_id) playersByGroup[t.group_name].add(t.member1_id);
     if (t.member2_id) playersByGroup[t.group_name].add(t.member2_id);
@@ -2690,9 +2696,12 @@ async function autoScheduleMatches() {
       const m = matchByPair.get(k);
       if (!m) continue;
 
-      // Players currently on the court
-      const teamA = teamByName.get(t1);
-      const teamB = teamByName.get(t2);
+      // Players currently on the court — look up by team_a_id (most reliable),
+      // fall back to name match. Without this fallback the onCourt set was
+      // sometimes empty and the algorithm picked a referee from the playing
+      // team (e.g. Chương Huỳnh refereeing his own match).
+      const teamA = teamById.get(m.team_a_id) || teamByName.get(m.team_a) || teamByName.get(t1);
+      const teamB = teamById.get(m.team_b_id) || teamByName.get(m.team_b) || teamByName.get(t2);
       const onCourt = new Set([
         teamA?.member1_id, teamA?.member2_id,
         teamB?.member1_id, teamB?.member2_id

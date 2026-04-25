@@ -957,6 +957,17 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
   font-weight: 600;
 }
 
+/* Random option — purple accent so it reads as a third "system" choice */
+.serve-option.serve-random {
+  border-style: dashed;
+  border-color: var(--adm-purple, #7c3aed);
+}
+.serve-option.serve-random:hover {
+  background: rgba(124, 58, 237, 0.1);
+  border-color: var(--adm-purple, #7c3aed);
+}
+.serve-option.serve-random .team-name { color: var(--adm-purple, #7c3aed); }
+
 .serve-note {
   text-align: center;
   font-size: 0.85rem;
