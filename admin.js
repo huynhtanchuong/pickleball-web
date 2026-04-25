@@ -642,15 +642,23 @@ function matchHTML(m, stage) {
                   ? teamById.get(m.team_a_id) : null;
     const teamB = (typeof teamById !== 'undefined' && teamById)
                   ? teamById.get(m.team_b_id) : null;
-    // Pickleball rule: server stays, receiver TOGGLES each time the
-    // serving team scores. So receiver slot = serverNumber when serving
-    // team has scored an even number of points (incl. 0), opposite slot
-    // when odd.
+    // Pickleball:
+    //  - Score is announced "us-them-N" where N = server number (1 or 2).
+    //  - At MATCH START the starting team only gets one server; convention
+    //    calls them "Server 2" but the actual player is in slot 1 (right
+    //    court). So we default serverNumber=2 yet highlight slot 1.
+    //  - Once a score is on the board we use serverNumber directly to
+    //    decide which slot is the active server.
+    //  - Receiver TOGGLES each time the serving team scores (server moves
+    //    to opposite court → diagonal opponent changes).
+    const totalScore = (m.scoreA || 0) + (m.scoreB || 0);
+    const isMatchStart = totalScore === 0 && serverNumber === 2;
+    const baseServerSlot = isMatchStart ? 1 : serverNumber;
     const servingScoreNow = servingTeam === 'A' ? (m.scoreA || 0)
                           : servingTeam === 'B' ? (m.scoreB || 0) : 0;
     const receiverSlot = (servingScoreNow % 2 === 0)
-                         ? serverNumber
-                         : (serverNumber === 1 ? 2 : 1);
+                         ? baseServerSlot
+                         : (baseServerSlot === 1 ? 2 : 1);
     const teamCardHTML = (side) => {
       const tm        = side === 'A' ? teamA : teamB;
       const teamName  = side === 'A' ? m.teamA : m.teamB;
@@ -660,7 +668,7 @@ function matchHTML(m, stage) {
       const m1 = tm?.member1_id ? (memberById?.get(tm.member1_id)?.name || '') : '';
       const m2 = tm?.member2_id ? (memberById?.get(tm.member2_id)?.name || '') : '';
       const highlightSlot = (slot) => {
-        if (isServing && slot === serverNumber) return 'is-serving';
+        if (isServing && slot === baseServerSlot) return 'is-serving';
         if (opponentServing && slot === receiverSlot) return 'is-receiving';
         return '';
       };
