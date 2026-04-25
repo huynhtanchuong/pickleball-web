@@ -1088,6 +1088,33 @@
           showStatus('Lỗi: ' + error.message, 'error');
           return;
         }
+      } else if (currentStep === 3) {
+        // Persist teams when leaving the pairing step.
+        // Previously teams only existed in wizardData.teams (in-memory) and
+        // were saved inside generateSchedule(); closing the wizard before
+        // clicking "Tạo Lịch" lost the pairing entirely.
+        if (!wizardData.teams || wizardData.teams.length === 0) {
+          showStatus('Vui lòng bấm "Ghép Cặp Tự Động" trước khi tiếp tục', 'error');
+          return;
+        }
+        try {
+          // Re-pair case: clear any teams previously saved for this tournament
+          const existing = await window.storage.read('teams', {
+            tournament_id: wizardData.tournament.id
+          });
+          for (const t of existing) {
+            await window.storage.delete('teams', t.id);
+          }
+          const teamsToSave = wizardData.teams.map(t => ({
+            ...t,
+            tournament_id: wizardData.tournament.id
+          }));
+          const saved = await window.storage.create('teams', teamsToSave);
+          wizardData.teams = Array.isArray(saved) ? saved : [saved];
+        } catch (error) {
+          showStatus('Lỗi lưu đội: ' + error.message, 'error');
+          return;
+        }
       }
 
       currentStep++;
@@ -1231,14 +1258,7 @@
 
     async function generateSchedule() {
       try {
-        // Save teams first
-        const teamsToSave = wizardData.teams.map(t => ({
-          ...t,
-          tournament_id: wizardData.tournament.id
-        }));
-        await window.storage.create('teams', teamsToSave);
-
-        // Generate schedule
+        // Teams are already persisted by nextStep() at step 3 → 4.
         wizardData.matches = await window.tournamentManager.generateSchedule(wizardData.tournament.id);
         renderMatches();
         showStatus('Tạo lịch thành công!', 'success');
