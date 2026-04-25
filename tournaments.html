@@ -1105,10 +1105,20 @@
           for (const t of existing) {
             await window.storage.delete('teams', t.id);
           }
-          const teamsToSave = wizardData.teams.map(t => ({
-            ...t,
-            tournament_id: wizardData.tournament.id
-          }));
+          // Enrich raw pairing output with name + computed tier (lookup members)
+          if (!allMembers || allMembers.length === 0) {
+            allMembers = await window.memberManager.getAllMembers();
+          }
+          const teamsToSave = wizardData.teams.map(t => {
+            const m1 = allMembers.find(m => m.id == t.member1_id);
+            const m2 = allMembers.find(m => m.id == t.member2_id);
+            return {
+              ...t,
+              tournament_id: wizardData.tournament.id,
+              name: t.name || window.tournamentManager.getTeamName(m1, m2),
+              tier: t.tier || window.tournamentManager.calculateTeamTier(m1, m2)
+            };
+          });
           const saved = await window.storage.create('teams', teamsToSave);
           wizardData.teams = Array.isArray(saved) ? saved : [saved];
         } catch (error) {
