@@ -237,8 +237,12 @@ async function renderTournamentControls(tournament) {
     ]);
     pCount = participants.length;
     tCount = teams.length;
-    mCount = matches.length;
-    mScheduled = matches.filter(m => m.match_time && m.court).length;
+    // Only group-stage matches count toward setup steps (special matches like
+    // exhibition / third_place / consolation are added ad-hoc by admin and
+    // don't need to be auto-scheduled before the giải bắt đầu).
+    const groupMatches = matches.filter(m => !m.stage || m.stage === 'group');
+    mCount = groupMatches.length;
+    mScheduled = groupMatches.filter(m => m.match_time && m.court).length;
   } catch (e) {
     console.error('renderTournamentControls counts:', e);
   }
@@ -2616,9 +2620,10 @@ async function autoScheduleMatches() {
   }
 
   if (!confirm(
-    'Sẽ ghi đè giờ và sân của TẤT CẢ trận vòng bảng?\n' +
+    'Sẽ ghi đè giờ, sân, trọng tài của TẤT CẢ trận vòng bảng?\n' +
     `Giờ bắt đầu: ${_minToHhmm(startMin)} — mỗi trận cách 15 phút.\n` +
-    'Bảng A → Sân 1, Bảng B → Sân 2.'
+    'Bảng A → Sân 1, Bảng B → Sân 2.\n' +
+    'Trọng tài: chọn từ thành viên cùng bảng, không đang thi đấu.'
   )) return;
 
   // 2. Build per-group round-robin order
@@ -2628,20 +2633,35 @@ async function autoScheduleMatches() {
     (byGroup[m.group_name] = byGroup[m.group_name] || []).push(m);
   });
 
+  // 2.5 Pre-load teams + members so we can pick a referee per match.
+  // Referee rule: someone in the SAME group who is NOT one of the 4 players
+  // on court right now — and we balance load by picking the least-used so far.
+  const allTeams   = await storage.read('teams',   { tournament_id: tournamentId });
+  const allMembers = await storage.read('members');
+  const memberById = new Map(allMembers.map(m => [m.id, m]));
+  // team name → {member1_id, member2_id}
+  const teamByName = new Map();
+  // group_name → array of member ids (all 10 players in that group)
+  const playersByGroup = {};
+  allTeams.forEach(t => {
+    if (t.tournament_id !== tournamentId && t.tournament_id != tournamentId) return;
+    teamByName.set(t.name, t);
+    if (!playersByGroup[t.group_name]) playersByGroup[t.group_name] = new Set();
+    if (t.member1_id) playersByGroup[t.group_name].add(t.member1_id);
+    if (t.member2_id) playersByGroup[t.group_name].add(t.member2_id);
+  });
+  const refUsage = {}; // member_id → times assigned as referee
+
   const updates = []; // {id, payload}
   for (const [g, matches] of Object.entries(byGroup)) {
-    // Pair by team text names — team_a_id / team_b_id are often NULL
-    // because the wizard generator only populates the denormalised text.
     const teamSet = new Set();
     matches.forEach(m => {
       if (m.team_a) teamSet.add(m.team_a);
       if (m.team_b) teamSet.add(m.team_b);
     });
     const teams = [...teamSet];
-
     const orderedPairs = buildRoundRobinOrder(teams);
 
-    // Lookup by sorted name pair so (A,B) matches the row stored as (B,A)
     const matchByPair = new Map();
     matches.forEach(m => {
       if (!m.team_a || !m.team_b) return;
@@ -2650,17 +2670,39 @@ async function autoScheduleMatches() {
     });
 
     const court = courtMap[g] || `Sân ${g}`;
+    const groupPlayerIds = [...(playersByGroup[g] || new Set())];
     let slot = 0;
+
     for (const [t1, t2] of orderedPairs) {
       const k = [t1, t2].sort().join('|');
       const m = matchByPair.get(k);
-      if (!m) continue; // pair not in DB (shouldn't happen)
+      if (!m) continue;
+
+      // Players currently on the court
+      const teamA = teamByName.get(t1);
+      const teamB = teamByName.get(t2);
+      const onCourt = new Set([
+        teamA?.member1_id, teamA?.member2_id,
+        teamB?.member1_id, teamB?.member2_id
+      ].filter(Boolean));
+
+      // Pick least-used candidate from the same group who isn't playing
+      const candidates = groupPlayerIds.filter(id => !onCourt.has(id));
+      candidates.sort((a, b) =>
+        (refUsage[a] || 0) - (refUsage[b] || 0) ||
+        String(memberById.get(a)?.name || '').localeCompare(String(memberById.get(b)?.name || ''), 'vi')
+      );
+      const refId = candidates[0] || null;
+      const refName = refId ? (memberById.get(refId)?.name || '') : '';
+      if (refId) refUsage[refId] = (refUsage[refId] || 0) + 1;
+
       updates.push({
         id: m.id,
         payload: {
           match_time: _minToHhmm(startMin + slot * SLOT),
           court,
           match_order: slot + 1,
+          referee_name: refName,
           updated_at: new Date().toISOString()
         }
       });
