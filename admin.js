@@ -2740,13 +2740,10 @@ async function autoScheduleMatches() {
       });
       saveLocal(localMatches);
     }
-    setStatus(`✓ Đã xếp lịch ${updates.length} trận`, 'ok');
+    showOk(`✓ Đã xếp lịch ${updates.length} trận`);
     await fetchMatches();
-    // Refresh the setup bar so step 4 (Lịch đấu) ticks done and CTA flips
-    // to ▶️ Bắt Đầu Giải Đấu without needing a manual reload.
     if (_activeTournament) await renderTournamentControls(_activeTournament);
   } catch (e) {
-    console.error('autoScheduleMatches:', e);
-    setStatus('❌ Lỗi xếp lịch: ' + (e.message || e), 'err');
+    showError(e, 'Không thể xếp lịch. Vui lòng thử lại.');
   }
 }

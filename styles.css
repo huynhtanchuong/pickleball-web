@@ -101,8 +101,36 @@ body {
 }
 .header-link:hover { color: #fff; border-color: var(--blue); }
 
-/* ── STATUS CHIP ── */
+/* ── STATUS CHIP / toast ── */
 .status-chip {
+  /* When .err class is applied, render as a more visible red toast */
+  transition: all 0.2s ease;
+}
+.status-chip.err {
+  background: rgba(239, 68, 68, 0.18);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+  font-weight: 700;
+  animation: shakeIn 0.4s ease;
+}
+.status-chip.ok {
+  background: rgba(34, 197, 94, 0.15);
+  color: #86efac;
+  border: 1px solid rgba(34, 197, 94, 0.45);
+  font-weight: 700;
+}
+@keyframes shakeIn {
+  0% { transform: translateX(-6px); opacity: 0; }
+  25% { transform: translateX(6px); opacity: 1; }
+  50% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+/* Base look (overridden by .ok / .err above) */
+.status-chip,
+.status-chip-legacy {
   font-size: 0.72rem;
   font-weight: 600;
   padding: 4px 10px;
@@ -112,8 +140,7 @@ body {
   border: 1px solid var(--border);
   white-space: nowrap;
 }
-.status-chip.ok  { background: #052e16; color: #86efac; border-color: #166534; }
-.status-chip.err { background: #2d0a0a; color: #fca5a5; border-color: #7f1d1d; }
+/* Note: .status-chip.ok / .err overrides defined above with toast styling */
 
 /* ── REALTIME DOT ── */
 .pulse-dot {

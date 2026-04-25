@@ -1710,3 +1710,114 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
   /* Hide Xem emoji on very tight screens — keep label only */
   .tournament-control-btn { min-width: 100%; }
 }
+
+/* ============================================================
+   MOBILE POLISH — comprehensive sweep for phone-first usage
+   ============================================================ */
+
+/* Larger tap targets across the board (Apple HIG: ≥44×44px) */
+@media (max-width: 768px) {
+  button, a.adm-btn-sm, .role-switcher button, .adm-info-save,
+  .adm-finish-btn, .adm-reset-btn, .adm-set-btn, .adm-inc-btn,
+  .tournament-control-btn, .setup-btn-sm {
+    min-height: 40px;
+  }
+  .adm-set-btn, .adm-inc-btn { min-width: 40px; }
+
+  /* Prevent any accidental horizontal scroll on the whole page */
+  html, body { overflow-x: hidden; max-width: 100vw; }
+
+  /* Match cards: more breathing room, no edge-bleed */
+  .adm-match-card { margin: 0 0 8px; border-radius: 10px; }
+  .adm-section { margin: 8px 0; padding: 12px; border-radius: 10px; }
+
+  /* Summary line: wrap long team names instead of cutting off */
+  .adm-summary-teams {
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.25;
+  }
+
+  /* Tournament selector row stacks cleanly */
+  #tournament-select { font-size: 0.95rem; padding: 10px; }
+
+  /* Modals: never wider than viewport, no padding overflow */
+  .wizard-content, .member-list,
+  #member-registration-modal > div,
+  #show-match-modal > div {
+    width: 95vw !important;
+    max-width: 100vw !important;
+    box-sizing: border-box;
+  }
+
+  /* Member-list rows wrap on narrow screens */
+  .member-list label { font-size: 0.9rem; }
+
+  /* Standings tables: horizontal scroll instead of overflow */
+  .standings-table { font-size: 0.85rem; }
+  .standings-group-card { overflow-x: auto; }
+
+  /* Bracket: horizontal scroll if too wide */
+  #bracket-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+}
+
+/* ── Phones (≤480px) ── */
+@media (max-width: 480px) {
+  /* Tap-to-score: full screen-width team cards, big text */
+  .scoring-teams { gap: 10px; }
+  .team-card { min-height: 110px; padding: 12px 8px; }
+  .team-card .team-name { font-size: 0.95rem; line-height: 1.2; }
+  .team-card .team-score { font-size: 64px; font-weight: 900; }
+  .vs-divider { font-size: 1.1rem; padding: 4px 0; }
+
+  /* Inline-scoring buttons full width below */
+  .scoring-actions { flex-direction: column; gap: 8px; }
+  .scoring-actions button { width: 100%; padding: 12px; }
+
+  /* Set inputs: bigger, better spaced */
+  .adm-set-row { flex-wrap: wrap; gap: 6px; }
+  .adm-set-input { width: 56px; height: 48px; font-size: 1.4rem; }
+
+  /* Hint banner: tighter padding */
+  .scoring-hint { font-size: 0.78rem; padding: 6px 10px; }
+
+  /* Status chip: bigger so toast is readable */
+  .status-chip { font-size: 0.78rem; padding: 6px 12px; }
+
+  /* Auto-schedule bar: stack vertically */
+  #auto-schedule-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  #auto-schedule-bar input,
+  #auto-schedule-bar button { width: 100%; }
+}
+
+/* ── Tap targets for very narrow phones ── */
+@media (max-width: 360px) {
+  .team-card .team-score { font-size: 52px; }
+  .adm-info-row label { flex: 1 1 100%; }
+  .adm-info-bottom { font-size: 0.66rem; gap: 6px; }
+  /* Tab nav: 4 tabs in 2×2 grid */
+  .admin-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    overflow-x: visible;
+  }
+  .admin-tab { min-width: 0; padding: 10px 6px; font-size: 11px; }
+}
+
+/* Smooth scroll feel everywhere */
+html { scroll-behavior: smooth; }
+
+/* Removable focus outlines on touch but keep for keyboard */
+@media (hover: none) {
+  button:focus, a:focus, input:focus, select:focus { outline: none; }
+}
+@media (hover: hover) {
+  button:focus-visible, a:focus-visible,
+  input:focus-visible, select:focus-visible {
+    outline: 2px solid var(--adm-blue);
+    outline-offset: 2px;
+  }
+}
