@@ -1104,6 +1104,63 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
 }
 
 /* ============================================================
+   MATCH INFO EDIT FORM (admin-only) — time / court / referee
+   ============================================================ */
+
+.adm-info-form {
+  background: rgba(255,255,255,0.04);
+  border: 1px dashed var(--adm-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 8px 0 12px;
+}
+.adm-info-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px;
+}
+.adm-info-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--adm-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex: 1 1 100px;
+}
+.adm-info-row input {
+  padding: 6px 10px;
+  border: 1px solid var(--adm-border);
+  background: var(--adm-card);
+  color: var(--adm-text);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.adm-info-row input:focus {
+  outline: 2px solid var(--adm-blue);
+  border-color: transparent;
+}
+.adm-info-save {
+  padding: 8px 14px;
+  background: var(--adm-blue);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.adm-info-save:hover { opacity: 0.9; }
+@media (max-width: 480px) {
+  .adm-info-save { width: 100%; padding: 10px; }
+}
+
+/* ============================================================
    ROLE SWITCHER — header buttons to swap admin/referee/view
    ============================================================ */
 

@@ -97,7 +97,17 @@
 
     <!-- Tab Content: Matches -->
     <div id="tab-matches" class="admin-tab-content">
-    
+
+    <!-- Auto-schedule bar (admin only) -->
+    <div class="adm-section admin-only" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <span style="font-weight:700;">📅 Lịch thi đấu:</span>
+      <input type="time" id="auto-schedule-start" value="07:00" style="padding:6px 10px;border:1px solid var(--adm-border);background:var(--adm-card);color:var(--adm-text);border-radius:6px;">
+      <button class="adm-btn-sm" onclick="autoScheduleMatches()" style="background:var(--adm-purple);color:#fff;font-weight:700;padding:8px 14px;">
+        🤖 Tự động xếp lịch
+      </button>
+      <span style="color:var(--adm-muted);font-size:0.78rem;">Bảng A → Sân 1, Bảng B → Sân 2, mỗi trận cách 15 phút</span>
+    </div>
+
     <!-- Group Stage -->
     <div class="adm-section">
       <div class="adm-section-title" data-i18n="groupStageSection">📋 Vòng Bảng</div>

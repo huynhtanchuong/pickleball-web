@@ -605,6 +605,26 @@ function matchHTML(m, stage) {
   
   const finishDisabled = dis || !canFinish ? "disabled" : "";
 
+  // Match-info form (time / court / referee) — admin-only
+  const infoForm = `
+    <div class="adm-info-form admin-only">
+      <div class="adm-info-row">
+        <label>🕐 Giờ
+          <input type="text" data-id="${m.id}" data-field="match_time"
+                 value="${esc(m.match_time || '')}" placeholder="07:00">
+        </label>
+        <label>🏟 Sân
+          <input type="text" data-id="${m.id}" data-field="court"
+                 value="${esc(m.court || '')}" placeholder="Sân 1">
+        </label>
+        <label>👤 Trọng tài
+          <input type="text" data-id="${m.id}" data-field="referee"
+                 value="${esc(m.referee_name || m.referee || '')}" placeholder="Tên TT">
+        </label>
+        <button class="adm-info-save" onclick="saveMatchInfo('${m.id}')">💾 Lưu</button>
+      </div>
+    </div>`;
+
   // Full card body (hidden by default)
   const body = `
     <div class="adm-card-body" id="body-${m.id}" style="display:none;">
@@ -613,6 +633,7 @@ function matchHTML(m, stage) {
         <span class="adm-vs">vs</span>
         <span class="adm-team-name right ${winnerB?"winner":""}">${esc(m.teamB)}</span>
       </div>
+      ${infoForm}
       ${scoreSection}
       <div class="adm-actions">
         <button class="adm-finish-btn ${done?"is-done":""}" ${finishDisabled} onclick="finishMatch('${m.id}')" title="${finishTitle}">
@@ -2425,9 +2446,157 @@ async function clearTeams() {
     
     setStatus('✓ Đã xóa tất cả đội', 'ok');
     loadTeamsTab();
-    
+
   } catch (error) {
     console.error('Error clearing teams:', error);
     setStatus('❌ Lỗi khi xóa đội', 'err');
+  }
+}
+
+// ============================================================
+//  AUTO-SCHEDULE — assign match_time + court for every group match
+//  Rules:
+//    - Each group plays on a fixed court (Bảng A → Sân 1, Bảng B → Sân 2)
+//    - Both groups start at the same time
+//    - 15 minutes between consecutive matches on the same court
+//    - Round-robin order avoids any team playing 3 matches in a row
+// ============================================================
+
+/**
+ * Round-robin schedule via the circle method (works for any team count).
+ * Returns an ordered list of [teamA, teamB] pairs — sequential play on
+ * one court naturally avoids 3-in-a-row for each team.
+ */
+function buildRoundRobinOrder(teams) {
+  if (!teams || teams.length < 2) return [];
+  // Insert phantom for odd counts so the algorithm works uniformly.
+  const list = teams.length % 2 === 0 ? [...teams] : [...teams, null];
+  const n = list.length;
+  const ordered = [];
+  for (let r = 0; r < n - 1; r++) {
+    for (let i = 0; i < n / 2; i++) {
+      const t1 = list[i];
+      const t2 = list[n - 1 - i];
+      if (t1 && t2) ordered.push([t1, t2]);
+    }
+    // rotate: keep position 0 fixed, move last → position 1
+    const last = list.pop();
+    list.splice(1, 0, last);
+  }
+  return ordered;
+}
+
+/** "07:00" → 420 (minutes since midnight) */
+function _hhmmToMin(s) {
+  const m = (s || '').match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return 7 * 60;
+  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+}
+/** 435 → "07:15" */
+function _minToHhmm(mins) {
+  const h = Math.floor(mins / 60) % 24;
+  const m = mins % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+async function autoScheduleMatches() {
+  if (!isAdmin || !isAdmin()) {
+    setStatus('Chỉ admin mới được xếp lịch', 'err');
+    return;
+  }
+
+  const startInput = document.getElementById('auto-schedule-start');
+  const startMin = _hhmmToMin(startInput?.value || '07:00');
+  const SLOT = 15; // minutes between matches on the same court
+
+  const tournamentId = tournamentManager?.getActiveTournamentId();
+  if (!tournamentId) { setStatus('Chưa chọn giải đấu', 'err'); return; }
+
+  // 1. Load all group-stage matches for the active tournament
+  const allMatches = await fetchAllMatches();
+  const groupMatches = allMatches.filter(m =>
+    (!m.stage || m.stage === 'group') && m.group_name
+  );
+  if (groupMatches.length === 0) {
+    setStatus('Không có trận vòng bảng để xếp lịch', 'err');
+    return;
+  }
+
+  if (!confirm(
+    'Sẽ ghi đè giờ và sân của TẤT CẢ trận vòng bảng?\n' +
+    `Giờ bắt đầu: ${_minToHhmm(startMin)} — mỗi trận cách 15 phút.\n` +
+    'Bảng A → Sân 1, Bảng B → Sân 2.'
+  )) return;
+
+  // 2. Build per-group round-robin order
+  const courtMap = { A: 'Sân 1', B: 'Sân 2', C: 'Sân 3', D: 'Sân 4' };
+  const byGroup = {};
+  groupMatches.forEach(m => {
+    (byGroup[m.group_name] = byGroup[m.group_name] || []).push(m);
+  });
+
+  const updates = []; // {id, payload}
+  for (const [g, matches] of Object.entries(byGroup)) {
+    // Collect distinct teams in the group
+    const teamSet = new Set();
+    matches.forEach(m => {
+      if (m.team_a_id) teamSet.add(m.team_a_id);
+      if (m.team_b_id) teamSet.add(m.team_b_id);
+    });
+    const teams = [...teamSet];
+
+    // Generate round-robin pair order
+    const orderedPairs = buildRoundRobinOrder(teams);
+
+    // Map back to the actual match rows. matchKey = sorted pair of team ids.
+    const matchByPair = new Map();
+    matches.forEach(m => {
+      if (!m.team_a_id || !m.team_b_id) return;
+      const k = [m.team_a_id, m.team_b_id].sort().join('|');
+      matchByPair.set(k, m);
+    });
+
+    const court = courtMap[g] || `Sân ${g}`;
+    let slot = 0;
+    for (const [t1, t2] of orderedPairs) {
+      const k = [t1, t2].sort().join('|');
+      const m = matchByPair.get(k);
+      if (!m) continue; // pair not in DB (shouldn't happen)
+      updates.push({
+        id: m.id,
+        payload: {
+          match_time: _minToHhmm(startMin + slot * SLOT),
+          court,
+          match_order: slot + 1,
+          updated_at: new Date().toISOString()
+        }
+      });
+      slot++;
+    }
+  }
+
+  // 3. Push to DB (or localStorage)
+  setStatus(`Đang xếp lịch ${updates.length} trận…`);
+  try {
+    if (db) {
+      // Sequential to keep simple; tournaments rarely have > 30 group matches
+      for (const u of updates) {
+        const { error } = await db.from('matches').update(u.payload).eq('id', u.id);
+        if (error) throw error;
+      }
+    } else {
+      const stored = localStorage.getItem('pb_matches');
+      localMatches = stored ? JSON.parse(stored) : [];
+      updates.forEach(u => {
+        const m = localMatches.find(x => x.id === u.id);
+        if (m) Object.assign(m, u.payload);
+      });
+      saveLocal(localMatches);
+    }
+    setStatus(`✓ Đã xếp lịch ${updates.length} trận`, 'ok');
+    await fetchMatches();
+  } catch (e) {
+    console.error('autoScheduleMatches:', e);
+    setStatus('❌ Lỗi xếp lịch: ' + (e.message || e), 'err');
   }
 }
