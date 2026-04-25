@@ -86,15 +86,30 @@ async function refreshTeamsCache() {
   }
 }
 
-// Swap member1 ↔ member2 of a team (admin-only). Refreshes display.
+// Swap member1 ↔ member2 of a team. Allowed for referee + admin
+// (trọng tài cần đổi vị trí ngay tại sân khi vào trận).
 async function swapTeamMembers(teamId) {
-  if (typeof isAdmin !== 'function' || !isAdmin()) {
-    setStatus(t('onlyAdminMatchInfo'), 'err');
+  if (typeof isReferee !== 'function' || !isReferee()) {
+    setStatus(t('errPermission'), 'err');
     return;
   }
   try {
     const team = teamById.get(teamId);
     if (!team) return;
+
+    // Reject if this team has any match that is already playing or done —
+    // changing positions mid-tournament would invalidate live scoring state.
+    const tid = team.tournament_id;
+    const teamMatches = await storage.read('matches', { tournament_id: tid });
+    const inProgress = (teamMatches || []).some(mm =>
+      (mm.team_a_id === teamId || mm.team_b_id === teamId) &&
+      mm.status !== 'not_started'
+    );
+    if (inProgress) {
+      setStatus('Không thể đổi vị trí — đội đã/đang thi đấu', 'err');
+      return;
+    }
+
     await storage.update('teams', teamId, {
       member1_id: team.member2_id,
       member2_id: team.member1_id
@@ -652,10 +667,6 @@ function matchHTML(m, stage) {
                 <span class="slot-num">2</span>
                 <span class="slot-name">${esc(m2 || '—')}</span>
               </div>
-              ${tm && isAdmin && isAdmin() ? `
-                <button class="player-swap-btn admin-only" title="Đổi vị trí 1 ↔ 2"
-                        onclick="event.stopPropagation(); swapTeamMembers('${tm.id}')">⇅</button>
-              ` : ''}
             </div>
           ` : ''}
           <div class="team-score">${score}</div>
@@ -791,14 +802,17 @@ function matchHTML(m, stage) {
         <div class="lineup-slots">
           <span class="lineup-slot"><b>1</b> ${esc(m1)}</span>
           <span class="lineup-slot"><b>2</b> ${esc(m2)}</span>
-          <button class="lineup-swap admin-only" onclick="swapTeamMembers('${rec.id}')"
+          <button class="lineup-swap" onclick="swapTeamMembers('${rec.id}')"
                   title="Đổi vị trí 1 ↔ 2">⇅ Đổi</button>
         </div>
       </div>`;
   };
-  const lineupRow = (teamARec || teamBRec) ? `
-    <div class="adm-lineup admin-only">
-      <div class="adm-lineup-title">📋 Đội hình (vị trí 1 / 2)</div>
+  // Lineup is only editable BEFORE the match starts. Once status moves
+  // to 'playing' or 'done', positions are locked.
+  const canEditLineup = m.status === 'not_started';
+  const lineupRow = (canEditLineup && (teamARec || teamBRec)) ? `
+    <div class="adm-lineup auth-only">
+      <div class="adm-lineup-title">📋 Đội hình (vị trí 1 / 2) — chỉ chỉnh trước khi vào trận</div>
       ${slotInfo(teamARec)}
       ${slotInfo(teamBRec)}
     </div>` : '';
