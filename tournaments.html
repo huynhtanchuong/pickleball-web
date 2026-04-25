@@ -146,6 +146,7 @@
 
     .wizard-content {
       background: white;
+      color: #2c3e50; /* override global dark-theme --text so modal text is readable on white bg */
       border-radius: 8px;
       width: 90%;
       max-width: 800px;
@@ -154,6 +155,9 @@
       display: flex;
       flex-direction: column;
     }
+    .wizard-content h1, .wizard-content h2, .wizard-content h3, .wizard-content h4,
+    .wizard-content label, .wizard-content strong, .wizard-content span,
+    .wizard-content p, .wizard-content div { color: inherit; }
 
     .wizard-header {
       padding: 16px 20px;
@@ -270,7 +274,7 @@
       margin: 0;
     }
 
-    .participant-item .tier-badge {
+    .tier-badge {
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -283,19 +287,19 @@
       text-align: center;
     }
 
-    .participant-item .tier-badge.tier-1 {
+    .tier-badge.tier-1 {
       background: linear-gradient(135deg, #ffd700, #ffed4e);
       color: #856404;
       border: 1px solid #ffc107;
     }
 
-    .participant-item .tier-badge.tier-2 {
+    .tier-badge.tier-2 {
       background: linear-gradient(135deg, #c0c0c0, #e8e8e8);
       color: #495057;
       border: 1px solid #adb5bd;
     }
 
-    .participant-item .tier-badge.tier-3 {
+    .tier-badge.tier-3 {
       background: linear-gradient(135deg, #cd7f32, #e8a87c);
       color: #6c4a2a;
       border: 1px solid #b8860b;
