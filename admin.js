@@ -228,7 +228,7 @@ async function renderTournamentControls(tournament) {
   }
 
   // Setup wizard: read current state, render progress + single primary CTA.
-  let pCount = 0, tCount = 0, mCount = 0;
+  let pCount = 0, tCount = 0, mCount = 0, mScheduled = 0;
   try {
     const [participants, teams, matches] = await Promise.all([
       storage.read('tournament_participants', { tournament_id: tournament.id }),
@@ -238,20 +238,23 @@ async function renderTournamentControls(tournament) {
     pCount = participants.length;
     tCount = teams.length;
     mCount = matches.length;
+    mScheduled = matches.filter(m => m.match_time && m.court).length;
   } catch (e) {
     console.error('renderTournamentControls counts:', e);
   }
 
   // Determine completion of each step
-  const step1Done = pCount >= 4;          // thành viên (cần ít nhất 4 để ghép cặp)
+  const step1Done = pCount >= 4;
   const step2Done = step1Done && tCount > 0;
   const step3Done = step2Done && mCount > 0;
+  const step4Done = step3Done && mScheduled === mCount; // all matches scheduled
 
-  // The "next action" is the first incomplete step
+  // First incomplete step → primary CTA
   const next =
     !step1Done ? { label: '👥 Thêm Thành viên',     fn: 'openMemberRegistrationModal()', cls: 'btn-add-members' } :
     !step2Done ? { label: '🎲 Tạo Đội Ngẫu nhiên',  fn: 'generateRandomTeams()',         cls: 'btn-generate-teams' } :
     !step3Done ? { label: '📅 Tạo Trận Đấu',        fn: 'generateRandomMatches()',       cls: 'btn-generate-matches' } :
+    !step4Done ? { label: '🤖 Set Lịch Đấu',        fn: 'autoScheduleMatches()',         cls: 'btn-generate-matches' } :
                  { label: '▶️ Bắt Đầu Giải Đấu',    fn: 'startTournament()',             cls: 'btn-start-tournament' };
 
   const stepHtml = (n, label, count, done, active) => `
@@ -263,13 +266,15 @@ async function renderTournamentControls(tournament) {
 
   container.innerHTML = `
     <div class="setup-bar">
-      ${stepHtml(1, 'Thành viên', pCount, step1Done, !step1Done)}
+      ${stepHtml(1, 'Thành viên', pCount,     step1Done, !step1Done)}
       <span class="step-arrow">›</span>
-      ${stepHtml(2, 'Đội',        tCount, step2Done, step1Done && !step2Done)}
+      ${stepHtml(2, 'Đội',        tCount,     step2Done, step1Done && !step2Done)}
       <span class="step-arrow">›</span>
-      ${stepHtml(3, 'Trận đấu',   mCount, step3Done, step2Done && !step3Done)}
+      ${stepHtml(3, 'Trận đấu',   mCount,     step3Done, step2Done && !step3Done)}
       <span class="step-arrow">›</span>
-      ${stepHtml(4, 'Bắt đầu',    null,   false,     step3Done)}
+      ${stepHtml(4, 'Lịch đấu',   step3Done ? `${mScheduled}/${mCount}` : null, step4Done, step3Done && !step4Done)}
+      <span class="step-arrow">›</span>
+      ${stepHtml(5, 'Bắt đầu',    null,       false,     step4Done)}
     </div>
     <div class="setup-cta-row">
       <button class="tournament-control-btn ${next.cls}" onclick="${next.fn}">
@@ -1267,9 +1272,9 @@ async function createThirdPlaceMatch() {
       return;
     }
 
-    // Check if third-place match already exists
+    // Check if third-place match already exists (use stage; fall back to legacy match_type)
     const matches = await tournamentManager.getMatches(activeId);
-    const existingThirdPlace = matches.find(m => m.match_type === 'third_place');
+    const existingThirdPlace = matches.find(m => m.stage === 'third_place' || m.match_type === 'third_place');
     
     if (existingThirdPlace) {
       setStatus('⚠️ Trận tranh giải ba đã tồn tại', 'err');
@@ -1304,7 +1309,7 @@ async function createConsolationMatch() {
 
     // Check if consolation match already exists
     const matches = await tournamentManager.getMatches(activeId);
-    const existingConsolation = matches.find(m => m.match_type === 'consolation');
+    const existingConsolation = matches.find(m => m.stage === 'consolation' || m.match_type === 'consolation');
     
     if (existingConsolation) {
       setStatus('⚠️ Trận khuyến khích đã tồn tại', 'err');
@@ -1442,11 +1447,11 @@ async function createShowMatch() {
  * Render special matches in the special section
  */
 function renderSpecialMatches(matches) {
-  const specialMatches = matches.filter(m => 
-    m.match_type === 'third_place' || 
-    m.match_type === 'consolation' || 
-    m.match_type === 'exhibition'
-  );
+  const isSpecial = m => {
+    const k = m.stage || m.match_type;
+    return k === 'third_place' || k === 'consolation' || k === 'exhibition';
+  };
+  const specialMatches = matches.filter(isSpecial);
 
   const container = document.getElementById('match-list-special');
   if (!container) return;

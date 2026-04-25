@@ -1238,6 +1238,20 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
   color: #fff;
   font-weight: 800;
 }
+/* "Xem" link sits inside the switcher pill but is a real link, not a role */
+.role-switcher .role-view-link {
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--adm-muted);
+  text-decoration: none;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.role-switcher .role-view-link:hover {
+  color: var(--adm-text);
+  background: rgba(255,255,255,0.06);
+}
 
 #role-badge {
   font-size: 0.72rem;

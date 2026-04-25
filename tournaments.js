@@ -433,10 +433,14 @@ class TournamentManager {
    */
   async generateThirdPlaceMatch(tournamentId) {
     const matches = await this.getMatches(tournamentId);
-    const semifinals = matches.filter(m => m.match_type === 'semi' && m.status === 'completed');
-    
+    // v2 uses stage='semi' + status='done' (was: match_type='semi' + status='completed')
+    const semifinals = matches.filter(m =>
+      (m.stage === 'semi' || m.match_type === 'semi') &&
+      (m.status === 'done' || m.status === 'completed')
+    );
+
     if (semifinals.length !== 2) {
-      throw new Error('Both semifinals must be completed');
+      throw new Error('Cần cả 2 trận bán kết kết thúc trước khi tạo trận tranh giải ba');
     }
 
     // Identify losing teams (handle both snake_case from DB and legacy camelCase)

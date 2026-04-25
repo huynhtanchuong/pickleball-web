@@ -1681,7 +1681,7 @@ function generateBackupHTML(matches) {
 </head>
 <body>
   <div class="container">
-    <h1>🏓 ${t("backupTitle")}</h1>
+    <h1>${PICKLEBALL_SVG} ${t("backupTitle")}</h1>
     <div class="backup-date">📅 ${t("backupDate")}: ${dateStr}</div>
 `;
 
@@ -1754,7 +1754,7 @@ function generateBackupHTML(matches) {
   html += `
     <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #9ca3af; font-size: 0.85rem;">
       <p>Backup được tạo tự động từ hệ thống Pickleball Tournament</p>
-      <p>🏓 Giải Pickleball Tolo Pikaboo lần 3 - 2026</p>
+      <p>${PICKLEBALL_SVG} HTC Pickleball</p>
     </div>
   </div>
 </body>

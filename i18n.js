@@ -6,7 +6,7 @@
 const TRANSLATIONS = {
   vi: {
     // Site
-    siteTitle:        "Giải Pickleball Tolo Pikaboo lần 3 - 2026",
+    siteTitle:        "HTC Pickleball",
     liveSub:          "Bảng Điểm Trực Tiếp",
     adminLink:        "Trọng tài ›",
 
@@ -87,7 +87,7 @@ const TRANSLATIONS = {
 
     // Admin
     adminTitle:       "Đăng Nhập Trọng Tài",
-    adminSub:         "Giải Pickleball",
+    adminSub:         "HTC Pickleball",
     passwordLabel:    "Mật khẩu",
     passwordPlaceholder: "Nhập mật khẩu",
     signIn:           "Đăng Nhập",
@@ -157,7 +157,7 @@ const TRANSLATIONS = {
   },
 
   en: {
-    siteTitle:        "Tolo Pikaboo Pickleball Tournament #3 - 2026",
+    siteTitle:        "HTC Pickleball",
     liveSub:          "Live Scoreboard",
     adminLink:        "Referee ›",
 
@@ -228,7 +228,7 @@ const TRANSLATIONS = {
     footerSub:        "Live Scoreboard",
 
     adminTitle:       "Referee Login",
-    adminSub:         "Pickleball Tournament",
+    adminSub:         "HTC Pickleball",
     passwordLabel:    "Password",
     passwordPlaceholder: "Enter password",
     signIn:           "Sign In",
