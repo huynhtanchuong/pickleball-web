@@ -44,7 +44,17 @@
       </div>
       <div class="adm-header-right">
         <div class="role-switcher" title="Chuyển vai trò">
-          <button data-role="referee" onclick="switchRole('referee')">🏓 Trọng Tài</button>
+          <button data-role="referee" onclick="switchRole('referee')">
+            <svg viewBox="0 0 24 24" width="13" height="13" style="vertical-align:-2px;margin-right:3px;" aria-hidden="true">
+              <circle cx="12" cy="12" r="10.5" fill="#fde047" stroke="#a16207" stroke-width="0.7"/>
+              <circle cx="8"  cy="8"  r="1.4" fill="#a16207"/>
+              <circle cx="16" cy="8"  r="1.4" fill="#a16207"/>
+              <circle cx="12" cy="13" r="1.4" fill="#a16207"/>
+              <circle cx="7"  cy="15" r="1.1" fill="#a16207"/>
+              <circle cx="17" cy="15" r="1.1" fill="#a16207"/>
+              <circle cx="12" cy="18.2" r="1" fill="#a16207"/>
+            </svg>Trọng Tài
+          </button>
           <button data-role="admin"   onclick="switchRole('admin')"  >👑 Admin</button>
         </div>
         <span id="role-badge" style="display:none;"></span>

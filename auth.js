@@ -152,8 +152,9 @@ function applyRoleVisibility() {
   // Role badge in header
   const badge = document.getElementById('role-badge');
   if (badge) {
-    const labels = { admin: '👑 Admin', referee: '🏓 Trọng Tài', view: '' };
-    badge.textContent = labels[role] || '';
+    const PICKLEBALL_ICON = `<svg viewBox="0 0 24 24" width="11" height="11" style="vertical-align:-1px;margin-right:2px;" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="#fde047" stroke="#a16207" stroke-width="0.7"/><circle cx="8" cy="8" r="1.4" fill="#a16207"/><circle cx="16" cy="8" r="1.4" fill="#a16207"/><circle cx="12" cy="13" r="1.4" fill="#a16207"/><circle cx="7" cy="15" r="1.1" fill="#a16207"/><circle cx="17" cy="15" r="1.1" fill="#a16207"/><circle cx="12" cy="18.2" r="1" fill="#a16207"/></svg>`;
+    const labels = { admin: '👑 Admin', referee: PICKLEBALL_ICON + 'Trọng Tài', view: '' };
+    badge.innerHTML = labels[role] || '';
     badge.style.display = role !== 'view' ? 'inline-block' : 'none';
   }
 
