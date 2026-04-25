@@ -336,8 +336,10 @@ class TournamentManager {
         for (let j = i + 1; j < groupTeams.length; j++) {
           matches.push({
             tournament_id: tournamentId,
-            team_a: groupTeams[i].display_name,
-            team_b: groupTeams[j].display_name,
+            team_a:    groupTeams[i].display_name,
+            team_b:    groupTeams[j].display_name,
+            team_a_id: groupTeams[i].id,
+            team_b_id: groupTeams[j].id,
             score_a: 0,
             score_b: 0,
             group_name: groupName,

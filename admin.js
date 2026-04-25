@@ -638,10 +638,12 @@ function matchHTML(m, stage) {
   
   const finishDisabled = dis || !canFinish ? "disabled" : "";
 
-  // Match-info read-only display (visible to ALL roles, including view)
+  // Match-info read-only line (rendered as small text at the bottom of the
+  // card, visible to ALL roles incl. trọng tài + view). The .admin-only
+  // edit form below is only shown to admin.
   const refName = m.referee_name || m.referee || '';
-  const infoDisplay = (m.match_time || m.court || refName) ? `
-    <div class="adm-info-display">
+  const infoBottom = (m.match_time || m.court || refName) ? `
+    <div class="adm-info-bottom">
       ${m.match_time ? `<span>🕐 ${esc(m.match_time)}</span>` : ''}
       ${m.court      ? `<span>🏟 ${esc(m.court)}</span>`      : ''}
       ${refName      ? `<span>👤 ${esc(refName)}</span>`      : ''}
@@ -682,7 +684,6 @@ function matchHTML(m, stage) {
         <span class="adm-vs">vs</span>
         <span class="adm-team-name right ${winnerB?"winner":""}">${esc(m.teamB)}</span>
       </div>
-      ${infoDisplay}
       ${infoForm}
       ${scoreSection}
       <div class="adm-actions">
@@ -693,7 +694,7 @@ function matchHTML(m, stage) {
       </div>
     </div>`;
 
-  return `<div class="adm-match-card ${cardCls}" data-id="${m.id}" data-updated="${m.updated_at||''}">${summary}${body}</div>`;
+  return `<div class="adm-match-card ${cardCls}" data-id="${m.id}" data-updated="${m.updated_at||''}">${summary}${body}${infoBottom}</div>`;
 }
 
 // ── Helper: Check if match is ready (has valid teams) ────────
@@ -2607,22 +2608,22 @@ async function autoScheduleMatches() {
 
   const updates = []; // {id, payload}
   for (const [g, matches] of Object.entries(byGroup)) {
-    // Collect distinct teams in the group
+    // Pair by team text names — team_a_id / team_b_id are often NULL
+    // because the wizard generator only populates the denormalised text.
     const teamSet = new Set();
     matches.forEach(m => {
-      if (m.team_a_id) teamSet.add(m.team_a_id);
-      if (m.team_b_id) teamSet.add(m.team_b_id);
+      if (m.team_a) teamSet.add(m.team_a);
+      if (m.team_b) teamSet.add(m.team_b);
     });
     const teams = [...teamSet];
 
-    // Generate round-robin pair order
     const orderedPairs = buildRoundRobinOrder(teams);
 
-    // Map back to the actual match rows. matchKey = sorted pair of team ids.
+    // Lookup by sorted name pair so (A,B) matches the row stored as (B,A)
     const matchByPair = new Map();
     matches.forEach(m => {
-      if (!m.team_a_id || !m.team_b_id) return;
-      const k = [m.team_a_id, m.team_b_id].sort().join('|');
+      if (!m.team_a || !m.team_b) return;
+      const k = [m.team_a, m.team_b].sort().join('|');
       matchByPair.set(k, m);
     });
 

@@ -1147,21 +1147,20 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
   border-color: transparent;
 }
 
-/* Read-only meta row visible to ALL roles (referee/view see it,
-   admin sees it next to the edit form) */
-.adm-info-display {
+/* Match info shown as a small text strip at the very bottom of every
+   match card. Visible to all roles. Admins still get the editable form
+   inside the expanded body above. */
+.adm-info-bottom {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
-  padding: 8px 12px;
-  background: rgba(255,255,255,0.03);
-  border-left: 3px solid var(--adm-blue);
-  border-radius: 6px;
-  margin: 8px 0;
-  font-size: 0.85rem;
-  color: var(--adm-text);
+  gap: 10px;
+  padding: 6px 12px;
+  border-top: 1px dashed var(--adm-border);
+  font-size: 0.7rem;
+  color: var(--adm-muted);
+  font-weight: 500;
 }
-.adm-info-display span { white-space: nowrap; }
+.adm-info-bottom span { white-space: nowrap; }
 .adm-info-save {
   padding: 8px 14px;
   background: var(--adm-blue);
