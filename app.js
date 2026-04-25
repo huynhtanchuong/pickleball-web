@@ -507,8 +507,19 @@ function publicMatchHTML(m, stage) {
 
   // Build the per-team serving badge to drop under whichever team is serving
   const serverNum = m.server_number || 1;
+  // Inline SVG: yellow pickleball with the characteristic perforations.
+  // Shipped as plain markup so the badge doesn't depend on any CSS class.
+  const PICKLEBALL_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" style="vertical-align:-2px;flex-shrink:0;" aria-hidden="true">
+    <circle cx="12" cy="12" r="10.5" fill="#fde047" stroke="#a16207" stroke-width="0.7"/>
+    <circle cx="8"  cy="8"  r="1.4" fill="#a16207"/>
+    <circle cx="16" cy="8"  r="1.4" fill="#a16207"/>
+    <circle cx="12" cy="13" r="1.4" fill="#a16207"/>
+    <circle cx="7"  cy="15" r="1.1" fill="#a16207"/>
+    <circle cx="17" cy="15" r="1.1" fill="#a16207"/>
+    <circle cx="12" cy="18.2" r="1" fill="#a16207"/>
+  </svg>`;
   const servingBadge = (sideLetter) => (playing && m.serving_team === sideLetter)
-    ? `<div class="mc-serving">🥎 Đang giao ${serverNum === 1 ? '1️⃣' : '2️⃣'}</div>`
+    ? `<div class="mc-serving">${PICKLEBALL_SVG} Đang giao ${serverNum === 1 ? '1️⃣' : '2️⃣'}</div>`
     : '';
 
   return `

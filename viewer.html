@@ -580,8 +580,17 @@
                 <div style="font-size: 1.2rem; font-weight: 600; margin-bottom: 4px;">
                   ĐANG GIAO: TEAM ${this.state.servingTeam}
                 </div>
-                <div style="font-size: 1rem; color: #ffd700;">
-                  🥎 GIAO ${this.state.serverNumber === 1 ? 'THỨ NHẤT' : 'THỨ HAI'}
+                <div style="font-size: 1rem; color: #ffd700; display:inline-flex; align-items:center; gap:6px;">
+                  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10.5" fill="#fde047" stroke="#a16207" stroke-width="0.7"/>
+                    <circle cx="8"  cy="8"  r="1.4" fill="#a16207"/>
+                    <circle cx="16" cy="8"  r="1.4" fill="#a16207"/>
+                    <circle cx="12" cy="13" r="1.4" fill="#a16207"/>
+                    <circle cx="7"  cy="15" r="1.1" fill="#a16207"/>
+                    <circle cx="17" cy="15" r="1.1" fill="#a16207"/>
+                    <circle cx="12" cy="18.2" r="1" fill="#a16207"/>
+                  </svg>
+                  GIAO ${this.state.serverNumber === 1 ? 'THỨ NHẤT' : 'THỨ HAI'}
                 </div>
               </div>
             ` : `

@@ -65,6 +65,16 @@ async function refreshMembersCache() {
   }
 }
 
+// Show/hide elements that only make sense before the tournament starts
+// (e.g. auto-schedule bar). Once status moves to 'ongoing' admins only
+// edit individual matches; once 'completed' nothing else to do.
+function applyTournamentStatusVisibility() {
+  const isUpcoming = _activeTournament && _activeTournament.status === 'upcoming';
+  document.querySelectorAll('.upcoming-only').forEach(el => {
+    el.style.display = isUpcoming ? '' : 'none';
+  });
+}
+
 // ── Migration Check ──────────────────────────────────────────
 async function checkAndMigrate() {
   try {
@@ -129,6 +139,7 @@ async function loadTournamentSelector() {
       const activeTournament = tournaments.find(t => t.id == activeId);
       if (activeTournament) {
         _activeTournament = activeTournament; // cache for gateScoringByRole
+        applyTournamentStatusVisibility();
         await renderTournamentControls(activeTournament);
       }
     }
@@ -155,6 +166,7 @@ async function switchTournament(tournamentId) {
 
     // Cache the active tournament so gateScoringByRole can read .status
     _activeTournament = await tournamentManager.getTournament(tournamentId);
+    applyTournamentStatusVisibility();
 
     await fetchMatches();
     await renderTournamentControls(_activeTournament);
@@ -2138,6 +2150,7 @@ async function startTournament() {
 
     // Refresh cached tournament so gateScoringByRole unlocks scoring
     _activeTournament = await tournamentManager.getTournament(tournamentId);
+    applyTournamentStatusVisibility(); // hide auto-schedule bar etc.
 
     setStatus('✓ Giải đấu đã bắt đầu!', 'ok');
 
