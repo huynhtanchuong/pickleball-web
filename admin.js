@@ -1268,6 +1268,10 @@ function renderBracketVisual(container, matches) {
  * Create third-place match (auto-detect losers from semifinals)
  */
 async function createThirdPlaceMatch() {
+  if (typeof isAdmin === 'function' && !isAdmin()) {
+    setStatus('Chỉ admin mới được tạo trận đặc biệt', 'err');
+    return;
+  }
   try {
     if (!tournamentManager) {
       setStatus('❌ Tournament manager not initialized', 'err');
@@ -1303,6 +1307,10 @@ async function createThirdPlaceMatch() {
  * Create consolation match (3rd place teams from groups)
  */
 async function createConsolationMatch() {
+  if (typeof isAdmin === 'function' && !isAdmin()) {
+    setStatus('Chỉ admin mới được tạo trận đặc biệt', 'err');
+    return;
+  }
   try {
     if (!tournamentManager) {
       setStatus('❌ Tournament manager not initialized', 'err');
@@ -1338,6 +1346,10 @@ async function createConsolationMatch() {
  * Open show match modal
  */
 async function openShowMatchModal() {
+  if (typeof isAdmin === 'function' && !isAdmin()) {
+    setStatus('Chỉ admin mới được tạo trận đặc biệt', 'err');
+    return;
+  }
   try {
     if (!storage) {
       setStatus('❌ Storage not initialized', 'err');
