@@ -1131,7 +1131,8 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
   letter-spacing: 0.04em;
   flex: 1 1 100px;
 }
-.adm-info-row input {
+.adm-info-row input,
+.adm-info-row select {
   padding: 6px 10px;
   border: 1px solid var(--adm-border);
   background: var(--adm-card);
@@ -1140,10 +1141,27 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
   font-size: 0.85rem;
   font-weight: 600;
 }
-.adm-info-row input:focus {
+.adm-info-row input:focus,
+.adm-info-row select:focus {
   outline: 2px solid var(--adm-blue);
   border-color: transparent;
 }
+
+/* Read-only meta row visible to ALL roles (referee/view see it,
+   admin sees it next to the edit form) */
+.adm-info-display {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.03);
+  border-left: 3px solid var(--adm-blue);
+  border-radius: 6px;
+  margin: 8px 0;
+  font-size: 0.85rem;
+  color: var(--adm-text);
+}
+.adm-info-display span { white-space: nowrap; }
 .adm-info-save {
   padding: 8px 14px;
   background: var(--adm-blue);

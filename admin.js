@@ -18,12 +18,16 @@ function submitLogin() {
 }
 // doLogout() is provided by auth.js
 
+// Cached state used by matchHTML & gateScoringByRole
+let _activeTournament = null;     // current tournament object (status, config…)
+let _allMembersList   = [];       // members list for referee dropdown
+
 function showAdminPanel() {
   document.getElementById("login-screen").style.display = "none";
   document.getElementById("admin-panel").style.display  = "block";
   applyRoleVisibility(); // auth.js — refresh role badge + hide admin-only elements
   initSupabase();
-  
+
   // Initialize storage and tournament manager
   if (typeof storage === 'undefined' || !storage) {
     window.storage = new StorageAdapter(db);
@@ -31,19 +35,33 @@ function showAdminPanel() {
   if (typeof tournamentManager === 'undefined' || !tournamentManager) {
     window.tournamentManager = new TournamentManager(window.storage);
   }
-  
+
   // Run migration check
   checkAndMigrate();
-  
+
+  // Cache members for referee dropdown
+  refreshMembersCache();
+
   // Load tournament selector
   loadTournamentSelector();
-  
+
   fetchMatches();
   subscribeRealtime();
-  
+
   // Initialize auto-backup toggle (loads saved preference)
   if (typeof initAutoBackupToggle === 'function') {
     initAutoBackupToggle();
+  }
+}
+
+async function refreshMembersCache() {
+  try {
+    if (!storage) return;
+    const members = await storage.read('members');
+    _allMembersList = (members || []).slice().sort((a, b) =>
+      (a.name || '').localeCompare(b.name || '', 'vi'));
+  } catch (e) {
+    console.error('refreshMembersCache:', e);
   }
 }
 
@@ -108,9 +126,9 @@ async function loadTournamentSelector() {
     } else {
       updateTournamentStatus();
       
-      // Render tournament controls
       const activeTournament = tournaments.find(t => t.id == activeId);
       if (activeTournament) {
+        _activeTournament = activeTournament; // cache for gateScoringByRole
         await renderTournamentControls(activeTournament);
       }
     }
@@ -130,18 +148,17 @@ function getStatusText(status) {
 
 async function switchTournament(tournamentId) {
   if (!tournamentId) return;
-  
+
   try {
     await tournamentManager.setActiveTournament(tournamentId);
     updateTournamentStatus();
-    
-    // Reload matches for selected tournament
+
+    // Cache the active tournament so gateScoringByRole can read .status
+    _activeTournament = await tournamentManager.getTournament(tournamentId);
+
     await fetchMatches();
-    
-    // Render tournament controls
-    const tournament = await tournamentManager.getTournament(tournamentId);
-    await renderTournamentControls(tournament);
-    
+    await renderTournamentControls(_activeTournament);
+
     setStatus('Đã chuyển giải đấu', 'ok');
   } catch (error) {
     setStatus('Lỗi khi chuyển giải đấu: ' + error.message, 'err');
@@ -274,10 +291,14 @@ function renderMatches(matches) {
   autoGenerateBracket(matches);
 }
 
-// Hide / disable score-input UI for everyone except role='referee'.
-// Admin can SEE scores but cannot edit; switch role to referee to score.
+// Hide / disable score-input UI when:
+//   - current role isn't 'referee', OR
+//   - active tournament hasn't started yet (status !== 'ongoing')
+// Admin must press "▶️ Bắt Đầu Giải Đấu" before referees can score.
 function gateScoringByRole() {
-  if (typeof canScore !== 'function' || canScore()) return;
+  const isOngoing = _activeTournament && _activeTournament.status === 'ongoing';
+  const allowed = (typeof canScore === 'function') && canScore() && isOngoing;
+  if (allowed) return;
 
   // Numeric set inputs → read-only
   document.querySelectorAll('.adm-set-input').forEach(el => {
@@ -605,7 +626,21 @@ function matchHTML(m, stage) {
   
   const finishDisabled = dis || !canFinish ? "disabled" : "";
 
-  // Match-info form (time / court / referee) — admin-only
+  // Match-info read-only display (visible to ALL roles, including view)
+  const refName = m.referee_name || m.referee || '';
+  const infoDisplay = (m.match_time || m.court || refName) ? `
+    <div class="adm-info-display">
+      ${m.match_time ? `<span>🕐 ${esc(m.match_time)}</span>` : ''}
+      ${m.court      ? `<span>🏟 ${esc(m.court)}</span>`      : ''}
+      ${refName      ? `<span>👤 ${esc(refName)}</span>`      : ''}
+    </div>` : '';
+
+  // Referee dropdown options (from cached members list)
+  const refOpts = (_allMembersList || []).map(mem =>
+    `<option value="${esc(mem.name || '')}" ${mem.name === refName ? 'selected' : ''}>${esc(mem.name || '')}</option>`
+  ).join('');
+
+  // Edit form — admin-only (visibility-gated by .admin-only class)
   const infoForm = `
     <div class="adm-info-form admin-only">
       <div class="adm-info-row">
@@ -618,8 +653,10 @@ function matchHTML(m, stage) {
                  value="${esc(m.court || '')}" placeholder="Sân 1">
         </label>
         <label>👤 Trọng tài
-          <input type="text" data-id="${m.id}" data-field="referee"
-                 value="${esc(m.referee_name || m.referee || '')}" placeholder="Tên TT">
+          <select data-id="${m.id}" data-field="referee">
+            <option value="">— Chọn trọng tài —</option>
+            ${refOpts}
+          </select>
         </label>
         <button class="adm-info-save" onclick="saveMatchInfo('${m.id}')">💾 Lưu</button>
       </div>
@@ -633,6 +670,7 @@ function matchHTML(m, stage) {
         <span class="adm-vs">vs</span>
         <span class="adm-team-name right ${winnerB?"winner":""}">${esc(m.teamB)}</span>
       </div>
+      ${infoDisplay}
       ${infoForm}
       ${scoreSection}
       <div class="adm-actions">
@@ -827,9 +865,16 @@ function adjustScore(id, field, delta) {
 
 // ── Save match info (time/court/referee) ──────────────────────
 async function saveMatchInfo(id) {
+  if (typeof isAdmin === 'function' && !isAdmin()) {
+    setStatus('Chỉ admin mới được sửa thông tin trận', 'err');
+    return;
+  }
   const timeVal = document.querySelector(`input[data-id="${id}"][data-field="match_time"]`)?.value || "";
   const courtVal= document.querySelector(`input[data-id="${id}"][data-field="court"]`)?.value || "";
-  const refVal  = document.querySelector(`input[data-id="${id}"][data-field="referee"]`)?.value || "";
+  // Referee is now a <select>; fallback to <input> for back-compat
+  const refVal  = document.querySelector(`select[data-id="${id}"][data-field="referee"]`)?.value
+              ?? document.querySelector(`input[data-id="${id}"][data-field="referee"]`)?.value
+              ?? "";
 
   if (!db) {
     const stored = localStorage.getItem("pb_matches");
@@ -1441,9 +1486,18 @@ async function handleTeamTap(matchId, team) {
   if (tapDebounce.has(matchId)) {
     return;
   }
-  
   tapDebounce.set(matchId, true);
   setTimeout(() => tapDebounce.delete(matchId), 300);
+
+  // Defensive guard — UI is already hidden by gateScoringByRole, but block here too
+  if (!_activeTournament || _activeTournament.status !== 'ongoing') {
+    setStatus('⚠️ Giải đấu chưa bắt đầu — admin chưa "Bắt Đầu Giải Đấu"', 'err');
+    return;
+  }
+  if (typeof canScore === 'function' && !canScore()) {
+    setStatus('⚠️ Chỉ trọng tài mới được chấm điểm', 'err');
+    return;
+  }
 
   try {
     // Always load fresh data from database
@@ -2081,9 +2135,12 @@ async function startTournament() {
     
     // 5.4: Call tournamentManager.updateStatus(tournamentId, 'ongoing')
     await tournamentManager.updateStatus(tournamentId, 'ongoing');
-    
+
+    // Refresh cached tournament so gateScoringByRole unlocks scoring
+    _activeTournament = await tournamentManager.getTournament(tournamentId);
+
     setStatus('✓ Giải đấu đã bắt đầu!', 'ok');
-    
+
     // 5.5: Reload tournament selector and UI after status change
     await loadTournamentSelector();
     
