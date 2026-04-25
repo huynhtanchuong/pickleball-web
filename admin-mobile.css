@@ -957,6 +957,87 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
   font-weight: 600;
 }
 
+/* ============================================================
+   PLAYER SLOTS — show 2 members per team in tap-to-score card
+   + highlight server (gold) and receiver (blue)
+   ============================================================ */
+
+.team-players {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0;
+  position: relative;
+}
+.player-slot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.04);
+  border: 2px solid transparent;
+  font-size: 0.85rem;
+  transition: background 0.2s, border-color 0.2s;
+}
+.player-slot .slot-num {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: var(--adm-muted);
+  background: rgba(255,255,255,0.1);
+  border-radius: 50%;
+  width: 18px; height: 18px;
+  display: inline-flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.player-slot .slot-name {
+  flex: 1;
+  font-weight: 600;
+  color: var(--adm-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Server highlight: gold ring + soft glow */
+.player-slot.is-serving {
+  background: rgba(253, 224, 71, 0.18);
+  border-color: #fde047;
+  box-shadow: 0 0 0 2px rgba(253, 224, 71, 0.25);
+  animation: livePulse 1.5s ease-in-out infinite;
+}
+.player-slot.is-serving .slot-num { background: #fde047; color: #422006; }
+
+/* Receiver highlight: blue ring */
+.player-slot.is-receiving {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: var(--adm-blue);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+.player-slot.is-receiving .slot-num { background: var(--adm-blue); color: #fff; }
+
+/* Swap button (admin only) — small icon at the top-right of player list */
+.player-swap-btn {
+  position: absolute;
+  top: -10px; right: -6px;
+  width: 26px; height: 26px;
+  border: 1px solid var(--adm-border);
+  border-radius: 50%;
+  background: var(--adm-card2);
+  color: var(--adm-muted);
+  font-size: 0.95rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 2;
+  transition: transform 0.15s, color 0.15s, border-color 0.15s;
+}
+.player-swap-btn:hover {
+  color: var(--adm-blue);
+  border-color: var(--adm-blue);
+  transform: rotate(180deg);
+}
+
 /* Random option — purple accent so it reads as a third "system" choice */
 .serve-option.serve-random {
   border-style: dashed;

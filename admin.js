@@ -29,6 +29,8 @@ function submitLogin() {
 // Cached state used by matchHTML & gateScoringByRole
 let _activeTournament = null;     // current tournament object (status, config…)
 let _allMembersList   = [];       // members list for referee dropdown
+let teamById          = new Map();// team_id → team object (for inline scoring)
+let memberById        = new Map();// member_id → member object
 
 async function showAdminPanel() {
   document.getElementById("login-screen").style.display = "none";
@@ -68,8 +70,40 @@ async function refreshMembersCache() {
     const members = await storage.read('members');
     _allMembersList = (members || []).slice().sort((a, b) =>
       (a.name || '').localeCompare(b.name || '', 'vi'));
+    memberById = new Map((members || []).map(m => [m.id, m]));
   } catch (e) {
     console.error('refreshMembersCache:', e);
+  }
+}
+
+async function refreshTeamsCache() {
+  try {
+    if (!storage || !_activeTournament) return;
+    const teams = await storage.read('teams', { tournament_id: _activeTournament.id });
+    teamById = new Map((teams || []).map(t => [t.id, t]));
+  } catch (e) {
+    console.error('refreshTeamsCache:', e);
+  }
+}
+
+// Swap member1 ↔ member2 of a team (admin-only). Refreshes display.
+async function swapTeamMembers(teamId) {
+  if (typeof isAdmin !== 'function' || !isAdmin()) {
+    setStatus(t('onlyAdminMatchInfo'), 'err');
+    return;
+  }
+  try {
+    const team = teamById.get(teamId);
+    if (!team) return;
+    await storage.update('teams', teamId, {
+      member1_id: team.member2_id,
+      member2_id: team.member1_id
+    });
+    await refreshTeamsCache();
+    await fetchMatches();
+    showOk('✓ Đã đổi vị trí');
+  } catch (e) {
+    showError(e);
   }
 }
 
@@ -147,8 +181,9 @@ async function loadTournamentSelector() {
       
       const activeTournament = tournaments.find(t => t.id == activeId);
       if (activeTournament) {
-        _activeTournament = activeTournament; // cache for gateScoringByRole
+        _activeTournament = activeTournament;
         applyTournamentStatusVisibility();
+        await refreshTeamsCache();
         await renderTournamentControls(activeTournament);
       }
     }
@@ -176,6 +211,7 @@ async function switchTournament(tournamentId) {
     // Cache the active tournament so gateScoringByRole can read .status
     _activeTournament = await tournamentManager.getTournament(tournamentId);
     applyTournamentStatusVisibility();
+    await refreshTeamsCache();
 
     await fetchMatches();
     await renderTournamentControls(_activeTournament);
@@ -573,6 +609,54 @@ function matchHTML(m, stage) {
     const isServingB = servingTeam === 'B';
     const canStart = !servingTeam;
     
+    // Resolve teams to get member1_id / member2_id (for player slots)
+    const teamA = (typeof teamById !== 'undefined' && teamById)
+                  ? teamById.get(m.team_a_id) : null;
+    const teamB = (typeof teamById !== 'undefined' && teamById)
+                  ? teamById.get(m.team_b_id) : null;
+    const teamCardHTML = (side) => {
+      const tm        = side === 'A' ? teamA : teamB;
+      const teamName  = side === 'A' ? m.teamA : m.teamB;
+      const score     = (side === 'A' ? m.scoreA : m.scoreB) || 0;
+      const isServing = (servingTeam === side);
+      const opponentServing = servingTeam && servingTeam !== side; // we are the receiving team
+      // Member names (slot 1 / slot 2)
+      const m1 = tm?.member1_id ? (memberById?.get(tm.member1_id)?.name || '') : '';
+      const m2 = tm?.member2_id ? (memberById?.get(tm.member2_id)?.name || '') : '';
+      // Highlight rules:
+      //   - Server: serving team's slot N where N = serverNumber
+      //   - Receiver: receiving team's slot N (same slot as server)
+      const highlightSlot = (slot) => {
+        if (isServing && slot === serverNumber) return 'is-serving';
+        if (opponentServing && slot === serverNumber) return 'is-receiving';
+        return '';
+      };
+      return `
+        <div class="team-card ${isServing ? 'serving' : ''}"
+             onclick="handleTeamTap('${m.id}', '${side}')"
+             ${canStart || dis ? 'style="opacity:0.5;cursor:not-allowed;"' : ''}>
+          <div class="team-name">${esc(teamName)}</div>
+          ${isServing ? `<div class="serving-badge">${pickleballBalls(serverNumber)}</div>` : ''}
+          ${(m1 || m2) ? `
+            <div class="team-players">
+              <div class="player-slot ${highlightSlot(1)}" data-slot="1">
+                <span class="slot-num">1</span>
+                <span class="slot-name">${esc(m1 || '—')}</span>
+              </div>
+              <div class="player-slot ${highlightSlot(2)}" data-slot="2">
+                <span class="slot-num">2</span>
+                <span class="slot-name">${esc(m2 || '—')}</span>
+              </div>
+              ${tm && isAdmin && isAdmin() ? `
+                <button class="player-swap-btn admin-only" title="Đổi vị trí 1 ↔ 2"
+                        onclick="event.stopPropagation(); swapTeamMembers('${tm.id}')">⇅</button>
+              ` : ''}
+            </div>
+          ` : ''}
+          <div class="team-score">${score}</div>
+        </div>`;
+    };
+
     scoreSection = `
       <div class="inline-scoring">
         <div class="scoring-hint scorer-only">
@@ -580,23 +664,9 @@ function matchHTML(m, stage) {
           ${canStart ? t('hintPickServe') : t('hintNonServerTap')}
         </div>
         <div class="scoring-teams">
-          <div class="team-card ${isServingA ? 'serving' : ''}"
-               onclick="handleTeamTap('${m.id}', 'A')"
-               ${canStart || dis ? 'style="opacity:0.5;cursor:not-allowed;"' : ''}>
-            <div class="team-name">${esc(m.teamA)}</div>
-            ${isServingA ? `<div class="serving-badge">${pickleballBalls(serverNumber)}</div>` : ''}
-            <div class="team-score">${m.scoreA || 0}</div>
-          </div>
-
+          ${teamCardHTML('A')}
           <div class="vs-divider">VS</div>
-
-          <div class="team-card ${isServingB ? 'serving' : ''}"
-               onclick="handleTeamTap('${m.id}', 'B')"
-               ${canStart || dis ? 'style="opacity:0.5;cursor:not-allowed;"' : ''}>
-            <div class="team-name">${esc(m.teamB)}</div>
-            ${isServingB ? `<div class="serving-badge">${pickleballBalls(serverNumber)}</div>` : ''}
-            <div class="team-score">${m.scoreB || 0}</div>
-          </div>
+          ${teamCardHTML('B')}
         </div>
         
         <div class="scoring-actions">
