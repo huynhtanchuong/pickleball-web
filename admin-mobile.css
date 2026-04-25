@@ -1104,6 +1104,127 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
 }
 
 /* ============================================================
+   SETUP BAR — replaces the old big-button row
+   Shows tournament-setup steps as a wizard breadcrumb + 1 CTA
+   ============================================================ */
+
+.setup-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--adm-card2);
+  border: 1px solid var(--adm-border);
+  border-radius: 10px;
+  margin-bottom: 12px;
+  font-size: 0.85rem;
+}
+.setup-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(100,116,139,0.12);
+  color: #94a3b8;
+  white-space: nowrap;
+}
+.setup-step.done {
+  background: rgba(34,197,94,0.15);
+  color: #4ade80;
+}
+.setup-step.active {
+  background: linear-gradient(135deg, #3b82f6, #7c3aed);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 0 0 2px rgba(59,130,246,0.3);
+}
+.setup-step .step-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.18);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+.setup-step.done .step-badge { background: #22c55e; color: #fff; }
+.setup-step .step-label { font-weight: 600; }
+.setup-step .step-count {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  background: rgba(255,255,255,0.18);
+  border-radius: 8px;
+}
+.step-arrow { color: var(--adm-muted); font-weight: 700; }
+
+.setup-cta-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.setup-cta-row .tournament-control-btn {
+  flex: 0 1 auto;
+  min-width: 200px;
+  font-size: 0.95rem;
+}
+.setup-other {
+  margin-left: auto;
+  font-size: 0.78rem;
+}
+.setup-other > summary {
+  cursor: pointer;
+  color: var(--adm-muted);
+  padding: 6px 10px;
+  border-radius: 6px;
+  list-style: none;
+  user-select: none;
+}
+.setup-other > summary:hover { color: var(--adm-text); background: rgba(255,255,255,0.05); }
+.setup-other > summary::-webkit-details-marker { display: none; }
+.setup-other-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 10px;
+  background: var(--adm-card2);
+  border: 1px solid var(--adm-border);
+  border-radius: 8px;
+  position: absolute;
+  right: 0;
+  z-index: 10;
+  min-width: 200px;
+}
+.setup-other { position: relative; }
+.setup-btn-sm {
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  background: rgba(255,255,255,0.06);
+  color: var(--adm-text);
+  border: 1px solid var(--adm-border);
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+}
+.setup-btn-sm:hover { background: rgba(255,255,255,0.12); }
+
+@media (max-width: 600px) {
+  .setup-bar { font-size: 0.78rem; padding: 8px; gap: 4px; }
+  .setup-step { padding: 5px 8px; }
+  .setup-step .step-label { display: none; } /* keep badge + count only on phones */
+  .setup-step.active .step-label { display: inline; } /* show label for active step */
+  .step-arrow { font-size: 0.9rem; }
+  .setup-cta-row .tournament-control-btn { width: 100%; min-width: 0; }
+  .setup-other { margin-left: 0; width: 100%; text-align: center; }
+}
+
+/* ============================================================
    MEMBER REGISTRATION MODAL
    ============================================================ */
 

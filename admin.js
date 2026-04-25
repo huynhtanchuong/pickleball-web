@@ -176,44 +176,77 @@ async function renderTournamentControls(tournament) {
     return;
   }
   
-  // Show container
   container.style.display = 'block';
-  
-  let html = '<div class="tournament-controls-container">';
-  
-  if (tournament.status === 'upcoming') {
-    // Show registration and setup buttons
-    html += `
-      <button class="tournament-control-btn btn-add-members" onclick="openMemberRegistrationModal()">
-        👥 Thêm Thành viên
-      </button>
-      <button class="tournament-control-btn btn-generate-teams" onclick="generateRandomTeams()">
-        🎲 Tạo Đội Ngẫu nhiên
-      </button>
-      <button class="tournament-control-btn btn-generate-matches" onclick="generateRandomMatches()">
-        📅 Tạo Trận Đấu
-      </button>
-      <button class="tournament-control-btn btn-start-tournament" onclick="startTournament()">
-        ▶️ Bắt Đầu Giải Đấu
-      </button>
-    `;
-  }
-  
-  html += '</div>';
-  
-  // Add reset link at bottom (for ongoing/completed tournaments)
-  if (tournament.status === 'ongoing' || tournament.status === 'completed') {
-    html += `
-      <div style="text-align: center; margin-top: 40px; padding: 20px;">
-        <a href="#" onclick="resetTournament(); return false;" 
+
+  // For ongoing/completed: only the reset link is shown, no setup wizard
+  if (tournament.status !== 'upcoming') {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 12px;">
+        <a href="#" onclick="resetTournament(); return false;"
            style="font-size: 12px; color: #999; text-decoration: none; border-bottom: 1px dashed #999;">
           ↺ Reset giải đấu
         </a>
-      </div>
-    `;
+      </div>`;
+    return;
   }
-  
-  container.innerHTML = html;
+
+  // Setup wizard: read current state, render progress + single primary CTA.
+  let pCount = 0, tCount = 0, mCount = 0;
+  try {
+    const [participants, teams, matches] = await Promise.all([
+      storage.read('tournament_participants', { tournament_id: tournament.id }),
+      storage.read('teams',                   { tournament_id: tournament.id }),
+      storage.read('matches',                 { tournament_id: tournament.id })
+    ]);
+    pCount = participants.length;
+    tCount = teams.length;
+    mCount = matches.length;
+  } catch (e) {
+    console.error('renderTournamentControls counts:', e);
+  }
+
+  // Determine completion of each step
+  const step1Done = pCount >= 4;          // thành viên (cần ít nhất 4 để ghép cặp)
+  const step2Done = step1Done && tCount > 0;
+  const step3Done = step2Done && mCount > 0;
+
+  // The "next action" is the first incomplete step
+  const next =
+    !step1Done ? { label: '👥 Thêm Thành viên',     fn: 'openMemberRegistrationModal()', cls: 'btn-add-members' } :
+    !step2Done ? { label: '🎲 Tạo Đội Ngẫu nhiên',  fn: 'generateRandomTeams()',         cls: 'btn-generate-teams' } :
+    !step3Done ? { label: '📅 Tạo Trận Đấu',        fn: 'generateRandomMatches()',       cls: 'btn-generate-matches' } :
+                 { label: '▶️ Bắt Đầu Giải Đấu',    fn: 'startTournament()',             cls: 'btn-start-tournament' };
+
+  const stepHtml = (n, label, count, done, active) => `
+    <div class="setup-step ${done ? 'done' : ''} ${active ? 'active' : ''}">
+      <span class="step-badge">${done ? '✓' : n}</span>
+      <span class="step-label">${label}</span>
+      ${count !== null ? `<span class="step-count">${count}</span>` : ''}
+    </div>`;
+
+  container.innerHTML = `
+    <div class="setup-bar">
+      ${stepHtml(1, 'Thành viên', pCount, step1Done, !step1Done)}
+      <span class="step-arrow">›</span>
+      ${stepHtml(2, 'Đội',        tCount, step2Done, step1Done && !step2Done)}
+      <span class="step-arrow">›</span>
+      ${stepHtml(3, 'Trận đấu',   mCount, step3Done, step2Done && !step3Done)}
+      <span class="step-arrow">›</span>
+      ${stepHtml(4, 'Bắt đầu',    null,   false,     step3Done)}
+    </div>
+    <div class="setup-cta-row">
+      <button class="tournament-control-btn ${next.cls}" onclick="${next.fn}">
+        ${next.label}
+      </button>
+      <details class="setup-other">
+        <summary>Tùy chọn khác ▾</summary>
+        <div class="setup-other-actions">
+          <button class="setup-btn-sm" onclick="openMemberRegistrationModal()">👥 Sửa thành viên</button>
+          <button class="setup-btn-sm" onclick="generateRandomTeams()">🎲 Ghép lại đội</button>
+          <button class="setup-btn-sm" onclick="generateRandomMatches()">📅 Tạo lại trận đấu</button>
+        </div>
+      </details>
+    </div>`;
 }
 
 document.addEventListener("DOMContentLoaded", () => {
