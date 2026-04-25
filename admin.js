@@ -692,13 +692,18 @@ function matchHTML(m, stage) {
       // Original member identities
       const m1 = tm?.member1_id ? (memberById?.get(tm.member1_id)?.name || '') : '';
       const m2 = tm?.member2_id ? (memberById?.get(tm.member2_id)?.name || '') : '';
-      // Each team's positions swap every time THAT team scores. Total swaps
-      // = team's total score, so the player CURRENTLY in Ô 1 depends on
-      // (teamScore % 2). This way the same identity stays "in the
-      // highlighted Ô" while serving (matches "server keeps serving" rule).
+      // Each team's positions swap every time THAT team scores.
+      //   - Visual ORDER of cards changes (left/right swap)
+      //   - But BADGE label "1/2" stays with the player's IDENTITY
+      //     (m1 is forever badge "1", m2 forever badge "2") so admin/referee
+      //     can always tell who's who regardless of court side.
       const teamSwapped = score % 2 === 1;
-      const o1Name = teamSwapped ? m2 : m1;
-      const o2Name = teamSwapped ? m1 : m2;
+      // Whoever is in the LEFT position of this card right now:
+      const leftName  = teamSwapped ? m2 : m1;
+      const leftBadge = teamSwapped ? 2 : 1;
+      // Whoever is in the RIGHT position right now:
+      const rightName  = teamSwapped ? m1 : m2;
+      const rightBadge = teamSwapped ? 1 : 2;
       const highlightSlot = (slot) => {
         if (isServing && slot === baseServerSlot) return 'is-serving';
         if (opponentServing && slot === receiverSlot) return 'is-receiving';
@@ -711,17 +716,21 @@ function matchHTML(m, stage) {
           <div class="team-name">${esc(teamName)}</div>
           ${isServing ? `<div class="serving-badge">${pickleballBalls(serverNumber)}</div>` : ''}
           ${(m1 || m2) ? (() => {
-            const slot1 = `
+            // data-slot is the COURT POSITION (1 = left of A's row / right of
+            // B's row mirror = pickleball "Ô 1"). slot-num shows the player's
+            // IDENTITY badge (1 = original m1, 2 = original m2). Highlight
+            // follows position; badge follows identity.
+            const leftSlot = `
               <div class="player-slot ${highlightSlot(1)}" data-slot="1">
-                <span class="slot-num">1</span>
-                <span class="slot-name">${esc(o1Name || '—')}</span>
+                <span class="slot-num">${leftBadge}</span>
+                <span class="slot-name">${esc(leftName || '—')}</span>
               </div>`;
-            const slot2 = `
+            const rightSlot = `
               <div class="player-slot ${highlightSlot(2)}" data-slot="2">
-                <span class="slot-num">2</span>
-                <span class="slot-name">${esc(o2Name || '—')}</span>
+                <span class="slot-num">${rightBadge}</span>
+                <span class="slot-name">${esc(rightName || '—')}</span>
               </div>`;
-            return `<div class="team-players">${side === 'A' ? slot1 + slot2 : slot2 + slot1}</div>`;
+            return `<div class="team-players">${side === 'A' ? leftSlot + rightSlot : rightSlot + leftSlot}</div>`;
           })() : ''}
           <div class="team-score">${score}</div>
         </div>`;
