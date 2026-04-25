@@ -163,20 +163,24 @@ async function fetchMatches() {
     return; 
   }
 
-  if (!data || data.length === 0) {
-    await seedMatches();
-    return;
-  }
-
-  const normalized = data.map(normalizeMatch);
+  // v2: never auto-seed. Empty DB = empty render.
+  // (Auto-seeding looped forever when an active tournament had no matches yet,
+  //  because SAMPLE_MATCHES insert with tournament_id=NULL never satisfies the
+  //  filter, so the next fetch returned [] again → seed → repeat.)
+  const normalized = (data || []).map(normalizeMatch);
   renderMatches(normalized);
   calculateStandings(normalized);
   storeUpdatedAt(normalized); // track timestamps for conflict detection
 }
 
 async function seedMatches() {
+  // Disabled in v2. Sample data must be seeded via tournaments.html
+  // with an explicit tournament_id. Calling this without a tournament
+  // would create orphan rows and trigger an auto-seed loop.
+  console.warn('seedMatches() is disabled. Use tournaments.html to create demo data.');
+  return;
+  // eslint-disable-next-line no-unreachable
   if (!db) return;
-  // Strip the local-only `id` and any camelCase aliases so we only send DB columns.
   const rows = SAMPLE_MATCHES.map(m => {
     const n = normalizeMatch({ ...m });
     const { id, teamA, teamB, scoreA, scoreB,
