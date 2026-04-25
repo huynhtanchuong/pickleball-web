@@ -642,21 +642,26 @@ function matchHTML(m, stage) {
                   ? teamById.get(m.team_a_id) : null;
     const teamB = (typeof teamById !== 'undefined' && teamById)
                   ? teamById.get(m.team_b_id) : null;
+    // Pickleball rule: server stays, receiver TOGGLES each time the
+    // serving team scores. So receiver slot = serverNumber when serving
+    // team has scored an even number of points (incl. 0), opposite slot
+    // when odd.
+    const servingScoreNow = servingTeam === 'A' ? (m.scoreA || 0)
+                          : servingTeam === 'B' ? (m.scoreB || 0) : 0;
+    const receiverSlot = (servingScoreNow % 2 === 0)
+                         ? serverNumber
+                         : (serverNumber === 1 ? 2 : 1);
     const teamCardHTML = (side) => {
       const tm        = side === 'A' ? teamA : teamB;
       const teamName  = side === 'A' ? m.teamA : m.teamB;
       const score     = (side === 'A' ? m.scoreA : m.scoreB) || 0;
       const isServing = (servingTeam === side);
-      const opponentServing = servingTeam && servingTeam !== side; // we are the receiving team
-      // Member names (slot 1 / slot 2)
+      const opponentServing = servingTeam && servingTeam !== side; // this team is receiving
       const m1 = tm?.member1_id ? (memberById?.get(tm.member1_id)?.name || '') : '';
       const m2 = tm?.member2_id ? (memberById?.get(tm.member2_id)?.name || '') : '';
-      // Highlight rules:
-      //   - Server: serving team's slot N where N = serverNumber
-      //   - Receiver: receiving team's slot N (same slot as server)
       const highlightSlot = (slot) => {
         if (isServing && slot === serverNumber) return 'is-serving';
-        if (opponentServing && slot === serverNumber) return 'is-receiving';
+        if (opponentServing && slot === receiverSlot) return 'is-receiving';
         return '';
       };
       return `
