@@ -65,17 +65,6 @@
           <span>↺</span>
           <span style="font-size:0.75rem;" data-i18n="reload">Reload</span>
         </button>
-      </div>
-    </div>
-
-    <!-- Tournament Selector -->
-    <div class="adm-section" style="background: #fff3cd; border-left: 4px solid #ffc107;">
-      <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
-        <label style="font-weight: 600; color: #856404;">🏆 <span data-i18n="tournamentLabel">Giải đấu</span>:</label>
-        <select id="tournament-select" onchange="switchTournament(this.value)" style="flex: 1; min-width: 200px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-          <option value="" data-i18n="loading">Đang tải…</option>
-        </select>
-        <span id="tournament-status" class="status-chip"></span>
         <details class="adm-menu admin-only" id="adm-manage-menu">
           <summary title="Quản lý">⚙</summary>
           <div class="adm-menu-items" role="menu">
@@ -84,6 +73,14 @@
           </div>
         </details>
       </div>
+    </div>
+
+    <!-- Tournament Selector — minimal, just the dropdown -->
+    <div class="adm-tournament-row">
+      <select id="tournament-select" onchange="switchTournament(this.value)">
+        <option value="" data-i18n="loading">Đang tải…</option>
+      </select>
+      <span id="tournament-status" class="status-chip"></span>
     </div>
 
     <!-- Tournament Controls -->
@@ -97,14 +94,14 @@
         <button class="admin-tab active" onclick="switchAdminTab('matches')" data-tab="matches" data-i18n="tabMatches">
           ⚽ Trận đấu
         </button>
-        <button class="admin-tab admin-only" onclick="switchAdminTab('members')" data-tab="members" data-i18n="tabMembers">
-          👥 Vận động viên
+        <button class="admin-tab" onclick="switchAdminTab('standings')" data-tab="standings" data-i18n="tabStandings">
+          📊 Bảng xếp hạng
         </button>
         <button class="admin-tab admin-only" onclick="switchAdminTab('teams')" data-tab="teams" data-i18n="tabTeams">
           🏆 Đội
         </button>
-        <button class="admin-tab" onclick="switchAdminTab('standings')" data-tab="standings" data-i18n="tabStandings">
-          📊 Bảng xếp hạng
+        <button class="admin-tab admin-only" onclick="switchAdminTab('members')" data-tab="members" data-i18n="tabMembers">
+          👥 Vận động viên
         </button>
       </div>
     </div>
@@ -227,9 +224,10 @@
         <button class="lang-btn lang-btn-active" data-lang="vi" onclick="setLang('vi')">🇻🇳 VI</button>
         <button class="lang-btn" data-lang="en" onclick="setLang('en')">🇬🇧 EN</button>
       </span>
-      <br>
-      <button class="adm-reset-all-link" onclick="resetDemo()">↺ Reset all data</button>
     </div>
+
+    <!-- Reset tournament link — bottom of page, admin-only, far from primary controls -->
+    <div id="tournament-reset-bottom" class="admin-only" style="display:none;text-align:center;padding:24px 12px 32px;"></div>
 
   </div>
 

@@ -123,6 +123,24 @@ async function swapTeamMembers(teamId) {
   }
 }
 
+// Render / hide the "Reset giải đấu" link at the very bottom of the admin
+// page. Only shown to admin and only when the tournament is past the setup
+// phase (status !== 'upcoming'). Pass null to hide.
+function renderResetBottomLink(tournament) {
+  const el = document.getElementById('tournament-reset-bottom');
+  if (!el) return;
+  if (!tournament || (typeof isAdmin === 'function' && !isAdmin())) {
+    el.innerHTML = '';
+    el.style.display = 'none';
+    return;
+  }
+  el.style.display = 'block';
+  el.innerHTML = `
+    <a href="#" onclick="resetTournament(); return false;" class="adm-reset-bottom-link">
+      ${t('ctaResetTournament')}
+    </a>`;
+}
+
 // Show/hide elements that only make sense before the tournament starts
 // (e.g. auto-schedule bar). Once status moves to 'ongoing' admins only
 // edit individual matches; once 'completed' nothing else to do.
@@ -268,17 +286,17 @@ async function renderTournamentControls(tournament) {
   
   container.style.display = 'block';
 
-  // For ongoing/completed: only the reset link is shown, no setup wizard
+  // For ongoing/completed: hide the controls section entirely (no setup wizard).
+  // The reset link is rendered separately at the very bottom of the page —
+  // see #tournament-reset-bottom — so it can't be hit by accident near the
+  // active controls.
   if (tournament.status !== 'upcoming') {
-    container.innerHTML = `
-      <div style="text-align: center; padding: 12px;">
-        <a href="#" onclick="resetTournament(); return false;"
-           style="font-size: 12px; color: #999; text-decoration: none; border-bottom: 1px dashed #999;">
-          ${t('ctaResetTournament')}
-        </a>
-      </div>`;
+    container.innerHTML = '';
+    container.style.display = 'none';
+    renderResetBottomLink(tournament);
     return;
   }
+  renderResetBottomLink(null); // hide bottom link while in upcoming setup
 
   // Setup wizard: read current state, render progress + single primary CTA.
   let pCount = 0, tCount = 0, mCount = 0, mScheduled = 0;
@@ -644,35 +662,43 @@ function matchHTML(m, stage) {
                   ? teamById.get(m.team_a_id) : null;
     const teamB = (typeof teamById !== 'undefined' && teamById)
                   ? teamById.get(m.team_b_id) : null;
-    // Pickleball serving model:
-    //  - "Starting phase" = the very first serve turn of the match. The
-    //    starting team only gets one server (announced as "Server 2") and
-    //    the actual player is slot 1 (right court). They KEEP serving even
-    //    after scoring multiple points — only the receiver toggles.
-    //  - Detect: receiving team's score is 0 AND serverNumber === 2.
-    //    Once they fault, serve transfers (otherScore stays 0 only if
-    //    no transfer has occurred).
-    //  - After starting phase: server slot follows serverNumber (1=slot 1,
-    //    2=slot 2 partner takes over).
-    //  - Receiver toggles each time the serving team scores (server swaps
-    //    courts → diagonal opponent changes).
+    // Pickleball positional model:
+    //  - Ô 1 / Ô 2 are COURT POSITIONS (right / left). The PLAYERS in
+    //    each Ô swap each time the serving team scores.
+    //  - Server slot follows the rule "even score → Ô 1 (right), odd → Ô 2
+    //    (left)", relative to whichever member identity is the active server.
+    //  - Receiver = diagonal of server = same Ô number on the opposing team.
+    //  - Match start "0-0-2" exception: starting team is announced as
+    //    "Server 2" but the actual player is the original slot-1 member.
     const servingScoreNow = servingTeam === 'A' ? (m.scoreA || 0)
                           : servingTeam === 'B' ? (m.scoreB || 0) : 0;
     const otherScoreNow   = servingTeam === 'A' ? (m.scoreB || 0)
                           : servingTeam === 'B' ? (m.scoreA || 0) : 0;
     const isStartingPhase = otherScoreNow === 0 && serverNumber === 2;
-    const baseServerSlot  = isStartingPhase ? 1 : serverNumber;
-    const receiverSlot    = (servingScoreNow % 2 === 0)
-                            ? baseServerSlot
-                            : (baseServerSlot === 1 ? 2 : 1);
+    // Which ORIGINAL member-id index is the active server (1 or 2)
+    const serverOriginalIdx = isStartingPhase ? 1 : serverNumber;
+    // Active server's CURRENT position (Ô) based on serving team's score parity
+    const baseServerSlot = (servingScoreNow % 2 === 0)
+                          ? serverOriginalIdx
+                          : (serverOriginalIdx === 1 ? 2 : 1);
+    // Diagonal (receiver) is the same Ô number
+    const receiverSlot = baseServerSlot;
     const teamCardHTML = (side) => {
       const tm        = side === 'A' ? teamA : teamB;
       const teamName  = side === 'A' ? m.teamA : m.teamB;
       const score     = (side === 'A' ? m.scoreA : m.scoreB) || 0;
       const isServing = (servingTeam === side);
-      const opponentServing = servingTeam && servingTeam !== side; // this team is receiving
+      const opponentServing = servingTeam && servingTeam !== side;
+      // Original member identities
       const m1 = tm?.member1_id ? (memberById?.get(tm.member1_id)?.name || '') : '';
       const m2 = tm?.member2_id ? (memberById?.get(tm.member2_id)?.name || '') : '';
+      // Each team's positions swap every time THAT team scores. Total swaps
+      // = team's total score, so the player CURRENTLY in Ô 1 depends on
+      // (teamScore % 2). This way the same identity stays "in the
+      // highlighted Ô" while serving (matches "server keeps serving" rule).
+      const teamSwapped = score % 2 === 1;
+      const o1Name = teamSwapped ? m2 : m1;
+      const o2Name = teamSwapped ? m1 : m2;
       const highlightSlot = (slot) => {
         if (isServing && slot === baseServerSlot) return 'is-serving';
         if (opponentServing && slot === receiverSlot) return 'is-receiving';
@@ -685,19 +711,15 @@ function matchHTML(m, stage) {
           <div class="team-name">${esc(teamName)}</div>
           ${isServing ? `<div class="serving-badge">${pickleballBalls(serverNumber)}</div>` : ''}
           ${(m1 || m2) ? (() => {
-            // Visual mirroring: top team (A) shows slots left→right "1 | 2";
-            // bottom team (B) is mirrored "2 | 1" so each player's column
-            // matches the same physical court half (right court of A and
-            // right court of B share the same on-screen side).
             const slot1 = `
               <div class="player-slot ${highlightSlot(1)}" data-slot="1">
                 <span class="slot-num">1</span>
-                <span class="slot-name">${esc(m1 || '—')}</span>
+                <span class="slot-name">${esc(o1Name || '—')}</span>
               </div>`;
             const slot2 = `
               <div class="player-slot ${highlightSlot(2)}" data-slot="2">
                 <span class="slot-num">2</span>
-                <span class="slot-name">${esc(m2 || '—')}</span>
+                <span class="slot-name">${esc(o2Name || '—')}</span>
               </div>`;
             return `<div class="team-players">${side === 'A' ? slot1 + slot2 : slot2 + slot1}</div>`;
           })() : ''}

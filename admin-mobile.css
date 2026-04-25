@@ -2052,6 +2052,43 @@ html { scroll-behavior: smooth; }
 /* Hide via class (preserves original display: flex / grid / etc.) */
 .is-hidden { display: none !important; }
 
+/* Bottom-of-page reset link — muted + dashed border so it reads as a
+   "danger zone" action far from the primary scoring/setup controls. */
+.adm-reset-bottom-link {
+  display: inline-block;
+  font-size: 0.75rem;
+  color: var(--adm-muted);
+  text-decoration: none;
+  padding: 6px 14px;
+  border: 1px dashed var(--adm-border);
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+  transition: color 0.15s, border-color 0.15s;
+}
+.adm-reset-bottom-link:hover {
+  color: var(--adm-red, #ef4444);
+  border-color: var(--adm-red, #ef4444);
+}
+
+/* Minimal tournament selector row — just dropdown + status chip */
+.adm-tournament-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin: 0;
+}
+.adm-tournament-row select {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  font-size: 0.9rem;
+  background: var(--adm-card);
+  color: var(--adm-text);
+  border: 1px solid var(--adm-border);
+  border-radius: 6px;
+}
+
 /* ============================================================
    ADM MENU — kebab-style "⚙" dropdown for occasional admin actions
    (Quản lý giải đấu / Quản lý thành viên)
@@ -2064,28 +2101,30 @@ html { scroll-behavior: smooth; }
   list-style: none;
   cursor: pointer;
   user-select: none;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background: rgba(133, 100, 4, 0.15);
-  color: #856404;
+  background: rgba(255,255,255,0.08);
+  color: var(--adm-muted);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   font-weight: 800;
-  border: 1px solid rgba(133, 100, 4, 0.3);
-  transition: background 0.15s, transform 0.15s;
+  border: 1px solid var(--adm-border);
+  transition: background 0.15s, transform 0.15s, color 0.15s;
 }
 .adm-menu > summary::-webkit-details-marker { display: none; }
 .adm-menu > summary:hover {
-  background: rgba(133, 100, 4, 0.25);
+  background: rgba(255,255,255,0.15);
+  color: var(--adm-text);
   transform: rotate(45deg);
 }
 .adm-menu[open] > summary {
-  background: #856404;
+  background: var(--adm-blue);
   color: #fff;
   transform: rotate(45deg);
+  border-color: var(--adm-blue);
 }
 .adm-menu-items {
   position: absolute;
