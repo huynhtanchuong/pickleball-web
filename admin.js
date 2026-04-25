@@ -1065,19 +1065,21 @@ async function generateFinal(silent=false) {
 
 async function fetchAllMatches() {
   if (!db) return localMatches||[];
-  
-  // Filter by active tournament if available
+
   let query = db.from("matches").select("*");
-  
   if (typeof tournamentManager !== 'undefined' && tournamentManager) {
     const activeId = tournamentManager.getActiveTournamentId();
     if (activeId) {
       query = query.eq('tournament_id', activeId);
     }
   }
-  
+
   const {data} = await query;
-  return data||[];
+  // CRITICAL: normalize so callers can read m.scoreA / m.teamA aliases.
+  // Without this, handleTeamTap reset scoreA/scoreB to 0 on every tap
+  // because match.scoreA was undefined (DB columns are score_a / score_b).
+  const norm = typeof normalizeMatch === 'function' ? normalizeMatch : m => m;
+  return (data || []).map(norm);
 }
 
 // ── Bracket visual ────────────────────────────────────────────
