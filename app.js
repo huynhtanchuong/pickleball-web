@@ -508,7 +508,7 @@ function publicMatchHTML(m, stage) {
   // Build the per-team serving badge to drop under whichever team is serving
   const serverNum = m.server_number || 1;
   const servingBadge = (sideLetter) => (playing && m.serving_team === sideLetter)
-    ? `<div class="mc-serving">🏓 Đang giao ${serverNum === 1 ? '1️⃣' : '2️⃣'}</div>`
+    ? `<div class="mc-serving">🥎 Đang giao ${serverNum === 1 ? '1️⃣' : '2️⃣'}</div>`
     : '';
 
   return `
