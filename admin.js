@@ -178,6 +178,11 @@ async function swapTeamMembers(teamId) {
     });
     await refreshTeamsCache();
     await fetchMatches();
+    // Reload teams tab too if it's the open one — keeps the swap UI fresh
+    if (typeof loadTeamsTab === 'function') {
+      const teamsTab = document.getElementById('tab-teams');
+      if (teamsTab && teamsTab.style.display !== 'none') loadTeamsTab();
+    }
     showOk('✓ Đã đổi vị trí');
   } catch (e) {
     showError(e);
@@ -2829,12 +2834,20 @@ async function loadTeamsTab() {
                   ${team.is_seeded ? ' 🌟' : ''}
                 </div>
                 <div style="font-size: 13px; color: #94a3b8; line-height: 1.6;">
-                  <div>👤 ${esc(member1Name)}</div>
-                  <div>👤 ${esc(member2Name)}</div>
+                  <div>
+                    <span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:#22c55e;color:#052e16;font-size:0.7rem;font-weight:800;text-align:center;line-height:18px;margin-right:6px;">1</span>
+                    ${esc(member1Name)}
+                  </div>
+                  <div>
+                    <span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:#ef4444;color:#fff;font-size:0.7rem;font-weight:800;text-align:center;line-height:18px;margin-right:6px;">2</span>
+                    ${esc(member2Name)}
+                  </div>
                   <div style="margin-top: 5px; color: #64748b;">
                     Tier: ${team.tier || 'N/A'}
                   </div>
                 </div>
+                <button class="lineup-swap auth-only" onclick="swapTeamMembers('${team.id}')"
+                        style="margin-top:10px;width:100%;">⇅ Đổi vị trí 1 ↔ 2</button>
               </div>
             `;
             }).join('')}
