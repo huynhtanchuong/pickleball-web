@@ -144,6 +144,37 @@ body {
 }
 .header-link:hover { color: #fff; border-color: var(--blue); }
 
+/* ── Public tournament selector (minimal) ── */
+.public-tournament-row {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 8px 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.public-tournament-row select {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  font-size: 0.9rem;
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+#public-tournament-status {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.06);
+  white-space: nowrap;
+}
+#public-tournament-status:empty { display: none; }
+
 /* ── STATUS CHIP / toast ── */
 .status-chip {
   /* When .err class is applied, render as a more visible red toast */

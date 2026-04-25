@@ -29,15 +29,12 @@
     </div>
   </header>
 
-  <!-- Tournament Selector -->
-  <div style="max-width: 1200px; margin: 0 auto; padding: 15px 20px; background: #f8f9fa; border-bottom: 1px solid #dee2e6;">
-    <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
-      <label style="font-weight: 600; color: #495057;">🏆 Giải đấu:</label>
-      <select id="public-tournament-select" onchange="switchPublicTournament(this.value)" style="flex: 1; min-width: 200px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-        <option value="">Đang tải...</option>
-      </select>
-      <span id="public-tournament-status" style="padding: 4px 12px; background: #d4edda; color: #155724; border-radius: 12px; font-size: 12px; font-weight: 600;"></span>
-    </div>
+  <!-- Tournament Selector — minimal, just the dropdown -->
+  <div class="public-tournament-row">
+    <select id="public-tournament-select" onchange="switchPublicTournament(this.value)">
+      <option value="" data-i18n="loading">Đang tải…</option>
+    </select>
+    <span id="public-tournament-status"></span>
   </div>
 
   <main class="scoreboard-main">
