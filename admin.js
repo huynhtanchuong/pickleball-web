@@ -303,6 +303,11 @@ function renderMatches(matches) {
   renderSpecialMatches(matches);
   updateBracketUI(matches);
 
+  // Re-apply .admin-only / .scorer-only visibility on the freshly rendered
+  // match cards (the .admin-only edit form inside each card otherwise
+  // leaks to referee/view because applyRoleVisibility only ran at login).
+  if (typeof applyRoleVisibility === 'function') applyRoleVisibility();
+
   // Disable scoring controls when current role is not 'referee'
   // (admin can manage tournaments but must switch role to score matches)
   gateScoringByRole();
