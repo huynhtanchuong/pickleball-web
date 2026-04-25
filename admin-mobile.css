@@ -1313,3 +1313,101 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
     font-size: 13px;
   }
 }
+
+/* ============================================================
+   MOBILE PATCH — narrow-screen layout fixes
+   ============================================================ */
+
+/* ── 768px and below: tablets / large phones ── */
+@media (max-width: 768px) {
+  .adm-header {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  .adm-header-left { font-size: 1.2rem; gap: 8px; }
+  .adm-header-left img { width: 28px !important; height: 28px !important; }
+  .adm-title { font-size: 0.95rem; }
+  .adm-sub   { font-size: 0.62rem; }
+
+  .adm-header-right { gap: 6px; }
+  .adm-header-right .adm-btn-sm { padding: 5px 10px; font-size: 0.72rem; }
+
+  /* Tournament selector row: select takes the full row, links wrap below */
+  .adm-section > div[style*="display: flex"][style*="align-items: center"] {
+    gap: 8px !important;
+  }
+  #tournament-select {
+    flex: 1 1 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* Special matches: 1-col on phones, 2-col on tablets */
+  #tab-matches .adm-section > div[style*="flex-wrap: wrap"] {
+    gap: 8px !important;
+  }
+  #tab-matches .adm-section > div[style*="flex-wrap: wrap"] .adm-btn-sm {
+    flex: 1 1 calc(50% - 4px);
+    min-width: 0;
+    text-align: center;
+    padding: 10px 8px;
+    font-size: 0.78rem;
+  }
+
+  /* Tab nav: shrink so 4 tabs fit on most phones without scroll */
+  .admin-tab {
+    min-width: 0;
+    padding: 12px 8px;
+    font-size: 12px;
+  }
+}
+
+/* ── 480px and below: phones ── */
+@media (max-width: 480px) {
+  /* Header: hide reload label, show icon only */
+  .adm-header-right button[onclick="location.reload()"] span:last-child {
+    display: none;
+  }
+  /* Role badge: smaller padding on phones */
+  #role-badge {
+    font-size: 0.65rem !important;
+    padding: 2px 6px !important;
+  }
+  /* Status chip wraps as needed */
+  .adm-header-right { flex-wrap: wrap; justify-content: flex-end; }
+
+  /* Tournament selector links go full-width, stacked */
+  .adm-section > div[style*="display: flex"][style*="align-items: center"] .adm-btn-sm {
+    flex: 1 1 100%;
+    text-align: center;
+    padding: 10px 12px;
+    font-size: 0.8rem;
+  }
+
+  /* Special matches: 1-col on small phones */
+  #tab-matches .adm-section > div[style*="flex-wrap: wrap"] .adm-btn-sm {
+    flex: 1 1 100%;
+    padding: 12px 10px;
+    font-size: 0.85rem;
+  }
+
+  /* Section spacing */
+  .adm-section { padding: 12px; }
+  .adm-section-title { font-size: 0.95rem; }
+
+  /* Match info row: wrap nicely */
+  .mc-info { flex-wrap: wrap; gap: 6px; row-gap: 4px; font-size: 0.72rem; }
+
+  /* Bracket container scrolls horizontally if content is wider */
+  #bracket-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* Tournament-controls stack 2-col on small phones */
+  .tournament-control-btn { min-width: calc(50% - 5px); font-size: 0.82rem; padding: 12px 10px; }
+}
+
+/* ── 360px and below: very narrow ── */
+@media (max-width: 360px) {
+  .adm-header-left .adm-sub { display: none; }
+  .adm-header-right .adm-btn-sm { padding: 4px 8px; font-size: 0.68rem; }
+  /* Hide Xem emoji on very tight screens — keep label only */
+  .tournament-control-btn { min-width: 100%; }
+}
