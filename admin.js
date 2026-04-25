@@ -122,8 +122,9 @@ async function endSet(matchId) {
       payload.status = 'done';
     } else if (cs < 3) {
       payload.current_set = cs + 1;
+      // Reset positions for new set: server_slot back to 1
+      payload.server_slot = 1;
     } else {
-      // 3 sets played, no 2-set winner — shouldn't happen normally
       payload.status = 'done';
     }
 
@@ -729,25 +730,16 @@ function matchHTML(m, stage) {
     const teamB = (typeof teamById !== 'undefined' && teamById)
                   ? teamById.get(m.team_b_id) : null;
     // Pickleball positional model:
-    //  - Ô 1 / Ô 2 are COURT POSITIONS (right / left). The PLAYERS in
-    //    each Ô swap each time the serving team scores.
-    //  - Server slot follows the rule "even score → Ô 1 (right), odd → Ô 2
-    //    (left)", relative to whichever member identity is the active server.
+    //  - Ô 1 / Ô 2 are COURT POSITIONS. Player names in each Ô swap each
+    //    time their team scores (positions rotate in pickleball).
+    //  - server_slot is persisted on the match row — it's the source of
+    //    truth for which Ô the active server is in. It starts at 1 on
+    //    side-out, toggles 1↔2 on each serving-team score and server
+    //    1→2 fault transition (per pickleball positions).
     //  - Receiver = diagonal of server = same Ô number on the opposing team.
-    //  - Match start "0-0-2" exception: starting team is announced as
-    //    "Server 2" but the actual player is the original slot-1 member.
     const servingScoreNow = servingTeam === 'A' ? (m.scoreA || 0)
                           : servingTeam === 'B' ? (m.scoreB || 0) : 0;
-    const otherScoreNow   = servingTeam === 'A' ? (m.scoreB || 0)
-                          : servingTeam === 'B' ? (m.scoreA || 0) : 0;
-    const isStartingPhase = otherScoreNow === 0 && serverNumber === 2;
-    // Which ORIGINAL member-id index is the active server (1 or 2)
-    const serverOriginalIdx = isStartingPhase ? 1 : serverNumber;
-    // Active server's CURRENT position (Ô) based on serving team's score parity
-    const baseServerSlot = (servingScoreNow % 2 === 0)
-                          ? serverOriginalIdx
-                          : (serverOriginalIdx === 1 ? 2 : 1);
-    // Diagonal (receiver) is the same Ô number
+    const baseServerSlot = m.server_slot || 1;
     const receiverSlot = baseServerSlot;
     const teamCardHTML = (side) => {
       const tm        = side === 'A' ? teamA : teamB;
@@ -1921,7 +1913,10 @@ async function handleTeamTap(matchId, team) {
       const cs = match.current_set || 1;
       const newSetA = (match[`s${cs}a`] || 0) + (team === 'A' ? 1 : 0);
       const newSetB = (match[`s${cs}b`] || 0) + (team === 'B' ? 1 : 0);
+      // Serving team scored → server stays, but they swap court → server_slot toggles
+      const newServerSlot = (match.server_slot || 1) === 1 ? 2 : 1;
       const payload = { [`s${cs}a`]: newSetA, [`s${cs}b`]: newSetB,
+                        server_slot: newServerSlot,
                         status: 'playing',
                         updated_at: new Date().toISOString() };
 
@@ -1953,6 +1948,24 @@ async function handleTeamTap(matchId, team) {
     }
     const newState = gameStateReducer(current, action);
     matchState.current = newState;
+
+    // Derive new server_slot from state transition (gameStateReducer doesn't
+    // know about it). Three cases:
+    //  - servingTeam changed → side-out → reset to 1 (new team's Ô 1 serves)
+    //  - servingTeam same, serverNumber went 1→2 → toggle (partner is on
+    //    the opposite court half)
+    //  - servingTeam same, score went up → toggle (server keeps serving but
+    //    swaps court with partner per pickleball rules)
+    const oldSlot = match.server_slot || 1;
+    let newSlot = oldSlot;
+    if (newState.servingTeam !== current.servingTeam) {
+      newSlot = 1;
+    } else if (newState.serverNumber !== current.serverNumber) {
+      newSlot = oldSlot === 1 ? 2 : 1;
+    } else if (newState.scoreA !== current.scoreA || newState.scoreB !== current.scoreB) {
+      newSlot = oldSlot === 1 ? 2 : 1;
+    }
+    newState._serverSlot = newSlot; // pass through to syncMatchState
 
     const teamCard = event?.target?.closest('.team-card');
     if (teamCard) {
@@ -2058,17 +2071,17 @@ async function selectServe(matchId, team) {
     // Save to history
     history.push(current);
 
-    // Update state
+    // Update state — first serve of match: server_slot = 1 (Ô 1 starts)
     const newState = {
       ...current,
       servingTeam: team,
       serverNumber: 2,
-      status: 'playing'
+      status: 'playing',
+      _serverSlot: 1
     };
 
     matchState.current = newState;
 
-    // Sync to database
     await syncMatchState(matchId, newState);
 
     // Close dialog
@@ -2155,6 +2168,7 @@ async function syncMatchState(matchId, state) {
     status: dbStatus,
     updated_at: new Date().toISOString()
   };
+  if (state._serverSlot !== undefined) payload.server_slot = state._serverSlot;
 
   if (!db) {
     // localStorage mode
