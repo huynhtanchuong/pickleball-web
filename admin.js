@@ -404,10 +404,15 @@ let _bracketGenerating = false;
 
 async function autoGenerateBracket(matches) {
   if (_bracketGenerating) return;
+  // Only auto-generate while a tournament is selected and currently ongoing.
+  // Don't fire for upcoming/completed and don't pollute other tournaments.
+  if (!_activeTournament || _activeTournament.status !== 'ongoing') return;
 
-  const groupMatches = matches.filter(m => !m.stage || m.stage === "group");
-  const semiMatches  = matches.filter(m => m.stage === "semi");
-  const finalMatches = matches.filter(m => m.stage === "final");
+  const tid = _activeTournament.id;
+  const scoped = matches.filter(m => m.tournament_id == tid);
+  const groupMatches = scoped.filter(m => !m.stage || m.stage === "group");
+  const semiMatches  = scoped.filter(m => m.stage === "semi");
+  const finalMatches = scoped.filter(m => m.stage === "final");
 
   const allGroupDone = groupMatches.length > 0 && groupMatches.every(m => m.status === "done");
 
@@ -416,21 +421,21 @@ async function autoGenerateBracket(matches) {
     _bracketGenerating = true;
     await generateSemifinals(true);
     _bracketGenerating = false;
+    await fetchMatches();
     return;
   }
 
-  // If semis exist but some group matches were reset (not all done anymore),
-  // delete stale semis+final so they regen correctly when group finishes again
+  // If semis exist but some group matches were reset, clear stale bracket
   if (!allGroupDone && semiMatches.length > 0) {
     const hasNotStartedSemi = semiMatches.some(m => m.status === "not_started");
     if (hasNotStartedSemi) {
-      // Semis haven't started yet — safe to delete and wait for correct standings
       _bracketGenerating = true;
       if (db) {
-        await db.from("matches").delete().eq("stage", "semi");
-        await db.from("matches").delete().eq("stage", "final");
+        await db.from("matches").delete().eq("tournament_id", tid).eq("stage", "semi");
+        await db.from("matches").delete().eq("tournament_id", tid).eq("stage", "final");
       } else {
-        localMatches = (localMatches||[]).filter(m => m.stage !== "semi" && m.stage !== "final");
+        localMatches = (localMatches||[]).filter(m =>
+          m.tournament_id != tid || (m.stage !== "semi" && m.stage !== "final"));
         saveLocal(localMatches);
       }
       _bracketGenerating = false;
@@ -763,9 +768,6 @@ function matchHTML(m, stage) {
     </div>`;
 
   // Full card body (hidden by default).
-  // Drop the redundant adm-teams row for inline-scoring (group stage) — team
-  // names already show in the summary AND in the big tap-to-score cards.
-  // Keep it for set-based scoring (semi/final) where there's no team-card UI.
   const useInlineScoring = ready && stage !== 'semi' && stage !== 'final';
   const teamsHeader = useInlineScoring ? '' : `
     <div class="adm-teams">
@@ -774,9 +776,37 @@ function matchHTML(m, stage) {
       <span class="adm-team-name right ${winnerB?"winner":""}">${esc(m.teamB)}${admServingBadge(m, 'B')}</span>
     </div>`;
 
+  // Lineup row (admin-only) — shows player slots and lets admin swap them.
+  // Visible for any match where teams have member info, including BEFORE
+  // serve is picked, so admin can configure positions ahead of play.
+  const teamARec = teamById && teamById.get && teamById.get(m.team_a_id);
+  const teamBRec = teamById && teamById.get && teamById.get(m.team_b_id);
+  const slotInfo = (rec) => {
+    if (!rec) return '';
+    const m1 = rec.member1_id ? (memberById.get(rec.member1_id)?.name || '—') : '—';
+    const m2 = rec.member2_id ? (memberById.get(rec.member2_id)?.name || '—') : '—';
+    return `
+      <div class="lineup-team">
+        <div class="lineup-name">${esc(rec.name || '')}</div>
+        <div class="lineup-slots">
+          <span class="lineup-slot"><b>1</b> ${esc(m1)}</span>
+          <span class="lineup-slot"><b>2</b> ${esc(m2)}</span>
+          <button class="lineup-swap admin-only" onclick="swapTeamMembers('${rec.id}')"
+                  title="Đổi vị trí 1 ↔ 2">⇅ Đổi</button>
+        </div>
+      </div>`;
+  };
+  const lineupRow = (teamARec || teamBRec) ? `
+    <div class="adm-lineup admin-only">
+      <div class="adm-lineup-title">📋 Đội hình (vị trí 1 / 2)</div>
+      ${slotInfo(teamARec)}
+      ${slotInfo(teamBRec)}
+    </div>` : '';
+
   const body = `
     <div class="adm-card-body" id="body-${m.id}" style="display:none;">
       ${teamsHeader}
+      ${lineupRow}
       ${infoForm}
       ${scoreSection}
       <div class="adm-actions">
@@ -1162,7 +1192,6 @@ function getTopTeamsByGroup(matches) {
 }
 
 async function generateSemifinals(silent=false) {
-  // Always fetch fresh from DB to get accurate state after any deletes
   const matches = db ? await fetchAllMatches() : (localMatches||[]);
   const existing = matches.filter(m => m.stage === "semi");
 
@@ -1178,13 +1207,24 @@ async function generateSemifinals(silent=false) {
     return;
   }
 
+  // CRITICAL: include tournament_id — matches.tournament_id has NOT NULL
+  // constraint so without it the insert is rejected silently and no
+  // semifinals appear.
+  const tournamentId = tournamentManager?.getActiveTournamentId();
+  if (!tournamentId) {
+    if (!silent) alert("Chưa chọn giải đấu");
+    return;
+  }
+
   const [g1, g2] = groupKeys;
   const A1 = tops[g1][0]?.name || "TBD", A2 = tops[g1][1]?.name || "TBD";
   const B1 = tops[g2][0]?.name || "TBD", B2 = tops[g2][1]?.name || "TBD";
 
   const semis = [
-    { team_a:A1, team_b:B2, score_a:0, score_b:0, group_name:"SF", stage:"semi", status:"not_started" },
-    { team_a:B1, team_b:A2, score_a:0, score_b:0, group_name:"SF", stage:"semi", status:"not_started" },
+    { tournament_id: tournamentId, team_a:A1, team_b:B2, score_a:0, score_b:0,
+      group_name:"SF", stage:"semi", status:"not_started" },
+    { tournament_id: tournamentId, team_a:B1, team_b:A2, score_a:0, score_b:0,
+      group_name:"SF", stage:"semi", status:"not_started" },
   ];
 
   if (!db) {
@@ -1219,10 +1259,16 @@ async function generateFinal(silent=false) {
     return;
   }
 
+  const tournamentId = tournamentManager?.getActiveTournamentId();
+  if (!tournamentId) {
+    if (!silent) alert("Chưa chọn giải đấu");
+    return;
+  }
   const getWinner = m => (m.score_a ?? m.scoreA ?? 0) >= (m.score_b ?? m.scoreB ?? 0)
     ? (m.team_a || m.teamA)
     : (m.team_b || m.teamB);
   const finalMatch = {
+    tournament_id: tournamentId,
     team_a: getWinner(semis[0]), team_b: getWinner(semis[1]),
     score_a: 0, score_b: 0, group_name: "F", stage: "final", status: "not_started"
   };
@@ -1743,6 +1789,11 @@ function openServeDialog(matchId) {
  * Show serve selection dialog
  */
 function showServeDialog(matchId, state) {
+  // Force the page to scroll up so the fixed dialog is in front of the user
+  // (some mobile browsers anchor fixed elements to the layout viewport, which
+  // can leave the dialog above the visible scroll area)
+  window.scrollTo({ top: 0, behavior: 'instant' });
+  document.body.style.overflow = 'hidden'; // lock background scroll
   const dialog = `
     <div class="dialog-overlay" id="serve-dialog-${matchId}" onclick="if(event.target===this) closeServeDialog('${matchId}')">
       <div class="dialog">
@@ -1832,9 +1883,8 @@ async function selectServe(matchId, team) {
  */
 function closeServeDialog(matchId) {
   const dialog = document.getElementById(`serve-dialog-${matchId}`);
-  if (dialog) {
-    dialog.remove();
-  }
+  if (dialog) dialog.remove();
+  document.body.style.overflow = ''; // restore scroll
 }
 
 /**

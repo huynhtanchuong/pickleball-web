@@ -750,15 +750,25 @@ async function updateScore(id) {
     payload = { score_a: scoreA, score_b: scoreB };
   }
 
-  // Auto-status: not_started → playing when any score > 0
+  // Auto-status:
+  //   - not_started → playing when any score appears
+  //   - playing → done for BO3 (semi/final) when one team has 2 set wins
   const hasScore = scoreA > 0 || scoreB > 0 ||
     (payload.s1a > 0 || payload.s1b > 0);
-  const autoStatus = hasScore ? "playing" : null;
+  let autoStatus = hasScore ? "playing" : null;
+  if (useSets && (scoreA >= 2 || scoreB >= 2)) {
+    autoStatus = "done"; // best-of-3 ends as soon as someone wins 2 sets
+  }
 
   if (!db) {
     if (!m) return;
     Object.assign(m, payload);
-    if (autoStatus && (m.status === "not_started" || m.status === "pending")) {
+    const transitions = {
+      not_started: ['playing', 'done'],
+      pending:     ['playing', 'done'],
+      playing:     ['done']
+    };
+    if (autoStatus && (transitions[m.status] || []).includes(autoStatus)) {
       m.status = autoStatus;
     }
     m.updated_at = new Date().toISOString();
@@ -786,8 +796,17 @@ async function updateScore(id) {
 
   const { data: current } = await db
     .from("matches").select("status").eq("id", id).single();
-  if (current && (current.status === "not_started" || current.status === "pending") && autoStatus) {
-    payload.status = autoStatus;
+  if (current && autoStatus) {
+    // Promote not_started → playing on first score, or playing → done
+    // when BO3 reaches 2 sets won
+    const transitions = {
+      not_started: ['playing', 'done'],
+      pending:     ['playing', 'done'],
+      playing:     ['done']
+    };
+    if ((transitions[current.status] || []).includes(autoStatus)) {
+      payload.status = autoStatus;
+    }
   }
 
   const { error } = await db.from("matches").update(payload).eq("id", id);

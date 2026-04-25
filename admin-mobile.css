@@ -958,6 +958,81 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
 }
 
 /* ============================================================
+   ĐỘI HÌNH (LINEUP) — admin row to set / swap player slot 1 vs 2
+   Lives in the expanded match-card body, ABOVE the score section.
+   ============================================================ */
+.adm-lineup {
+  background: rgba(124, 58, 237, 0.08);
+  border: 1px dashed rgba(124, 58, 237, 0.4);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 8px 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.adm-lineup-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--adm-purple, #7c3aed);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.lineup-team {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.lineup-name {
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: var(--adm-text);
+  flex: 1 1 100%;
+}
+.lineup-slots {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+.lineup-slot {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 6px;
+  font-size: 0.78rem;
+  color: var(--adm-text);
+}
+.lineup-slot b {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  background: var(--adm-purple, #7c3aed);
+  color: #fff;
+  font-size: 0.65rem;
+  border-radius: 50%;
+}
+.lineup-swap {
+  margin-left: auto;
+  padding: 4px 10px;
+  background: var(--adm-purple, #7c3aed);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.lineup-swap:hover { opacity: 0.85; }
+
+/* ============================================================
    PLAYER SLOTS — show 2 members per team in tap-to-score card
    + highlight server (gold) and receiver (blue)
    ============================================================ */
@@ -1097,6 +1172,13 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
   
   .dialog {
     padding: 20px;
+    margin-top: 16px;       /* breathing room from sticky header */
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+  }
+  .dialog-overlay {
+    align-items: flex-start; /* anchor to top so always visible without scroll */
+    padding: 0 12px;
   }
 }
 
