@@ -76,8 +76,13 @@
           <option value="" data-i18n="loading">Đang tải…</option>
         </select>
         <span id="tournament-status" class="status-chip"></span>
-        <a href="tournaments.html" class="adm-btn-sm admin-only" style="background: #3498db; color: white;" data-i18n="manageTournament">Quản lý giải đấu</a>
-        <a href="members.html" class="adm-btn-sm admin-only" style="background: #27ae60; color: white;" data-i18n="manageMembers">Quản lý thành viên</a>
+        <details class="adm-menu admin-only" id="adm-manage-menu">
+          <summary title="Quản lý">⚙</summary>
+          <div class="adm-menu-items" role="menu">
+            <a href="tournaments.html" role="menuitem" data-i18n="manageTournament">Quản lý giải đấu</a>
+            <a href="members.html"     role="menuitem" data-i18n="manageMembers">Quản lý thành viên</a>
+          </div>
+        </details>
       </div>
     </div>
 

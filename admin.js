@@ -350,6 +350,14 @@ async function renderTournamentControls(tournament) {
 document.addEventListener("DOMContentLoaded", () => {
   // Accept both admin and referee roles (referee can score but not manage)
   if (isReferee()) showAdminPanel();
+
+  // Close any <details class="adm-menu"> when user clicks outside it.
+  // Native <details> doesn't auto-close on outside-click.
+  document.addEventListener('click', (e) => {
+    document.querySelectorAll('details.adm-menu[open]').forEach(d => {
+      if (!d.contains(e.target)) d.removeAttribute('open');
+    });
+  });
 });
 
 // ── Override renderMatches for admin ─────────────────────────
