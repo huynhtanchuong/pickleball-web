@@ -20,18 +20,18 @@ document.addEventListener("DOMContentLoaded", async () => {
 async function loadTeams() {
   setStatus("Đang tải danh sách đội...", "");
 
+  const norm = typeof normalizeMatch === 'function' ? normalizeMatch : m => m;
+
   if (!db) {
-    // Demo mode - load from localStorage
     const stored = localStorage.getItem("pb_matches");
-    allMatches = stored ? JSON.parse(stored) : [];
+    allMatches = stored ? JSON.parse(stored).map(norm) : [];
   } else {
-    // Load from Supabase
     const { data, error } = await db.from("matches").select("*").order("group_name");
     if (error) {
       setStatus("Lỗi: " + error.message, "err");
       return;
     }
-    allMatches = data || [];
+    allMatches = (data || []).map(norm);
   }
 
   // Extract unique teams
@@ -137,7 +137,7 @@ function teamCardHTML(team) {
         <div class="team-name" id="name-${teamId}">${esc(team.name)}</div>
         <div class="team-group">Bảng ${esc(team.group)}</div>
       </div>
-      
+
       <div class="team-stats">
         <div class="team-stat">
           <span>🎮</span>
@@ -152,23 +152,23 @@ function teamCardHTML(team) {
           <span>${team.losses} thua</span>
         </div>
       </div>
-      
+
       <div class="team-actions">
-        <button class="btn-edit" onclick="toggleEdit('${teamId}', '${esc(team.name)}')">
+        <button class="btn-edit" onclick="toggleEdit('${teamId}')">
           ✏️ Sửa tên
         </button>
       </div>
-      
-      <div class="team-edit-form" id="edit-${teamId}">
-        <input 
-          type="text" 
-          class="team-input" 
-          id="input-${teamId}" 
+
+      <div class="team-edit-form" id="edit-${teamId}" data-original-name="${esc(team.name)}">
+        <input
+          type="text"
+          class="team-input"
+          id="input-${teamId}"
           value="${esc(team.name)}"
           placeholder="Nhập tên đội mới"
         />
         <div style="display: flex; gap: 8px;">
-          <button class="btn-edit btn-save" onclick="saveTeamName('${teamId}', '${esc(team.name)}')">
+          <button class="btn-edit btn-save" onclick="saveTeamName('${teamId}')">
             💾 Lưu
           </button>
           <button class="btn-edit btn-cancel" onclick="cancelEdit('${teamId}')">
@@ -180,7 +180,7 @@ function teamCardHTML(team) {
 }
 
 // ── Toggle edit form ──────────────────────────────────────────
-function toggleEdit(teamId, oldName) {
+function toggleEdit(teamId) {
   // Close all other edit forms
   document.querySelectorAll(".team-edit-form").forEach(form => {
     form.classList.remove("active");
@@ -205,10 +205,12 @@ function cancelEdit(teamId) {
 }
 
 // ── Save team name ────────────────────────────────────────────
-async function saveTeamName(teamId, oldName) {
+async function saveTeamName(teamId) {
+  const form = document.getElementById(`edit-${teamId}`);
   const input = document.getElementById(`input-${teamId}`);
-  if (!input) return;
+  if (!input || !form) return;
 
+  const oldName = form.dataset.originalName || '';
   const newName = input.value.trim();
   if (!newName) {
     alert("Tên đội không được để trống!");

@@ -1,0 +1,2 @@
+# MCP config contains personal access token — never commit
+.mcp.json

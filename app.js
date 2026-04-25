@@ -10,12 +10,7 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 let db = null;
 let realtimeChannel = null;
 
-// ── Admin check ───────────────────────────────────────────────
-// Inlined string — no const, avoids duplicate-declaration crash
-// when admin.js (which owns ADMIN_KEY) is also loaded on admin.html.
-function isAdmin() {
-  return localStorage.getItem("pb_admin_auth") === "true";
-}
+// isAdmin() / isReferee() / getRole() are provided by auth.js when loaded.
 
 function initSupabase() {
   if (SUPABASE_URL === "REPLACE_ME" || SUPABASE_ANON_KEY === "REPLACE_ME") {
@@ -100,6 +95,30 @@ function saveLocal(matches) {
   localStorage.setItem("pb_matches", JSON.stringify(matches));
 }
 
+// Ensure every match object has both snake_case (DB) and camelCase (legacy) aliases.
+// Applied after all reads so rendering code using either naming convention works.
+function normalizeMatch(m) {
+  // snake_case → camelCase (DB → rendering)
+  if (m.team_a  !== undefined && m.teamA  === undefined) m.teamA  = m.team_a;
+  if (m.team_b  !== undefined && m.teamB  === undefined) m.teamB  = m.team_b;
+  if (m.score_a !== undefined && m.scoreA === undefined) m.scoreA = m.score_a;
+  if (m.score_b !== undefined && m.scoreB === undefined) m.scoreB = m.score_b;
+  // camelCase → snake_case (demo/localStorage → DB writes)
+  if (m.teamA  !== undefined && m.team_a  === undefined) m.team_a  = m.teamA;
+  if (m.teamB  !== undefined && m.team_b  === undefined) m.team_b  = m.teamB;
+  if (m.scoreA !== undefined && m.score_a === undefined) m.score_a = m.scoreA;
+  if (m.scoreB !== undefined && m.score_b === undefined) m.score_b = m.scoreB;
+  // Set scores: DB uses s1a/s1b; rendering uses s1A/s1B — bridge both
+  for (let i = 1; i <= 3; i++) {
+    const lo = `s${i}a`, lb = `s${i}b`, hi = `s${i}A`, hb = `s${i}B`;
+    if (m[lo] !== undefined && m[hi] === undefined) m[hi] = m[lo];
+    if (m[lb] !== undefined && m[hb] === undefined) m[hb] = m[lb];
+    if (m[hi] !== undefined && m[lo] === undefined) m[lo] = m[hi];
+    if (m[hb] !== undefined && m[lb] === undefined) m[lb] = m[hb];
+  }
+  return m;
+}
+
 // ── Fetch matches ─────────────────────────────────────────────
 async function fetchMatches() {
   if (!db) {
@@ -107,12 +126,12 @@ async function fetchMatches() {
     // The in-memory localMatches is only used as a write buffer; source of truth is localStorage.
     const stored = localStorage.getItem("pb_matches");
     if (stored) {
-      localMatches = JSON.parse(stored);
+      localMatches = JSON.parse(stored).map(normalizeMatch);
     } else {
-      localMatches = JSON.parse(JSON.stringify(SAMPLE_MATCHES));
+      localMatches = JSON.parse(JSON.stringify(SAMPLE_MATCHES)).map(normalizeMatch);
       saveLocal(localMatches);
     }
-    
+
     // Filter by active tournament if available
     let filtered = localMatches;
     if (typeof tournamentManager !== 'undefined' && tournamentManager) {
@@ -149,14 +168,21 @@ async function fetchMatches() {
     return;
   }
 
-  renderMatches(data);
-  calculateStandings(data);
-  storeUpdatedAt(data); // track timestamps for conflict detection
+  const normalized = data.map(normalizeMatch);
+  renderMatches(normalized);
+  calculateStandings(normalized);
+  storeUpdatedAt(normalized); // track timestamps for conflict detection
 }
 
 async function seedMatches() {
   if (!db) return;
-  const rows = SAMPLE_MATCHES.map(({ id, ...rest }) => rest);
+  // Strip the local-only `id` and any camelCase aliases so we only send DB columns.
+  const rows = SAMPLE_MATCHES.map(m => {
+    const n = normalizeMatch({ ...m });
+    const { id, teamA, teamB, scoreA, scoreB,
+            s1A, s1B, s2A, s2B, s3A, s3B, ...dbFields } = n;
+    return dbFields;
+  });
   const { error } = await db.from("matches").insert(rows);
   if (error) { 
     setStatus("❌ Không thể tạo dữ liệu mẫu", "err"); 
@@ -297,24 +323,28 @@ function renderFeaturedMatch(sec, box, featured) {
   const isPlaying    = featured.status === "playing";
   const isNotStarted = featured.status === "not_started" || featured.status === "pending";
   const isDone       = featured.status === "done";
-  const wA = isDone && featured.scoreA > featured.scoreB;
-  const wB = isDone && featured.scoreB > featured.scoreA;
+  const wA = isDone && (featured.score_a || featured.scoreA || 0) > (featured.score_b || featured.scoreB || 0);
+  const wB = isDone && (featured.score_b || featured.scoreB || 0) > (featured.score_a || featured.scoreA || 0);
 
   const stageLabel = featured.stage === "final" ? t("champFinal")
                    : featured.stage === "semi"  ? t("semifinal")
                    : t("groupLabel") + " " + (featured.group_name || "");
 
+  const fTeamA  = featured.team_a  || featured.teamA  || '';
+  const fTeamB  = featured.team_b  || featured.teamB  || '';
+  const fScoreA = featured.score_a !== undefined ? featured.score_a : (featured.scoreA || 0);
+  const fScoreB = featured.score_b !== undefined ? featured.score_b : (featured.scoreB || 0);
   box.innerHTML = `
     <div class="feat-team ${wA ? "feat-winner" : ""}">
-      <span class="feat-name">${esc(featured.teamA)}</span>
+      <span class="feat-name">${esc(fTeamA)}</span>
     </div>
     <div class="feat-scores">
-      <span class="feat-score ${wA ? "feat-score-win" : ""}">${featured.scoreA}</span>
+      <span class="feat-score ${wA ? "feat-score-win" : ""}">${fScoreA}</span>
       <span class="feat-divider">:</span>
-      <span class="feat-score ${wB ? "feat-score-win" : ""}">${featured.scoreB}</span>
+      <span class="feat-score ${wB ? "feat-score-win" : ""}">${fScoreB}</span>
     </div>
     <div class="feat-team ${wB ? "feat-winner" : ""}">
-      <span class="feat-name">${esc(featured.teamB)}</span>
+      <span class="feat-name">${esc(fTeamB)}</span>
     </div>
     <div class="feat-status">
       ${isPlaying    ? `<span class="badge-live">${t("badgePlaying")}</span>`
@@ -469,11 +499,12 @@ function publicMatchHTML(m, stage) {
     serverInfo = `<span style="color: #ffd700; font-weight: 600;">🏓 ${esc(serverTeam)} - Giao ${serverNum === 1 ? '1️⃣' : '2️⃣'}</span>`;
   }
   
-  const infoHtml = (m.match_time||m.court||m.referee||serverInfo) ? `
+  const refName = m.referee_name || m.referee || "";
+  const infoHtml = (m.match_time||m.court||refName||serverInfo) ? `
     <div class="mc-info">
       ${m.match_time ? `<span>🕐 ${esc(m.match_time)}</span>` : ""}
       ${m.court      ? `<span>🏟 ${esc(m.court)}</span>`      : ""}
-      ${m.referee    ? `<span>👤 ${esc(m.referee)}</span>`    : ""}
+      ${refName      ? `<span>👤 ${esc(refName)}</span>`      : ""}
       ${serverInfo}
     </div>` : "";
 
@@ -526,23 +557,16 @@ function getSetInput(id, field) {
 }
 
 function adjustSetScore(id, field, delta) {
-  console.log('adjustSetScore called:', { id, field, delta });
   const input = document.querySelector(`input[data-id="${id}"][data-field="${field}"]`);
-  if (!input) {
-    console.error('adjustSetScore: input not found', { id, field });
-    return;
-  }
+  if (!input) return;
   const oldValue = parseInt(input.value, 10) || 0;
-  const newValue = Math.max(0, oldValue + delta);
-  console.log('adjustSetScore: updating', { oldValue, newValue });
-  input.value = newValue;
-  
+  input.value = Math.max(0, oldValue + delta);
+
   // Set editing flag to prevent realtime fetch from interrupting
   _isEditingScore = true;
-  
+
   clearTimeout(_saveDebounce[id]);
   _saveDebounce[id] = setTimeout(() => {
-    console.log('adjustSetScore: calling updateScore after debounce');
     updateScore(id);
     // Clear editing flag after save completes
     setTimeout(() => {
@@ -622,11 +646,9 @@ async function reloadMatch(id) {
 
 // ── Update score ──────────────────────────────────────────────
 async function updateScore(id) {
-  console.log('updateScore called for:', id);
-  
   // Get match info to determine if it needs sets
   let m = null;
-  
+
   if (!db) {
     // Demo mode: read from localStorage
     const stored = localStorage.getItem("pb_matches");
@@ -641,44 +663,35 @@ async function updateScore(id) {
       _knownUpdatedAt[id] = m.updated_at;
     }
   }
-  
-  console.log('updateScore: match found:', m ? { id: m.id, stage: m.stage, teamA: m.teamA, teamB: m.teamB } : 'NOT FOUND');
 
   let scoreA, scoreB, payload;
 
   const useSets = needsSets(m || { stage: "" });
-  console.log('updateScore: needsSets?', useSets, 'stage:', m?.stage);
 
   if (useSets) {
     // Best-of-3: read individual set scores
     const s1A = getSetInput(id, "s1A"), s1B = getSetInput(id, "s1B");
     const s2A = getSetInput(id, "s2A"), s2B = getSetInput(id, "s2B");
     const s3A = getSetInput(id, "s3A"), s3B = getSetInput(id, "s3B");
-    console.log('updateScore: set scores read:', { s1A, s1B, s2A, s2B, s3A, s3B });
     const tmp = { s1A, s1B, s2A, s2B, s3A, s3B };
     const { winsA, winsB } = computeSetWins(tmp);
     scoreA = winsA;
     scoreB = winsB;
-    console.log('updateScore: computed wins:', { winsA, winsB });
-    // Use lowercase for Supabase (DB columns are lowercase)
-    payload = { s1a:s1A, s1b:s1B, s2a:s2A, s2b:s2B, s3a:s3A, s3b:s3B, scoreA, scoreB };
+    payload = { s1a:s1A, s1b:s1B, s2a:s2A, s2b:s2B, s3a:s3A, s3b:s3B,
+                score_a: scoreA, score_b: scoreB };
   } else {
     scoreA = parseInt(getInput(id, "scoreA"), 10) || 0;
     scoreB = parseInt(getInput(id, "scoreB"), 10) || 0;
-    console.log('updateScore: group stage scores:', { scoreA, scoreB });
-    payload = { scoreA, scoreB };
+    payload = { score_a: scoreA, score_b: scoreB };
   }
-
-  console.log('updateScore: payload to save:', payload);
 
   // Auto-status: not_started → playing when any score > 0
   const hasScore = scoreA > 0 || scoreB > 0 ||
     (payload.s1a > 0 || payload.s1b > 0);
   const autoStatus = hasScore ? "playing" : null;
-  console.log('updateScore: auto status:', autoStatus);
 
   if (!db) {
-    if (!m) { console.warn("updateScore: match not found", id); return; }
+    if (!m) return;
     Object.assign(m, payload);
     if (autoStatus && (m.status === "not_started" || m.status === "pending")) {
       m.status = autoStatus;
@@ -701,13 +714,8 @@ async function updateScore(id) {
   }
 
   // Supabase path
-  console.log('updateScore: using Supabase path');
   const conflict = await checkConflict(id);
-  if (conflict) { 
-    console.log('updateScore: conflict detected, aborting');
-    handleConflict(id); 
-    return; 
-  }
+  if (conflict) { handleConflict(id); return; }
 
   payload.updated_at = new Date().toISOString();
 
@@ -715,21 +723,17 @@ async function updateScore(id) {
     .from("matches").select("status").eq("id", id).single();
   if (current && (current.status === "not_started" || current.status === "pending") && autoStatus) {
     payload.status = autoStatus;
-    console.log('updateScore: setting status to:', autoStatus);
   }
 
-  console.log('updateScore: saving to DB...', payload);
   const { error } = await db.from("matches").update(payload).eq("id", id);
-  if (error) { 
-    console.error('updateScore: DB error:', error);
+  if (error) {
     setStatus(`❌ Lỗi lưu điểm: ${error.message || 'Không xác định'}`, "err");
     alert(`Không thể lưu điểm!\n\nLỗi: ${error.message || 'Không xác định'}\n\nVui lòng thử lại hoặc bấm Reload ở trên cùng.`);
-    return; 
+    return;
   }
 
-  console.log('updateScore: saved successfully!');
   _knownUpdatedAt[id] = payload.updated_at;
-  
+
   // Update UI in-place for admin page
   const isAdminPage = window.location.pathname.includes("admin");
   if (isAdminPage) {
@@ -740,8 +744,7 @@ async function updateScore(id) {
       updateSetWinsDisplay(id, scoreA, scoreB);
     }
   }
-  
-  console.log('updateScore: complete!');
+
   setStatus(t("scoreSaved"), "ok");
   flashSaved(id);
 }
@@ -807,20 +810,20 @@ async function finishMatch(id) {
       return;
     }
     
-    Object.assign(payload, { s1a:s1A, s1b:s1B, s2a:s2A, s2b:s2B, s3a:s3A, s3b:s3B, scoreA:winsA, scoreB:winsB });
+    Object.assign(payload, { s1a:s1A, s1b:s1B, s2a:s2A, s2b:s2B, s3a:s3A, s3b:s3B,
+                              score_a: winsA, score_b: winsB });
   } else {
     // For group stage matches with inline scoring, get scores from database/state
     if (m) {
-      payload.scoreA = m.scoreA || 0;
-      payload.scoreB = m.scoreB || 0;
+      payload.score_a = m.score_a !== undefined ? m.score_a : (m.scoreA || 0);
+      payload.score_b = m.score_b !== undefined ? m.score_b : (m.scoreB || 0);
     } else {
-      // Fallback: try to get from input fields (legacy scoring)
-      payload.scoreA = parseInt(getInput(id, "scoreA"), 10) || 0;
-      payload.scoreB = parseInt(getInput(id, "scoreB"), 10) || 0;
+      payload.score_a = parseInt(getInput(id, "scoreA"), 10) || 0;
+      payload.score_b = parseInt(getInput(id, "scoreB"), 10) || 0;
     }
     
     // Validate: cannot finish with tied score
-    if (payload.scoreA === payload.scoreB) {
+    if (payload.score_a === payload.score_b) {
       alert("Chưa thể kết thúc trận đấu!\n\n" +
         "Điểm số đang hòa. Cần có đội thắng trước khi kết thúc.\n\n" +
         "Vui lòng tiếp tục cập nhật điểm.");
@@ -1062,14 +1065,10 @@ function subscribeRealtime() {
       { event: "*", schema: "public", table: "matches" },
       () => {
         // Skip fetch if admin is currently editing scores
-        if (_isEditingScore) {
-          console.log('Realtime: skipping fetch (admin is editing)');
-          return;
-        }
+        if (_isEditingScore) return;
         // Debounce fetchMatches to avoid interrupting admin edits
         clearTimeout(_realtimeFetchDebounce);
         _realtimeFetchDebounce = setTimeout(() => {
-          console.log('Realtime: fetching matches after debounce');
           fetchMatches();
         }, 2000); // Wait 2 seconds before fetching (longer than save debounce)
       }
@@ -1161,8 +1160,9 @@ async function resetDemo() {
 
   // 2. Reset all group matches to not_started, zero scores
   const { error } = await db.from("matches").update({
-    scoreA: 0, scoreB: 0, status: "not_started",
+    score_a: 0, score_b: 0, status: "not_started",
     s1a: 0, s1b: 0, s2a: 0, s2b: 0, s3a: 0, s3b: 0,
+    serving_team: null, server_number: null,
     updated_at: new Date().toISOString()
   }).eq("stage", "group");
 
@@ -1517,21 +1517,12 @@ function startAutoBackup() {
   // Calculate exact milliseconds until next backup time
   const msUntilNext = (minutesUntilNext * 60 * 1000) - (seconds * 1000) - milliseconds;
   
-  console.log(`Auto-backup: Will start at next 30-min mark (in ${Math.round(msUntilNext/1000)}s)`);
-  
   // Schedule first backup at next 30-minute mark
   setTimeout(() => {
-    // Do first backup
-    console.log('Auto-backup: Creating backup file at scheduled time...');
     exportBackup(true);
-    
-    // Then set up recurring backup every 30 minutes
     _autoBackupTimer = setInterval(() => {
-      console.log('Auto-backup: Creating backup file at scheduled time...');
       exportBackup(true);
     }, AUTO_BACKUP_INTERVAL);
-    
-    console.log('Auto-backup: Now running every 30 minutes at :00 and :30');
   }, msUntilNext);
 }
 
@@ -1539,7 +1530,6 @@ function stopAutoBackup() {
   if (_autoBackupTimer) {
     clearInterval(_autoBackupTimer);
     _autoBackupTimer = null;
-    console.log('Auto-backup: Stopped');
   }
 }
 
@@ -1588,8 +1578,6 @@ async function exportBackup(silent = false) {
   
   if (!silent) {
     setStatus(t("backupSuccess"), "ok");
-  } else {
-    console.log(`Auto-backup: File created - ${a.download}`);
   }
 }
 

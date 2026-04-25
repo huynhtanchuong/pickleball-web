@@ -435,14 +435,18 @@
   <div id="referee-container"></div>
 
   <!-- Load dependencies -->
+  <script src="auth.js"></script>
   <script src="app.js"></script>
   <script src="storage.js"></script>
   <script src="i18n.js"></script>
   <script src="referee-game-state.js"></script>
   <script src="referee-sync-engine.js"></script>
   <script src="referee-ui.js"></script>
-  
+
   <script>
+    // Guard: referee or admin role required to score matches
+    if (typeof requireRole === 'function') requireRole('referee');
+
     // Initialize referee UI
     const urlParams = new URLSearchParams(window.location.search);
     const matchId = urlParams.get('matchId');

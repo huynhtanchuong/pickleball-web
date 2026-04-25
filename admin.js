@@ -2,31 +2,26 @@
 //  admin.js — Admin panel logic
 // ============================================================
 
-const ADMIN_PASSWORD = "admin123";
-const ADMIN_KEY      = "pb_admin_auth";
-
 // ── Auth ──────────────────────────────────────────────────────
-function doLogin() {
-  const pw  = document.getElementById("pw-input").value;
-  const err = document.getElementById("login-error");
-  if (pw === ADMIN_PASSWORD) {
-    localStorage.setItem(ADMIN_KEY, "true");
+// Reads password, delegates to auth.js doLogin(), shows panel or error.
+function submitLogin() {
+  const pw   = document.getElementById("pw-input").value;
+  const role = doLogin(pw); // auth.js
+  if (role) {
+    applyRoleVisibility(); // auth.js — hide/show .admin-only etc.
     showAdminPanel();
   } else {
-    err.textContent = "Incorrect password. Try again.";
+    showLoginError("Mật khẩu không đúng. Thử lại.");
     document.getElementById("pw-input").value = "";
     document.getElementById("pw-input").focus();
   }
 }
-
-function doLogout() {
-  localStorage.removeItem(ADMIN_KEY);
-  location.reload();
-}
+// doLogout() is provided by auth.js
 
 function showAdminPanel() {
   document.getElementById("login-screen").style.display = "none";
   document.getElementById("admin-panel").style.display  = "block";
+  applyRoleVisibility(); // auth.js — refresh role badge + hide admin-only elements
   initSupabase();
   
   // Initialize storage and tournament manager
@@ -222,7 +217,8 @@ async function renderTournamentControls(tournament) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  if (isAdmin()) showAdminPanel();
+  // Accept both admin and referee roles (referee can score but not manage)
+  if (isReferee()) showAdminPanel();
 });
 
 // ── Override renderMatches for admin ─────────────────────────
@@ -717,25 +713,17 @@ if (typeof _saveDebounce === 'undefined') {
 }
 
 function adjustScore(id, field, delta) {
-  console.log('adjustScore called:', { id, field, delta });
   const input = document.querySelector(`input[data-id="${id}"][data-field="${field}"]`);
-  if (!input) {
-    console.error('adjustScore: input not found', { id, field });
-    return;
-  }
+  if (!input) return;
   const oldValue = parseInt(input.value, 10) || 0;
-  const newValue = Math.max(0, oldValue + delta);
-  console.log('adjustScore: updating', { oldValue, newValue });
-  input.value = newValue;
-  
-  // Set editing flag to prevent realtime fetch from interrupting
+  input.value = Math.max(0, oldValue + delta);
+
   if (typeof _isEditingScore !== 'undefined') {
     _isEditingScore = true;
   }
-  
+
   clearTimeout(_saveDebounce[id]);
   _saveDebounce[id] = setTimeout(() => {
-    console.log('adjustScore: calling updateScore after debounce');
     updateScore(id);
     // Clear editing flag after save completes
     setTimeout(() => {
@@ -762,7 +750,7 @@ async function saveMatchInfo(id) {
     return;
   }
   const { error } = await db.from("matches")
-    .update({ match_time: timeVal, court: courtVal, referee: refVal }).eq("id", id);
+    .update({ match_time: timeVal, court: courtVal, referee_name: refVal }).eq("id", id);
   if (error) { 
     setStatus("❌ Không thể lưu thông tin trận đấu", "err"); 
     return; 
@@ -783,8 +771,9 @@ async function resetMatch(id) {
   if (!confirm(confirmMsg)) return;
 
   const payload = {
-    scoreA: 0, scoreB: 0, status: "not_started",
+    score_a: 0, score_b: 0, status: "not_started",
     s1a: 0, s1b: 0, s2a: 0, s2b: 0, s3a: 0, s3b: 0,
+    serving_team: null, server_number: null,
     updated_at: new Date().toISOString()
   };
 
@@ -943,8 +932,8 @@ async function generateSemifinals(silent=false) {
   const B1 = tops[g2][0]?.name || "TBD", B2 = tops[g2][1]?.name || "TBD";
 
   const semis = [
-    { teamA:A1, teamB:B2, scoreA:0, scoreB:0, group_name:"SF", stage:"semi", status:"not_started" },
-    { teamA:B1, teamB:A2, scoreA:0, scoreB:0, group_name:"SF", stage:"semi", status:"not_started" },
+    { team_a:A1, team_b:B2, score_a:0, score_b:0, group_name:"SF", stage:"semi", status:"not_started" },
+    { team_a:B1, team_b:A2, score_a:0, score_b:0, group_name:"SF", stage:"semi", status:"not_started" },
   ];
 
   if (!db) {
@@ -979,10 +968,12 @@ async function generateFinal(silent=false) {
     return;
   }
 
-  const getWinner = m => m.scoreA >= m.scoreB ? m.teamA : m.teamB;
+  const getWinner = m => (m.score_a ?? m.scoreA ?? 0) >= (m.score_b ?? m.scoreB ?? 0)
+    ? (m.team_a || m.teamA)
+    : (m.team_b || m.teamB);
   const finalMatch = {
-    teamA: getWinner(semis[0]), teamB: getWinner(semis[1]),
-    scoreA: 0, scoreB: 0, group_name: "F", stage: "final", status: "not_started"
+    team_a: getWinner(semis[0]), team_b: getWinner(semis[1]),
+    score_a: 0, score_b: 0, group_name: "F", stage: "final", status: "not_started"
   };
 
   if (!db) {
@@ -1623,8 +1614,8 @@ async function syncMatchState(matchId, state) {
   }
   
   const payload = {
-    scoreA: state.scoreA,
-    scoreB: state.scoreB,
+    score_a: state.scoreA,
+    score_b: state.scoreB,
     serving_team: state.servingTeam,
     server_number: state.serverNumber,
     status: dbStatus,

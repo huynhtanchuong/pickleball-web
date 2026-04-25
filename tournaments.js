@@ -336,13 +336,12 @@ class TournamentManager {
         for (let j = i + 1; j < groupTeams.length; j++) {
           matches.push({
             tournament_id: tournamentId,
-            teamA: groupTeams[i].display_name,
-            teamB: groupTeams[j].display_name,
-            scoreA: 0,
-            scoreB: 0,
+            team_a: groupTeams[i].display_name,
+            team_b: groupTeams[j].display_name,
+            score_a: 0,
+            score_b: 0,
             group_name: groupName,
             stage: 'group',
-            match_type: 'group',
             status: 'not_started',
             // Set scores
             s1a: 0, s1b: 0,
@@ -351,7 +350,7 @@ class TournamentManager {
             // Optional fields
             match_time: null,
             court: null,
-            referee: null,
+            referee_name: null,
             updated_at: null
           });
         }
@@ -438,18 +437,21 @@ class TournamentManager {
       throw new Error('Both semifinals must be completed');
     }
 
-    // Identify losing teams
-    const loser1 = semifinals[0].scoreA < semifinals[0].scoreB ? semifinals[0].teamA : semifinals[0].teamB;
-    const loser2 = semifinals[1].scoreA < semifinals[1].scoreB ? semifinals[1].teamA : semifinals[1].teamB;
+    // Identify losing teams (handle both snake_case from DB and legacy camelCase)
+    const sfA = m => m.score_a !== undefined ? m.score_a : (m.scoreA || 0);
+    const sfB = m => m.score_b !== undefined ? m.score_b : (m.scoreB || 0);
+    const tA  = m => m.team_a || m.teamA;
+    const tB  = m => m.team_b || m.teamB;
+    const loser1 = sfA(semifinals[0]) < sfB(semifinals[0]) ? tA(semifinals[0]) : tB(semifinals[0]);
+    const loser2 = sfA(semifinals[1]) < sfB(semifinals[1]) ? tA(semifinals[1]) : tB(semifinals[1]);
 
     const thirdPlaceMatch = {
       tournament_id: tournamentId,
-      teamA: loser1,
-      teamB: loser2,
-      scoreA: 0,
-      scoreB: 0,
-      stage: 'final',
-      match_type: 'third_place',
+      team_a: loser1,
+      team_b: loser2,
+      score_a: 0,
+      score_b: 0,
+      stage: 'third_place',
       status: 'not_started',
       s1a: 0, s1b: 0,
       s2a: 0, s2b: 0,
@@ -490,12 +492,11 @@ class TournamentManager {
 
     const consolationMatch = {
       tournament_id: tournamentId,
-      teamA: thirdPlaceTeams[0],
-      teamB: thirdPlaceTeams[1],
-      scoreA: 0,
-      scoreB: 0,
+      team_a: thirdPlaceTeams[0],
+      team_b: thirdPlaceTeams[1],
+      score_a: 0,
+      score_b: 0,
       stage: 'consolation',
-      match_type: 'consolation',
       status: 'not_started',
       s1a: 0, s1b: 0,
       s2a: 0, s2b: 0,
@@ -526,12 +527,11 @@ class TournamentManager {
 
     const showMatch = {
       tournament_id: tournamentId,
-      teamA: teamAName,
-      teamB: teamBName,
-      scoreA: 0,
-      scoreB: 0,
+      team_a: teamAName,
+      team_b: teamBName,
+      score_a: 0,
+      score_b: 0,
       stage: 'exhibition',
-      match_type: 'exhibition',
       status: 'not_started',
       s1a: 0, s1b: 0,
       s2a: 0, s2b: 0,
@@ -576,25 +576,30 @@ class TournamentManager {
         const groupStandings = standings[match.group_name];
         if (!groupStandings) return;
 
-        const teamA = groupStandings.find(s => s.team === match.teamA);
-        const teamB = groupStandings.find(s => s.team === match.teamB);
+        const nameA  = match.team_a  || match.teamA;
+        const nameB  = match.team_b  || match.teamB;
+        const scoreA = match.score_a !== undefined ? match.score_a : (match.scoreA || 0);
+        const scoreB = match.score_b !== undefined ? match.score_b : (match.scoreB || 0);
+
+        const teamA = groupStandings.find(s => s.team === nameA);
+        const teamB = groupStandings.find(s => s.team === nameB);
 
         if (teamA && teamB) {
           teamA.played++;
           teamB.played++;
 
-          if (match.scoreA > match.scoreB) {
+          if (scoreA > scoreB) {
             teamA.won++;
             teamA.points += 3;
             teamB.lost++;
-          } else if (match.scoreB > match.scoreA) {
+          } else if (scoreB > scoreA) {
             teamB.won++;
             teamB.points += 3;
             teamA.lost++;
           }
 
-          teamA.scoreDiff += (match.scoreA - match.scoreB);
-          teamB.scoreDiff += (match.scoreB - match.scoreA);
+          teamA.scoreDiff += (scoreA - scoreB);
+          teamB.scoreDiff += (scoreB - scoreA);
         }
       });
 
@@ -860,13 +865,12 @@ async function restoreTournamentFromBackup(backupData, options = {}) {
       const matchesToCreate = backupData.matches.map(m => {
         const newMatch = {
           tournament_id: newTournament.id,
-          teamA: m.teamA,
-          teamB: m.teamB,
-          scoreA: m.scoreA || 0,
-          scoreB: m.scoreB || 0,
+          team_a: m.team_a || m.teamA,
+          team_b: m.team_b || m.teamB,
+          score_a: m.score_a !== undefined ? m.score_a : (m.scoreA || 0),
+          score_b: m.score_b !== undefined ? m.score_b : (m.scoreB || 0),
           group_name: m.group_name,
           stage: m.stage,
-          match_type: m.match_type || 'group',
           status: m.status || 'not_started',
           s1a: m.s1a || 0,
           s1b: m.s1b || 0,
@@ -876,7 +880,7 @@ async function restoreTournamentFromBackup(backupData, options = {}) {
           s3b: m.s3b || 0,
           match_time: m.match_time,
           court: m.court,
-          referee: m.referee
+          referee_name: m.referee_name || m.referee
         };
         return newMatch;
       });

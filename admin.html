@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>🏓 Quản Trị — Giải Pickleball</title>
+  <title>🏓 Quản Lý — Giải Pickleball</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="admin-mobile.css" />
 </head>
@@ -13,17 +13,17 @@
   <div class="login-wrap" id="login-screen">
     <div class="login-card">
       <img src="logo.png" alt="Pickleball Logo" style="width:80px;height:80px;margin:0 auto 12px;" onerror="this.style.display='none'" />
-      <h1 data-i18n="adminTitle">Đăng Nhập Admin</h1>
+      <h1 data-i18n="adminTitle">Đăng Nhập</h1>
       <p data-i18n="adminSub">Giải Pickleball</p>
       <div class="form-group">
         <label for="pw-input" data-i18n="passwordLabel">Mật khẩu</label>
         <input type="password" id="pw-input"
           data-i18n="passwordPlaceholder" data-i18n-attr="placeholder"
           placeholder="Nhập mật khẩu"
-          onkeydown="if(event.key==='Enter') doLogin()"
+          onkeydown="if(event.key==='Enter') submitLogin()"
           autocomplete="current-password" autofocus />
       </div>
-      <button class="login-btn" onclick="doLogin()" data-i18n="signIn">Đăng Nhập</button>
+      <button class="login-btn" onclick="submitLogin()" data-i18n="signIn">Đăng Nhập</button>
       <div class="login-error" id="login-error"></div>
       <p style="margin-top:20px;font-size:0.75rem;">
         <a href="index.html" style="color:#64748b;" data-i18n="backToPublic">← Xem bảng điểm</a>
@@ -43,6 +43,7 @@
         </div>
       </div>
       <div class="adm-header-right">
+        <span id="role-badge" style="display:none;font-size:0.75rem;padding:3px 8px;border-radius:12px;background:rgba(255,255,255,0.15);"></span>
         <span id="realtime-indicator" class="pulse" style="display:none;"></span>
         <span id="status-bar" class="status-chip">…</span>
         <button onclick="location.reload()" class="adm-btn-sm" style="background:var(--bg-card2);border:1px solid var(--border);display:flex;align-items:center;gap:4px;" title="Làm mới trang">
@@ -61,8 +62,8 @@
           <option value="">Đang tải...</option>
         </select>
         <span id="tournament-status" class="status-chip"></span>
-        <a href="tournaments.html" class="adm-btn-sm" style="background: #3498db; color: white;">Quản lý giải đấu</a>
-        <a href="members.html" class="adm-btn-sm" style="background: #27ae60; color: white;">Quản lý thành viên</a>
+        <a href="tournaments.html" class="adm-btn-sm admin-only" style="background: #3498db; color: white;">Quản lý giải đấu</a>
+        <a href="members.html" class="adm-btn-sm admin-only" style="background: #27ae60; color: white;">Quản lý thành viên</a>
       </div>
     </div>
 
@@ -77,10 +78,10 @@
         <button class="admin-tab active" onclick="switchAdminTab('matches')" data-tab="matches">
           ⚽ Trận đấu
         </button>
-        <button class="admin-tab" onclick="switchAdminTab('members')" data-tab="members">
+        <button class="admin-tab admin-only" onclick="switchAdminTab('members')" data-tab="members">
           👥 Vận động viên
         </button>
-        <button class="admin-tab" onclick="switchAdminTab('teams')" data-tab="teams">
+        <button class="admin-tab admin-only" onclick="switchAdminTab('teams')" data-tab="teams">
           🏆 Đội
         </button>
         <button class="admin-tab" onclick="switchAdminTab('standings')" data-tab="standings">
@@ -265,6 +266,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="auth.js"></script>
   <script src="utils.js"></script>
   <script src="storage.js"></script>
   <script src="members.js"></script>

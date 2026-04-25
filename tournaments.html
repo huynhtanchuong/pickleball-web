@@ -674,12 +674,16 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="auth.js"></script>
   <script src="utils.js"></script>
   <script src="storage.js"></script>
   <script src="members.js"></script>
   <script src="pairing.js"></script>
   <script src="tournaments.js"></script>
   <script>
+    // Guard: admin-only page
+    if (typeof requireRole === 'function') requireRole('admin');
+
     // Global variables - Use window object for true global scope
     let currentTab = 'upcoming';
     let currentStep = 1;
