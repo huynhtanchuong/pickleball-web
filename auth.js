@@ -37,8 +37,14 @@ function isAdmin()   { return getRole() === 'admin'; }
 function isReferee() { const r = getRole(); return r === 'referee' || r === 'admin'; }
 function isView()    { return getRole() === 'view'; }
 
-// canScore: referee can enter scores and finish/reset matches
-function canScore()  { return isReferee(); }
+// canScore: STRICT referee-only. Admin must switch role to score (separation of duties).
+function canScore()  { return getRole() === 'referee'; }
+
+// canResetMatch: referee or admin can reset a single match
+function canResetMatch() { return isReferee(); }
+
+// canResetTournament: admin only — wipes all matches/teams of the tournament
+function canResetTournament() { return isAdmin(); }
 
 // canManage: admin-only (tournaments, members, teams, bracket gen)
 function canManage() { return isAdmin(); }
@@ -64,6 +70,39 @@ function doLogin(password) {
 
 function doLogout() {
   clearRole();
+  location.reload();
+}
+
+/**
+ * Switch to a different role.
+ *   - target='view'    → no password needed (just clear)
+ *   - target='admin' or 'referee' → if not already that role, prompt for password
+ *   - already on target role → no-op
+ * Reloads the page on successful switch so role-gated UI re-renders correctly.
+ */
+function switchRole(target) {
+  const current = getRole();
+  if (current === target) return;
+
+  if (target === 'view') {
+    clearRole();
+    location.reload();
+    return;
+  }
+
+  if (target !== 'admin' && target !== 'referee') return;
+
+  const expected = ROLE_PASSWORDS[target];
+  const promptLabel = target === 'admin'
+    ? 'Mật khẩu Admin:'
+    : 'Mật khẩu Trọng Tài:';
+  const pw = (window.prompt(promptLabel) || '').trim();
+  if (!pw) return; // user cancelled
+  if (pw !== expected) {
+    alert('Mật khẩu không đúng.');
+    return;
+  }
+  _setRole(target);
   location.reload();
 }
 
@@ -117,6 +156,11 @@ function applyRoleVisibility() {
     badge.textContent = labels[role] || '';
     badge.style.display = role !== 'view' ? 'inline-block' : 'none';
   }
+
+  // Role switcher: highlight the active role button
+  document.querySelectorAll('.role-switcher [data-role]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.role === role);
+  });
 }
 
 /**

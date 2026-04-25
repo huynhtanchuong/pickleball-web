@@ -266,8 +266,45 @@ function renderMatches(matches) {
   renderSpecialMatches(matches);
   updateBracketUI(matches);
 
+  // Disable scoring controls when current role is not 'referee'
+  // (admin can manage tournaments but must switch role to score matches)
+  gateScoringByRole();
+
   // Auto-generate bracket stages
   autoGenerateBracket(matches);
+}
+
+// Hide / disable score-input UI for everyone except role='referee'.
+// Admin can SEE scores but cannot edit; switch role to referee to score.
+function gateScoringByRole() {
+  if (typeof canScore !== 'function' || canScore()) return;
+
+  // Numeric set inputs → read-only
+  document.querySelectorAll('.adm-set-input').forEach(el => {
+    el.readOnly = true;
+    el.tabIndex = -1;
+  });
+  // All score-mutating buttons → hide
+  const hideSelectors = [
+    '.adm-set-btn',          // +/− on set inputs
+    '.adm-add-set-btn',      // "Add set 3"
+    '.adm-set-lock-btn',     // lock/unlock set
+    '.adm-inc-btn',          // legacy +/− single-score
+    '.btn-serve-select',     // pick first server
+    '.btn-undo',             // undo last point
+    '.adm-finish-btn',       // finish match
+    '.adm-reset-btn'         // reset single match
+  ];
+  document.querySelectorAll(hideSelectors.join(',')).forEach(el => {
+    el.style.display = 'none';
+  });
+  // Tap-to-score team cards → no click, no hover affordance
+  document.querySelectorAll('.inline-scoring .team-card').forEach(el => {
+    el.style.pointerEvents = 'none';
+    el.style.cursor = 'default';
+    el.onclick = null;
+    el.removeAttribute('onclick');
+  });
 }
 
 // ── Auto-generate bracket ─────────────────────────────────────

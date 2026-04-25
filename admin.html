@@ -43,7 +43,12 @@
         </div>
       </div>
       <div class="adm-header-right">
-        <span id="role-badge" style="display:none;font-size:0.75rem;padding:3px 8px;border-radius:12px;background:rgba(255,255,255,0.15);"></span>
+        <div class="role-switcher" title="Chuyển vai trò">
+          <button data-role="view"    onclick="switchRole('view')"   >👁 Xem</button>
+          <button data-role="referee" onclick="switchRole('referee')">🏓 Trọng Tài</button>
+          <button data-role="admin"   onclick="switchRole('admin')"  >👑 Admin</button>
+        </div>
+        <span id="role-badge" style="display:none;"></span>
         <span id="realtime-indicator" class="pulse" style="display:none;"></span>
         <span id="status-bar" class="status-chip">…</span>
         <button onclick="location.reload()" class="adm-btn-sm" style="background:var(--bg-card2);border:1px solid var(--border);display:flex;align-items:center;gap:4px;" title="Làm mới trang">

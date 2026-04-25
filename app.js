@@ -495,33 +495,38 @@ function publicMatchHTML(m, stage) {
     }
   }
 
-  // Match info: time, court, referee, server
-  let serverInfo = "";
-  if (playing && m.serving_team) {
-    const serverTeam = m.serving_team === 'A' ? m.teamA : m.teamB;
-    const serverNum = m.server_number || 1;
-    serverInfo = `<span style="color: #ffd700; font-weight: 600;">🏓 ${esc(serverTeam)} - Giao ${serverNum === 1 ? '1️⃣' : '2️⃣'}</span>`;
-  }
-  
+  // Serving indicator now lives directly under the serving team's name (see below).
+  // Match-info row no longer carries the server text.
   const refName = m.referee_name || m.referee || "";
-  const infoHtml = (m.match_time||m.court||refName||serverInfo) ? `
+  const infoHtml = (m.match_time||m.court||refName) ? `
     <div class="mc-info">
       ${m.match_time ? `<span>🕐 ${esc(m.match_time)}</span>` : ""}
       ${m.court      ? `<span>🏟 ${esc(m.court)}</span>`      : ""}
       ${refName      ? `<span>👤 ${esc(refName)}</span>`      : ""}
-      ${serverInfo}
     </div>` : "";
+
+  // Build the per-team serving badge to drop under whichever team is serving
+  const serverNum = m.server_number || 1;
+  const servingBadge = (sideLetter) => (playing && m.serving_team === sideLetter)
+    ? `<div class="mc-serving">🏓 Đang giao ${serverNum === 1 ? '1️⃣' : '2️⃣'}</div>`
+    : '';
 
   return `
     <div class="match-card ${cardMod}" data-id="${m.id}">
       <div class="mc-row">
-        <span class="mc-team ${winnerA ? "winner" : ""}">${esc(m.teamA)}</span>
+        <span class="mc-team ${winnerA ? "winner" : ""}">
+          ${esc(m.teamA)}
+          ${servingBadge('A')}
+        </span>
         <div class="mc-scores">
           <span class="mc-score ${winnerA ? "winner" : ""}">${m.scoreA}</span>
           <span class="mc-sep">:</span>
           <span class="mc-score ${winnerB ? "winner" : ""}">${m.scoreB}</span>
         </div>
-        <span class="mc-team right ${winnerB ? "winner" : ""}">${esc(m.teamB)}</span>
+        <span class="mc-team right ${winnerB ? "winner" : ""}">
+          ${esc(m.teamB)}
+          ${servingBadge('B')}
+        </span>
       </div>
       ${setsHtml}
       ${infoHtml}

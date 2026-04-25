@@ -1104,6 +1104,53 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
 }
 
 /* ============================================================
+   ROLE SWITCHER — header buttons to swap admin/referee/view
+   ============================================================ */
+
+.role-switcher {
+  display: inline-flex;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid var(--adm-border);
+  border-radius: 999px;
+  padding: 2px;
+  gap: 0;
+}
+.role-switcher button {
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: transparent;
+  color: var(--adm-muted);
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.role-switcher button:hover {
+  color: var(--adm-text);
+  background: rgba(255,255,255,0.06);
+}
+.role-switcher button.active {
+  background: linear-gradient(135deg, #3b82f6, #7c3aed);
+  color: #fff;
+  font-weight: 800;
+}
+
+#role-badge {
+  font-size: 0.72rem;
+  padding: 3px 8px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.15);
+  color: var(--adm-text);
+}
+
+@media (max-width: 600px) {
+  .role-switcher button { padding: 4px 8px; font-size: 0.68rem; }
+  .role-switcher button:not(.active) span { display: none; }
+}
+
+/* ============================================================
    SETUP BAR — replaces the old big-button row
    Shows tournament-setup steps as a wizard breadcrumb + 1 CTA
    ============================================================ */

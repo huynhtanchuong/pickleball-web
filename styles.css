@@ -271,11 +271,29 @@ body {
   font-weight: 700;
   color: var(--text);
   white-space: nowrap;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.mc-team.right { text-align: right; }
+.mc-team.right { text-align: right; align-items: flex-end; }
+.mc-team:not(.right) { align-items: flex-start; }
 .mc-team.winner { color: var(--green); }
+
+/* Per-team serving indicator (sits right under the team name) */
+.mc-serving {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #ffd700;
+  background: rgba(255, 215, 0, 0.12);
+  border: 1px solid rgba(255, 215, 0, 0.4);
+  padding: 1px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  animation: livePulse 1.5s ease-in-out infinite;
+}
+@keyframes livePulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
 
 .mc-scores {
   display: flex;
