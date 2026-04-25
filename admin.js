@@ -570,6 +570,10 @@ function matchHTML(m, stage) {
     
     scoreSection = `
       <div class="inline-scoring">
+        <div class="scoring-hint scorer-only">
+          💡 Bấm vào tên đội <strong>vừa thắng pha bóng</strong> để +1.
+          ${canStart ? 'Trước hết hãy <strong>Chọn Giao Bóng</strong> bên dưới.' : 'Bấm đội <strong>không giao</strong> sẽ đổi giao.'}
+        </div>
         <div class="scoring-teams">
           <div class="team-card ${isServingA ? 'serving' : ''}"
                onclick="handleTeamTap('${m.id}', 'A')"
@@ -2098,10 +2102,10 @@ async function generateRandomMatches() {
     
     // 4.6: Display success message with match count
     setStatus(`✓ Đã tạo ${matches.length} trận đấu`, 'ok');
-    
-    // Reload matches to display
+
     await fetchMatches();
-    
+    if (_activeTournament) await renderTournamentControls(_activeTournament);
+
   } catch (error) {
     // 4.7: Handle errors and display error messages
     console.error('generateRandomMatches error:', error);
@@ -2684,6 +2688,9 @@ async function autoScheduleMatches() {
     }
     setStatus(`✓ Đã xếp lịch ${updates.length} trận`, 'ok');
     await fetchMatches();
+    // Refresh the setup bar so step 4 (Lịch đấu) ticks done and CTA flips
+    // to ▶️ Bắt Đầu Giải Đấu without needing a manual reload.
+    if (_activeTournament) await renderTournamentControls(_activeTournament);
   } catch (e) {
     console.error('autoScheduleMatches:', e);
     setStatus('❌ Lỗi xếp lịch: ' + (e.message || e), 'err');

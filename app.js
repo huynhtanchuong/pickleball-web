@@ -38,7 +38,7 @@ function initSupabase() {
   }
   try {
     db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    setStatus(t("connected"), "ok");
+    // Don't announce "Đã kết nối" — assume happy path silently.
     return true;
   } catch (e) {
     setStatus("❌ Không thể kết nối cơ sở dữ liệu", "err");
@@ -58,24 +58,35 @@ if (typeof _saveDebounce === 'undefined') {
 function setStatus(msg, type = "") {
   const el = document.getElementById("status-bar");
   if (!el) return;
-  
+
   // Only show status on admin/teams pages (not user view)
-  const isAdminPage = window.location.pathname.includes("admin") || 
+  const isAdminPage = window.location.pathname.includes("admin") ||
                       window.location.pathname.includes("teams");
   if (!isAdminPage) {
     el.style.display = "none";
     return;
   }
-  
+
+  // No message → hide the chip entirely (no "Đã kết nối" idle state)
+  if (!msg) {
+    el.style.display = "none";
+    el.textContent = "";
+    el.className = "";
+    if (_statusTimer) clearTimeout(_statusTimer);
+    return;
+  }
+
   el.style.display = "inline-block";
   el.textContent = msg;
   el.className = type;
   if (_statusTimer) clearTimeout(_statusTimer);
+  // Auto-hide success messages after 2.5s instead of replacing with "Đã kết nối"
   if (type === "ok") {
     _statusTimer = setTimeout(() => {
-      el.textContent = db ? t("connected") : t("demoMode");
-      el.className = db ? "ok" : "err";
-    }, 3000);
+      el.style.display = "none";
+      el.textContent = "";
+      el.className = "";
+    }, 2500);
   }
 }
 

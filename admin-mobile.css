@@ -1178,6 +1178,21 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
 }
 
 /* ============================================================
+   SCORING HINT — referee guidance in tap-to-score area
+   ============================================================ */
+.scoring-hint {
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  background: rgba(59, 130, 246, 0.1);
+  border-left: 3px solid var(--adm-blue);
+  border-radius: 6px;
+  font-size: 0.82rem;
+  color: var(--adm-text);
+  line-height: 1.4;
+}
+.scoring-hint strong { color: var(--adm-blue); }
+
+/* ============================================================
    ADMIN SERVING BALLS — N pickleball icons next to team name
    ============================================================ */
 
