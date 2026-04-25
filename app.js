@@ -935,32 +935,30 @@ async function markDone(id) {
 }
 
 // ── Calculate standings (group stage only) ────────────────────
-// Ranking rules (FIXED):
-// 1. Wins (DESC)
-// 2. Point Difference (DESC)
-// 3. Head-to-head wins
-// 4. Head-to-head point diff
+// Ranking rules:
+//   1. Points (1pt per win, 0 per loss) DESC
+//   2. Point Difference DESC
+//   3. Head-to-head wins
+//   4. Head-to-head point diff
 function calculateStandings(matches) {
   const groupMatches = matches.filter(m => !m.stage || m.stage === "group");
   const groups = {};
 
-  // Register all teams
   groupMatches.forEach(m => {
     if (!groups[m.group_name]) groups[m.group_name] = {};
     [m.teamA, m.teamB].forEach(t => {
       if (!groups[m.group_name][t])
-        groups[m.group_name][t] = { wins:0, losses:0, diff:0, played:0 };
+        groups[m.group_name][t] = { wins:0, losses:0, points:0, diff:0, played:0 };
     });
   });
 
-  // Tally done matches
   const doneMatches = groupMatches.filter(m => m.status === "done");
   doneMatches.forEach(m => {
     const g = m.group_name;
     const a = groups[g][m.teamA], b = groups[g][m.teamB];
     a.played++; b.played++;
-    if (m.scoreA > m.scoreB)      { a.wins++; b.losses++; }
-    else if (m.scoreB > m.scoreA) { b.wins++; a.losses++; }
+    if (m.scoreA > m.scoreB)      { a.wins++; a.points++; b.losses++; }
+    else if (m.scoreB > m.scoreA) { b.wins++; b.points++; a.losses++; }
     a.diff += (m.scoreA - m.scoreB);
     b.diff += (m.scoreB - m.scoreA);
   });
@@ -977,36 +975,39 @@ function calculateStandings(matches) {
 
     // Sort with CORRECT tiebreaker chain
     teams.sort((a, b) => {
-      // 1. Wins DESC (PRIMARY)
-      if (b.wins !== a.wins) return b.wins - a.wins;
+      // 1. POINTS DESC (1pt per win, 0 per loss)
+      const pa = a.points ?? a.wins;
+      const pb = b.points ?? b.wins;
+      if (pb !== pa) return pb - pa;
 
-      // Teams are tied on wins — apply tiebreakers
-      // 2. Point Difference DESC (SECONDARY)
-      if (b.diff !== a.diff) {
-        // Don't record tie-break for point diff (obvious from standings)
-        return b.diff - a.diff;
-      }
+      // 2. POINT DIFFERENCE DESC
+      if (b.diff !== a.diff) return b.diff - a.diff;
 
-      // 3. H2H wins between tied teams (TERTIARY)
+      // 3. HEAD-TO-HEAD wins between tied teams
       const h2hA = getH2HWins(a.name, b.name, doneMatches, g);
       const h2hB = getH2HWins(b.name, a.name, doneMatches, g);
       if (h2hA !== h2hB) {
-        // Record tie-break reason ONLY when wins AND diff are equal
-        if (a.wins === b.wins && a.diff === b.diff) {
-          tieBreakInfo[g].push({
-            team1: h2hB > h2hA ? b.name : a.name,
-            team2: h2hB > h2hA ? a.name : b.name,
-            reason: 'head-to-head',
-            value: Math.abs(h2hB - h2hA)
-          });
-        }
+        // Record explanation when both points AND diff are tied — admin needs to see why
+        tieBreakInfo[g].push({
+          team1: h2hB > h2hA ? b.name : a.name,
+          team2: h2hB > h2hA ? a.name : b.name,
+          reason: 'head-to-head'
+        });
         return h2hB - h2hA;
       }
 
-      // 4. H2H point diff (QUATERNARY)
+      // 4. H2H point diff
       const h2hDiffA = getH2HDiff(a.name, b.name, doneMatches, g);
       const h2hDiffB = getH2HDiff(b.name, a.name, doneMatches, g);
-      return h2hDiffB - h2hDiffA;
+      if (h2hDiffB !== h2hDiffA) {
+        tieBreakInfo[g].push({
+          team1: h2hDiffB > h2hDiffA ? b.name : a.name,
+          team2: h2hDiffB > h2hDiffA ? a.name : b.name,
+          reason: 'h2h-diff'
+        });
+        return h2hDiffB - h2hDiffA;
+      }
+      return 0;
     });
 
     sortedGroups[g] = teams;
@@ -1059,43 +1060,44 @@ function renderStandings(groups, tieBreakInfo = {}) {
         <table class="standings-table">
           <thead><tr>
             <th>${t("standingsTeam")}</th>
-            <th>${t("standingsPts")}</th>
+            <th title="${t("ptsTooltip")}">${t("standingsPts")}</th>
             <th>${t("standingsW")}</th>
             <th>${t("standingsL")}</th>
             <th>${t("standingsDiff")}</th>
           </tr></thead>
           <tbody>`;
 
-    teams.forEach((t, i) => {
+    teams.forEach((team, i) => {
       const rankCls = i === 0 ? "rank-1" : i === 1 ? "rank-2" : "";
       const medal   = medals[i]
         ? `<span class="rank-medal">${medals[i]}</span>`
         : `<span class="rank-medal" style="opacity:0">·</span>`;
+      const pts = team.points ?? team.wins;
       html += `<tr class="${rankCls}">
-        <td>${medal}${esc(t.name)}</td>
-        <td style="font-weight:800;color:var(--green)">${t.wins}</td>
-        <td>${t.wins}</td>
-        <td>${t.losses}</td>
-        <td>${t.diff > 0 ? "+" : ""}${t.diff}</td>
+        <td>${medal}${esc(team.name)}</td>
+        <td style="font-weight:800;color:var(--green)">${pts}</td>
+        <td>${team.wins}</td>
+        <td>${team.losses}</td>
+        <td>${team.diff > 0 ? "+" : ""}${team.diff}</td>
       </tr>`;
     });
 
     html += `</tbody></table>`;
-    
-    // Show tie-break explanation if any
+
+    // Tie-break explanation: surfaces every time H2H or H2H-diff decided the order
     if (tieBreakInfo[g] && tieBreakInfo[g].length > 0) {
       html += `<div class="tie-break-info">`;
       tieBreakInfo[g].forEach(tb => {
-        if (tb.reason === 'point-diff') {
-          html += `<div class="tie-break-line">ℹ️ ${esc(tb.team1)} xếp trên ${esc(tb.team2)} do hiệu số tốt hơn (+${tb.value})</div>`;
-        } else if (tb.reason === 'head-to-head') {
-          html += `<div class="tie-break-line">ℹ️ ${esc(tb.team1)} xếp trên ${esc(tb.team2)} do thắng đối đầu</div>`;
-        }
+        const reasonText = tb.reason === 'head-to-head' ? t('tbH2H')
+                        : tb.reason === 'h2h-diff'      ? t('tbH2HDiff')
+                        : tb.reason === 'point-diff'    ? t('tbDiff')
+                        : '';
+        html += `<div class="tie-break-line">ℹ️ ${t('tbRanksAbove', { a: esc(tb.team1), b: esc(tb.team2), reason: reasonText })}</div>`;
       });
       html += `</div>`;
     }
-    
-    html += `<div class="standings-note">${t("standingsNote")}</div>
+
+    html += `<div class="standings-note">${t("standingsSortHint")}</div>
     </div>`;
   });
 

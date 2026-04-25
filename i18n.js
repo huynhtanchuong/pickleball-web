@@ -258,6 +258,14 @@ const TRANSLATIONS = {
     errTournamentNotStarted: "⚠️ Giải đấu chưa bắt đầu — admin chưa \"Bắt Đầu Giải Đấu\"",
     errOnlyReferee:   "⚠️ Chỉ trọng tài mới được chấm điểm",
 
+    // ── Standings tie-break ──
+    ptsTooltip:       "1 điểm cho mỗi trận thắng",
+    standingsSortHint:"Sắp xếp: Điểm → Hiệu số → Đối đầu",
+    tbH2H:            "thắng đối đầu",
+    tbH2HDiff:        "hiệu số đối đầu tốt hơn",
+    tbDiff:           "hiệu số tốt hơn",
+    tbRanksAbove:     "{a} xếp trên {b} do {reason}",
+
     // ── Misc ──
     reload:           "Reload",
     backupNow:        "Backup Now",
@@ -500,6 +508,14 @@ const TRANSLATIONS = {
     errMatchEnded:    "⚠️ Match has ended",
     errTournamentNotStarted: "⚠️ Tournament not started yet — admin hasn't pressed \"Start Tournament\"",
     errOnlyReferee:   "⚠️ Only referees can score",
+
+    // Standings tie-break
+    ptsTooltip:       "1 point per win",
+    standingsSortHint:"Sort: Points → Diff → Head-to-head",
+    tbH2H:            "head-to-head win",
+    tbH2HDiff:        "better head-to-head diff",
+    tbDiff:           "better point diff",
+    tbRanksAbove:     "{a} ranks above {b} due to {reason}",
 
     // Misc
     reload:           "Reload",

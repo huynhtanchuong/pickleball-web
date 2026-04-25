@@ -76,10 +76,11 @@ async function refreshMembersCache() {
 // Show/hide elements that only make sense before the tournament starts
 // (e.g. auto-schedule bar). Once status moves to 'ongoing' admins only
 // edit individual matches; once 'completed' nothing else to do.
+// Toggle a class instead of inline style so original display:flex is preserved.
 function applyTournamentStatusVisibility() {
   const isUpcoming = _activeTournament && _activeTournament.status === 'upcoming';
   document.querySelectorAll('.upcoming-only').forEach(el => {
-    el.style.display = isUpcoming ? '' : 'none';
+    el.classList.toggle('is-hidden', !isUpcoming);
   });
 }
 
@@ -598,24 +599,13 @@ function matchHTML(m, stage) {
           </div>
         </div>
         
-        <div class="score-info">
-          <div class="score-call">
-            Score: ${m.scoreA || 0}-${m.scoreB || 0}${servingTeam ? '-' + serverNumber : ''}
-          </div>
-          <div class="server-info">
-            ${servingTeam ? 
-              `<strong>Đang giao:</strong> Team ${servingTeam} - Giao ${serverNumber === 1 ? '1️⃣' : '2️⃣'}` : 
-              'Chưa chọn giao bóng'}
-          </div>
-        </div>
-        
         <div class="scoring-actions">
           ${canStart ? `
             <button class="btn-serve-select" onclick="openServeDialog('${m.id}')">
               Chọn Giao Bóng
             </button>
           ` : ''}
-          <button class="btn-undo" 
+          <button class="btn-undo"
                   onclick="handleUndo('${m.id}')"
                   ${dis}>
             ↶ Undo
@@ -702,14 +692,21 @@ function matchHTML(m, stage) {
       </div>
     </div>`;
 
-  // Full card body (hidden by default)
+  // Full card body (hidden by default).
+  // Drop the redundant adm-teams row for inline-scoring (group stage) — team
+  // names already show in the summary AND in the big tap-to-score cards.
+  // Keep it for set-based scoring (semi/final) where there's no team-card UI.
+  const useInlineScoring = ready && stage !== 'semi' && stage !== 'final';
+  const teamsHeader = useInlineScoring ? '' : `
+    <div class="adm-teams">
+      <span class="adm-team-name ${winnerA?"winner":""}">${esc(m.teamA)}${admServingBadge(m, 'A')}</span>
+      <span class="adm-vs">vs</span>
+      <span class="adm-team-name right ${winnerB?"winner":""}">${esc(m.teamB)}${admServingBadge(m, 'B')}</span>
+    </div>`;
+
   const body = `
     <div class="adm-card-body" id="body-${m.id}" style="display:none;">
-      <div class="adm-teams">
-        <span class="adm-team-name ${winnerA?"winner":""}">${esc(m.teamA)}${admServingBadge(m, 'A')}</span>
-        <span class="adm-vs">vs</span>
-        <span class="adm-team-name right ${winnerB?"winner":""}">${esc(m.teamB)}${admServingBadge(m, 'B')}</span>
-      </div>
+      ${teamsHeader}
       ${infoForm}
       ${scoreSection}
       <div class="adm-actions">
@@ -764,6 +761,15 @@ function toggleCard(id) {
     body.style.display = "block";
     if (icon) icon.textContent = "▼";
     _openCards.add(id);
+
+    // Scroll the card to top of viewport so user sees the full content
+    // (accounts for sticky header with ~70px offset)
+    setTimeout(() => {
+      const card = document.querySelector(`.adm-match-card[data-id="${id}"]`);
+      if (!card) return;
+      const rect = card.getBoundingClientRect();
+      window.scrollBy({ top: rect.top - 80, behavior: 'smooth' });
+    }, 60);
   }
 }
 

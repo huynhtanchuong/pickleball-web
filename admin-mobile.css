@@ -1192,16 +1192,16 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
    SCORING HINT — referee guidance in tap-to-score area
    ============================================================ */
 .scoring-hint {
-  margin-bottom: 10px;
-  padding: 8px 12px;
-  background: rgba(59, 130, 246, 0.1);
-  border-left: 3px solid var(--adm-blue);
-  border-radius: 6px;
-  font-size: 0.82rem;
-  color: var(--adm-text);
-  line-height: 1.4;
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  background: rgba(59, 130, 246, 0.08);
+  border-left: 2px solid var(--adm-blue);
+  border-radius: 4px;
+  font-size: 0.7rem;
+  color: var(--adm-muted);
+  line-height: 1.35;
 }
-.scoring-hint strong { color: var(--adm-blue); }
+.scoring-hint strong { color: var(--adm-blue); font-weight: 700; }
 
 /* ============================================================
    ADMIN SERVING BALLS — N pickleball icons next to team name
@@ -1820,6 +1820,9 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
 
 /* Smooth scroll feel everywhere */
 html { scroll-behavior: smooth; }
+
+/* Hide via class (preserves original display: flex / grid / etc.) */
+.is-hidden { display: none !important; }
 
 /* ============================================================
    ADMIN VISUAL POLISH — micro-interactions
