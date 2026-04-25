@@ -1178,6 +1178,34 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
 }
 
 /* ============================================================
+   ADMIN SERVING BALLS — N pickleball icons next to team name
+   ============================================================ */
+
+.adm-serving-balls {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  margin-left: 4px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: rgba(255, 215, 0, 0.15);
+  border: 1px solid rgba(255, 215, 0, 0.4);
+  vertical-align: middle;
+  animation: livePulse 1.5s ease-in-out infinite;
+}
+
+/* The serving badge inside tap-to-score team-card just shows balls */
+.team-card .serving-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 215, 0, 0.2);
+  border: 1px solid rgba(255, 215, 0, 0.5);
+}
+
+/* ============================================================
    ROLE SWITCHER — header buttons to swap admin/referee/view
    ============================================================ */
 

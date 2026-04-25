@@ -2,6 +2,14 @@
 //  admin.js — Admin panel logic
 // ============================================================
 
+// Render N serving-ball icons for a match (or empty string when not serving).
+// Uses the shared pickleballBalls() helper from app.js.
+function admServingBadge(m, side) {
+  if (m.status !== 'playing' || m.serving_team !== side) return '';
+  if (typeof pickleballBalls !== 'function') return '';
+  return `<span class="adm-serving-balls">${pickleballBalls(m.server_number || 1)}</span>`;
+}
+
 // ── Auth ──────────────────────────────────────────────────────
 // Reads password, delegates to auth.js doLogin(), shows panel or error.
 function submitLogin() {
@@ -553,21 +561,21 @@ function matchHTML(m, stage) {
     scoreSection = `
       <div class="inline-scoring">
         <div class="scoring-teams">
-          <div class="team-card ${isServingA ? 'serving' : ''}" 
+          <div class="team-card ${isServingA ? 'serving' : ''}"
                onclick="handleTeamTap('${m.id}', 'A')"
                ${canStart || dis ? 'style="opacity:0.5;cursor:not-allowed;"' : ''}>
             <div class="team-name">${esc(m.teamA)}</div>
-            ${isServingA ? '<div class="serving-badge">SERVING</div>' : ''}
+            ${isServingA ? `<div class="serving-badge">${pickleballBalls(serverNumber)}</div>` : ''}
             <div class="team-score">${m.scoreA || 0}</div>
           </div>
-          
+
           <div class="vs-divider">VS</div>
-          
-          <div class="team-card ${isServingB ? 'serving' : ''}" 
+
+          <div class="team-card ${isServingB ? 'serving' : ''}"
                onclick="handleTeamTap('${m.id}', 'B')"
                ${canStart || dis ? 'style="opacity:0.5;cursor:not-allowed;"' : ''}>
             <div class="team-name">${esc(m.teamB)}</div>
-            ${isServingB ? '<div class="serving-badge">SERVING</div>' : ''}
+            ${isServingB ? `<div class="serving-badge">${pickleballBalls(serverNumber)}</div>` : ''}
             <div class="team-score">${m.scoreB || 0}</div>
           </div>
         </div>
@@ -607,7 +615,7 @@ function matchHTML(m, stage) {
     <div class="adm-card-summary" onclick="toggleCard('${m.id}')">
       <div class="adm-summary-left">
         ${statusBadge}
-        <span class="adm-summary-teams">${esc(m.teamA)} <span style="color:var(--adm-muted)">vs</span> ${esc(m.teamB)}</span>
+        <span class="adm-summary-teams">${esc(m.teamA)}${admServingBadge(m, 'A')} <span style="color:var(--adm-muted)">vs</span> ${esc(m.teamB)}${admServingBadge(m, 'B')}</span>
       </div>
       <div class="adm-summary-right">
         ${scoreInSummary}
@@ -680,9 +688,9 @@ function matchHTML(m, stage) {
   const body = `
     <div class="adm-card-body" id="body-${m.id}" style="display:none;">
       <div class="adm-teams">
-        <span class="adm-team-name ${winnerA?"winner":""}">${esc(m.teamA)}</span>
+        <span class="adm-team-name ${winnerA?"winner":""}">${esc(m.teamA)}${admServingBadge(m, 'A')}</span>
         <span class="adm-vs">vs</span>
-        <span class="adm-team-name right ${winnerB?"winner":""}">${esc(m.teamB)}</span>
+        <span class="adm-team-name right ${winnerB?"winner":""}">${esc(m.teamB)}${admServingBadge(m, 'B')}</span>
       </div>
       ${infoForm}
       ${scoreSection}

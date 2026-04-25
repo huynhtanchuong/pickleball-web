@@ -2,8 +2,8 @@
 //  auth.js — Role-based Authentication
 //
 //  Three roles (shared passwords — suitable for a club app):
-//    admin    → password "bcd123"      — full access
-//    referee  → password "abc123"      — score + end + reset matches only
+//    admin    → password "am123"       — full access
+//    referee  → password "tt123"       — score + end + reset matches only
 //    view     → no login required      — read-only public viewer
 //
 //  Role is stored in localStorage as "pb_role".
@@ -13,8 +13,8 @@
 const AUTH_KEY = 'pb_role';
 
 const ROLE_PASSWORDS = {
-  admin:   'bcd123',
-  referee: 'abc123'
+  admin:   'am123',
+  referee: 'tt123'
 };
 
 // ── Read / write role ─────────────────────────────────────────

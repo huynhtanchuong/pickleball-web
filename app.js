@@ -12,6 +12,23 @@ let realtimeChannel = null;
 
 // isAdmin() / isReferee() / getRole() are provided by auth.js when loaded.
 
+// ── Pickleball icon helpers ──────────────────────────────────
+// Inline SVG of a yellow pickleball with the characteristic perforations.
+// pickleballBalls(n) returns N icons in a row — used for "lượt giao" indicator.
+const PICKLEBALL_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" style="vertical-align:-2px;flex-shrink:0;" aria-hidden="true">
+  <circle cx="12" cy="12" r="10.5" fill="#fde047" stroke="#a16207" stroke-width="0.7"/>
+  <circle cx="8"  cy="8"  r="1.4" fill="#a16207"/>
+  <circle cx="16" cy="8"  r="1.4" fill="#a16207"/>
+  <circle cx="12" cy="13" r="1.4" fill="#a16207"/>
+  <circle cx="7"  cy="15" r="1.1" fill="#a16207"/>
+  <circle cx="17" cy="15" r="1.1" fill="#a16207"/>
+  <circle cx="12" cy="18.2" r="1" fill="#a16207"/>
+</svg>`;
+function pickleballBalls(n) {
+  const count = Math.max(1, Math.min(2, parseInt(n, 10) || 1));
+  return PICKLEBALL_SVG.repeat(count);
+}
+
 function initSupabase() {
   if (SUPABASE_URL === "REPLACE_ME" || SUPABASE_ANON_KEY === "REPLACE_ME") {
     setStatus(t("demoMode"), "err");
@@ -338,9 +355,15 @@ function renderFeaturedMatch(sec, box, featured) {
   const fTeamB  = featured.team_b  || featured.teamB  || '';
   const fScoreA = featured.score_a !== undefined ? featured.score_a : (featured.scoreA || 0);
   const fScoreB = featured.score_b !== undefined ? featured.score_b : (featured.scoreB || 0);
+  // Serving balls under whichever team is serving
+  const fServerNum = featured.server_number || 1;
+  const featServing = (side) => (isPlaying && featured.serving_team === side)
+    ? `<div class="feat-serving">${pickleballBalls(fServerNum)}</div>`
+    : '';
   box.innerHTML = `
     <div class="feat-team ${wA ? "feat-winner" : ""}">
       <span class="feat-name">${esc(fTeamA)}</span>
+      ${featServing('A')}
     </div>
     <div class="feat-scores">
       <span class="feat-score ${wA ? "feat-score-win" : ""}">${fScoreA}</span>
@@ -349,6 +372,7 @@ function renderFeaturedMatch(sec, box, featured) {
     </div>
     <div class="feat-team ${wB ? "feat-winner" : ""}">
       <span class="feat-name">${esc(fTeamB)}</span>
+      ${featServing('B')}
     </div>
     <div class="feat-status">
       ${isPlaying    ? `<span class="badge-live">${t("badgePlaying")}</span>`
@@ -505,21 +529,10 @@ function publicMatchHTML(m, stage) {
       ${refName      ? `<span>👤 ${esc(refName)}</span>`      : ""}
     </div>` : "";
 
-  // Build the per-team serving badge to drop under whichever team is serving
+  // Per-team serving badge — N pickleball balls = N-th server (1 or 2)
   const serverNum = m.server_number || 1;
-  // Inline SVG: yellow pickleball with the characteristic perforations.
-  // Shipped as plain markup so the badge doesn't depend on any CSS class.
-  const PICKLEBALL_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" style="vertical-align:-2px;flex-shrink:0;" aria-hidden="true">
-    <circle cx="12" cy="12" r="10.5" fill="#fde047" stroke="#a16207" stroke-width="0.7"/>
-    <circle cx="8"  cy="8"  r="1.4" fill="#a16207"/>
-    <circle cx="16" cy="8"  r="1.4" fill="#a16207"/>
-    <circle cx="12" cy="13" r="1.4" fill="#a16207"/>
-    <circle cx="7"  cy="15" r="1.1" fill="#a16207"/>
-    <circle cx="17" cy="15" r="1.1" fill="#a16207"/>
-    <circle cx="12" cy="18.2" r="1" fill="#a16207"/>
-  </svg>`;
   const servingBadge = (sideLetter) => (playing && m.serving_team === sideLetter)
-    ? `<div class="mc-serving">${PICKLEBALL_SVG} Đang giao ${serverNum === 1 ? '1️⃣' : '2️⃣'}</div>`
+    ? `<div class="mc-serving">${pickleballBalls(serverNum)}</div>`
     : '';
 
   return `
