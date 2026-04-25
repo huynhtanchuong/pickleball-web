@@ -59,28 +59,18 @@ if (typeof _saveDebounce === 'undefined') {
 // Translate a thrown error / response error into a friendly Vietnamese
 // message. Keeps the technical detail in console only.
 function friendlyError(err, fallback) {
-  if (!err) return fallback || 'Có lỗi xảy ra. Vui lòng thử lại.';
+  if (!err) return fallback || t('errGeneric');
   console.error('[friendlyError]', err);
   const raw = String(err.message || err.error || err || '').toLowerCase();
-  // Common patterns we can humanize
-  if (raw.includes('failed to fetch') || raw.includes('networkerror'))
-    return 'Mất kết nối mạng. Kiểm tra internet rồi thử lại.';
-  if (raw.includes('jwt') || raw.includes('401') || raw.includes('unauthorized'))
-    return 'Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.';
-  if (raw.includes('not found') || raw.includes('does not exist') || raw.includes('schema cache'))
-    return 'Cơ sở dữ liệu chưa được cập nhật cấu trúc. Liên hệ admin.';
-  if (raw.includes('duplicate') || raw.includes('unique constraint') || raw.includes('23505'))
-    return 'Đã tồn tại bản ghi giống. Vui lòng kiểm tra lại.';
-  if (raw.includes('foreign key') || raw.includes('23503'))
-    return 'Không thể thao tác — dữ liệu đang được tham chiếu ở nơi khác.';
-  if (raw.includes('not null') || raw.includes('23502'))
-    return 'Thiếu thông tin bắt buộc. Vui lòng điền đầy đủ.';
-  if (raw.includes('check constraint') || raw.includes('23514'))
-    return 'Giá trị không hợp lệ. Vui lòng kiểm tra lại.';
-  if (raw.includes('permission denied') || raw.includes('403'))
-    return 'Bạn không có quyền thực hiện thao tác này.';
-  // Fallback: short message + keep technical detail off-screen
-  return fallback || (err.message ? err.message : 'Có lỗi xảy ra. Vui lòng thử lại.');
+  if (raw.includes('failed to fetch') || raw.includes('networkerror')) return t('errNetwork');
+  if (raw.includes('jwt') || raw.includes('401') || raw.includes('unauthorized')) return t('errAuth');
+  if (raw.includes('not found') || raw.includes('does not exist') || raw.includes('schema cache')) return t('errSchema');
+  if (raw.includes('duplicate') || raw.includes('unique constraint') || raw.includes('23505')) return t('errDuplicate');
+  if (raw.includes('foreign key') || raw.includes('23503')) return t('errForeignKey');
+  if (raw.includes('not null') || raw.includes('23502')) return t('errNotNull');
+  if (raw.includes('check constraint') || raw.includes('23514')) return t('errCheck');
+  if (raw.includes('permission denied') || raw.includes('403')) return t('errPermission');
+  return fallback || (err.message ? err.message : t('errGeneric'));
 }
 
 function showError(err, fallback)   { setStatus(friendlyError(err, fallback), 'err'); }
@@ -802,7 +792,7 @@ async function updateScore(id) {
 
   const { error } = await db.from("matches").update(payload).eq("id", id);
   if (error) {
-    showError(error, 'Không thể lưu điểm. Vui lòng thử lại.');
+    showError(error, t('errSaveScore'));
     return;
   }
 
@@ -827,7 +817,10 @@ async function updateScore(id) {
 function updateSetWinsDisplay(id, winsA, winsB) {
   const el = document.querySelector(`.adm-set-wins[data-id="${id}"]`);
   if (!el) return;
-  el.textContent = `Sets: ${winsA} — ${winsB}`;
+  el.textContent = `${t('sets')} ${winsA} — ${winsB}`;
+  el.classList.remove('flash');
+  void el.offsetWidth; // trigger reflow so animation re-runs
+  el.classList.add('flash');
 }
 
 // ── Update status badge in-place (admin page only) ────────────
@@ -922,7 +915,7 @@ async function finishMatch(id) {
 
   const { error } = await db.from("matches").update(payload).eq("id", id);
   if (error) {
-    showError(error, 'Không thể kết thúc trận đấu. Vui lòng thử lại.');
+    showError(error, t('errFinishMatch'));
     return;
   }
 

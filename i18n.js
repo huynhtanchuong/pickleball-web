@@ -154,6 +154,114 @@ const TRANSLATIONS = {
     // Set Lock
     setLocked:        "🔒 Set đã khóa",
     setUnlocked:      "🔓 Set đã mở",
+
+    // ── Roles & Auth ──
+    roleAdmin:        "Admin",
+    roleReferee:      "Trọng Tài",
+    roleView:         "Xem",
+    pwReferee:        "Mật khẩu Trọng Tài:",
+    pwAdmin:          "Mật khẩu Admin:",
+    pwWrong:          "Mật khẩu không đúng.",
+    onlyAdminMatchInfo: "Chỉ admin mới được sửa thông tin trận",
+    onlyAdminSpecial: "Chỉ admin mới được tạo trận đặc biệt",
+    onlyAdminSchedule: "Chỉ admin mới được xếp lịch",
+
+    // ── Setup wizard / steps ──
+    setupMembers:     "Thành viên",
+    setupTeams:       "Đội",
+    setupMatches:     "Trận đấu",
+    setupSchedule:    "Lịch đấu",
+    setupStart:       "Bắt đầu",
+    ctaAddMembers:    "👥 Thêm Thành viên",
+    ctaGenTeams:      "🎲 Tạo Đội Ngẫu nhiên",
+    ctaGenMatches:    "📅 Tạo Trận Đấu",
+    ctaSchedule:      "🤖 Set Lịch Đấu",
+    ctaStartTournament: "▶️ Bắt Đầu Giải Đấu",
+    ctaResetTournament: "↺ Reset giải đấu",
+    moreOptions:      "Tùy chọn khác",
+    editMembers:      "👥 Sửa thành viên",
+    repairTeams:      "🎲 Ghép lại đội",
+    regenMatches:     "📅 Tạo lại trận đấu",
+
+    // ── Tournament selector ──
+    tournamentLabel:  "Giải đấu",
+    manageTournament: "Quản lý giải đấu",
+    manageMembers:    "Quản lý thành viên",
+    noTournament:     "Chưa có giải đấu nào",
+    noTournamentSelected: "Chưa chọn giải đấu",
+    statusUpcoming:   "Sắp diễn ra",
+    statusOngoing:    "Đang diễn ra",
+    statusCompleted:  "Đã kết thúc",
+
+    // ── Auto-schedule ──
+    scheduleHeader:   "📅 Lịch thi đấu:",
+    scheduleHint:     "Bảng A → Sân 1, Bảng B → Sân 2, mỗi trận cách 15 phút",
+    scheduleConfirm:  "Sẽ ghi đè giờ, sân, trọng tài của TẤT CẢ trận vòng bảng?\nGiờ bắt đầu: {time} — mỗi trận cách 15 phút.\nBảng A → Sân 1, Bảng B → Sân 2.\nTrọng tài: chọn từ thành viên cùng bảng, không đang thi đấu.",
+    scheduling:       "Đang xếp lịch {n} trận…",
+    scheduleSaved:    "✓ Đã xếp lịch {n} trận",
+    scheduleNoMatch:  "Không có trận vòng bảng để xếp lịch",
+    scheduleFail:     "Không thể xếp lịch. Vui lòng thử lại.",
+
+    // ── Match info form ──
+    matchTimeLabel:   "🕐 Giờ",
+    matchCourtLabel:  "🏟 Sân",
+    matchRefLabel:    "👤 Trọng tài",
+    matchRefSelect:   "— Chọn trọng tài —",
+
+    // ── Scoring hint ──
+    hintTapWinner:    "💡 Bấm vào tên đội <strong>vừa thắng pha bóng</strong> để +1.",
+    hintPickServe:    "Trước hết hãy <strong>Chọn Giao Bóng</strong> bên dưới.",
+    hintNonServerTap: "Bấm đội <strong>không giao</strong> sẽ đổi giao.",
+
+    // ── Serve dialog ──
+    serveDialogTitle: "Chọn Đội Giao Bóng Đầu Tiên",
+    serveBefore:      "Giao Bóng Trước",
+    serveRandom:      "🎲 Random",
+    serveRandomSub:   "Hệ thống chọn ngẫu nhiên",
+    serveDefault:     "Mặc định: Server 2",
+    cancel:           "Hủy",
+
+    // ── Special matches ──
+    specialSection:   "⭐ Trận Đấu Đặc Biệt",
+    createThirdPlace: "🥉 Tạo Trận Tranh Giải Ba",
+    createConsolation:"🎖️ Tạo Trận Khuyến Khích",
+    createShowMatch:  "🎪 Tạo Trận Biểu Diễn",
+    noSpecial:        "Chưa có trận đặc biệt nào.",
+    thirdPlaceCreated:"✓ Đã tạo trận tranh giải ba",
+    consolationCreated:"✓ Đã tạo trận khuyến khích",
+    showMatchCreated: "✓ Đã tạo trận biểu diễn",
+    thirdPlaceExists: "⚠️ Trận tranh giải ba đã tồn tại",
+    consolationExists:"⚠️ Trận khuyến khích đã tồn tại",
+    needSemiDone:     "Cần cả 2 trận bán kết kết thúc trước khi tạo trận tranh giải ba",
+
+    // ── Tabs ──
+    tabMatches:       "⚽ Trận đấu",
+    tabMembers:       "👥 Vận động viên",
+    tabTeams:         "🏆 Đội",
+    tabStandings:     "📊 Bảng xếp hạng",
+
+    // ── Errors (friendly) ──
+    errGeneric:       "Có lỗi xảy ra. Vui lòng thử lại.",
+    errNetwork:       "Mất kết nối mạng. Kiểm tra internet rồi thử lại.",
+    errAuth:          "Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.",
+    errSchema:        "Cơ sở dữ liệu chưa được cập nhật cấu trúc. Liên hệ admin.",
+    errDuplicate:     "Đã tồn tại bản ghi giống. Vui lòng kiểm tra lại.",
+    errForeignKey:    "Không thể thao tác — dữ liệu đang được tham chiếu ở nơi khác.",
+    errNotNull:       "Thiếu thông tin bắt buộc. Vui lòng điền đầy đủ.",
+    errCheck:         "Giá trị không hợp lệ. Vui lòng kiểm tra lại.",
+    errPermission:    "Bạn không có quyền thực hiện thao tác này.",
+    errSaveScore:     "Không thể lưu điểm. Vui lòng thử lại.",
+    errFinishMatch:   "Không thể kết thúc trận đấu. Vui lòng thử lại.",
+    errMatchNotFound: "Không tìm thấy trận đấu",
+    errPickServerFirst: "⚠️ Vui lòng chọn đội giao bóng trước",
+    errMatchEnded:    "⚠️ Trận đấu đã kết thúc",
+    errTournamentNotStarted: "⚠️ Giải đấu chưa bắt đầu — admin chưa \"Bắt Đầu Giải Đấu\"",
+    errOnlyReferee:   "⚠️ Chỉ trọng tài mới được chấm điểm",
+
+    // ── Misc ──
+    reload:           "Reload",
+    backupNow:        "Backup Now",
+    pointsUpdated:    "✓ Đã cập nhật điểm",
   },
 
   en: {
@@ -289,15 +397,127 @@ const TRANSLATIONS = {
     // Set Lock
     setLocked:        "🔒 Set locked",
     setUnlocked:      "🔓 Set unlocked",
+
+    // Roles & Auth
+    roleAdmin:        "Admin",
+    roleReferee:      "Referee",
+    roleView:         "View",
+    pwReferee:        "Referee password:",
+    pwAdmin:          "Admin password:",
+    pwWrong:          "Wrong password.",
+    onlyAdminMatchInfo: "Only admin can edit match info",
+    onlyAdminSpecial: "Only admin can create special matches",
+    onlyAdminSchedule: "Only admin can run auto-schedule",
+
+    // Setup wizard / steps
+    setupMembers:     "Members",
+    setupTeams:       "Teams",
+    setupMatches:     "Matches",
+    setupSchedule:    "Schedule",
+    setupStart:       "Start",
+    ctaAddMembers:    "👥 Add Members",
+    ctaGenTeams:      "🎲 Generate Random Teams",
+    ctaGenMatches:    "📅 Generate Matches",
+    ctaSchedule:      "🤖 Auto Schedule",
+    ctaStartTournament: "▶️ Start Tournament",
+    ctaResetTournament: "↺ Reset tournament",
+    moreOptions:      "More options",
+    editMembers:      "👥 Edit members",
+    repairTeams:      "🎲 Re-pair teams",
+    regenMatches:     "📅 Re-generate matches",
+
+    // Tournament selector
+    tournamentLabel:  "Tournament",
+    manageTournament: "Manage tournaments",
+    manageMembers:    "Manage members",
+    noTournament:     "No tournaments yet",
+    noTournamentSelected: "No tournament selected",
+    statusUpcoming:   "Upcoming",
+    statusOngoing:    "Ongoing",
+    statusCompleted:  "Completed",
+
+    // Auto-schedule
+    scheduleHeader:   "📅 Schedule:",
+    scheduleHint:     "Group A → Court 1, Group B → Court 2, 15-minute slots",
+    scheduleConfirm:  "Overwrite time, court, referee for ALL group matches?\nStart time: {time} — 15 min between matches.\nGroup A → Court 1, Group B → Court 2.\nReferee: picked from same group, not currently playing.",
+    scheduling:       "Scheduling {n} matches…",
+    scheduleSaved:    "✓ Scheduled {n} matches",
+    scheduleNoMatch:  "No group matches to schedule",
+    scheduleFail:     "Could not schedule. Please try again.",
+
+    // Match info form
+    matchTimeLabel:   "🕐 Time",
+    matchCourtLabel:  "🏟 Court",
+    matchRefLabel:    "👤 Referee",
+    matchRefSelect:   "— Pick referee —",
+
+    // Scoring hint
+    hintTapWinner:    "💡 Tap the team that <strong>just won the rally</strong> to +1.",
+    hintPickServe:    "First, <strong>pick the serving team</strong> below.",
+    hintNonServerTap: "Tap the <strong>non-serving</strong> team to switch serve.",
+
+    // Serve dialog
+    serveDialogTitle: "Pick First Serving Team",
+    serveBefore:      "Serves First",
+    serveRandom:      "🎲 Random",
+    serveRandomSub:   "System picks randomly",
+    serveDefault:     "Default: Server 2",
+    cancel:           "Cancel",
+
+    // Special matches
+    specialSection:   "⭐ Special Matches",
+    createThirdPlace: "🥉 Create 3rd Place Match",
+    createConsolation:"🎖️ Create Consolation Match",
+    createShowMatch:  "🎪 Create Exhibition Match",
+    noSpecial:        "No special matches yet.",
+    thirdPlaceCreated:"✓ 3rd-place match created",
+    consolationCreated:"✓ Consolation match created",
+    showMatchCreated: "✓ Exhibition match created",
+    thirdPlaceExists: "⚠️ 3rd-place match already exists",
+    consolationExists:"⚠️ Consolation match already exists",
+    needSemiDone:     "Both semifinals must finish before creating the 3rd-place match",
+
+    // Tabs
+    tabMatches:       "⚽ Matches",
+    tabMembers:       "👥 Players",
+    tabTeams:         "🏆 Teams",
+    tabStandings:     "📊 Standings",
+
+    // Errors (friendly)
+    errGeneric:       "Something went wrong. Please try again.",
+    errNetwork:       "Network connection lost. Check internet and retry.",
+    errAuth:          "Session expired. Please sign in again.",
+    errSchema:        "Database schema is out of date. Contact admin.",
+    errDuplicate:     "Duplicate record. Please check.",
+    errForeignKey:    "Cannot continue — record is referenced elsewhere.",
+    errNotNull:       "Missing required field.",
+    errCheck:         "Invalid value. Please check.",
+    errPermission:    "You don't have permission for this action.",
+    errSaveScore:     "Could not save score. Please try again.",
+    errFinishMatch:   "Could not finish the match. Please try again.",
+    errMatchNotFound: "Match not found",
+    errPickServerFirst: "⚠️ Please pick the serving team first",
+    errMatchEnded:    "⚠️ Match has ended",
+    errTournamentNotStarted: "⚠️ Tournament not started yet — admin hasn't pressed \"Start Tournament\"",
+    errOnlyReferee:   "⚠️ Only referees can score",
+
+    // Misc
+    reload:           "Reload",
+    backupNow:        "Backup Now",
+    pointsUpdated:    "✓ Points updated",
   }
 };
 
 // ── Current language ──────────────────────────────────────────
 let _lang = localStorage.getItem("pb_lang") || "vi";
 
-function t(key) {
-  return (TRANSLATIONS[_lang] && TRANSLATIONS[_lang][key]) ||
-         (TRANSLATIONS["vi"][key]) || key;
+function t(key, vars) {
+  let s = (TRANSLATIONS[_lang] && TRANSLATIONS[_lang][key]) ||
+          (TRANSLATIONS["vi"][key]) || key;
+  if (vars && typeof s === 'string') {
+    s = s.replace(/\{(\w+)\}/g, (_, k) => (vars[k] !== undefined ? vars[k] : `{${k}}`));
+  }
+  return s;
 }
 
 function setLang(lang) {

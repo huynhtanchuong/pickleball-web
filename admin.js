@@ -221,7 +221,7 @@ async function renderTournamentControls(tournament) {
       <div style="text-align: center; padding: 12px;">
         <a href="#" onclick="resetTournament(); return false;"
            style="font-size: 12px; color: #999; text-decoration: none; border-bottom: 1px dashed #999;">
-          ↺ Reset giải đấu
+          ${t('ctaResetTournament')}
         </a>
       </div>`;
     return;
@@ -255,11 +255,11 @@ async function renderTournamentControls(tournament) {
 
   // First incomplete step → primary CTA
   const next =
-    !step1Done ? { label: '👥 Thêm Thành viên',     fn: 'openMemberRegistrationModal()', cls: 'btn-add-members' } :
-    !step2Done ? { label: '🎲 Tạo Đội Ngẫu nhiên',  fn: 'generateRandomTeams()',         cls: 'btn-generate-teams' } :
-    !step3Done ? { label: '📅 Tạo Trận Đấu',        fn: 'generateRandomMatches()',       cls: 'btn-generate-matches' } :
-    !step4Done ? { label: '🤖 Set Lịch Đấu',        fn: 'autoScheduleMatches()',         cls: 'btn-generate-matches' } :
-                 { label: '▶️ Bắt Đầu Giải Đấu',    fn: 'startTournament()',             cls: 'btn-start-tournament' };
+    !step1Done ? { label: t('ctaAddMembers'),     fn: 'openMemberRegistrationModal()', cls: 'btn-add-members' } :
+    !step2Done ? { label: t('ctaGenTeams'),       fn: 'generateRandomTeams()',         cls: 'btn-generate-teams' } :
+    !step3Done ? { label: t('ctaGenMatches'),     fn: 'generateRandomMatches()',       cls: 'btn-generate-matches' } :
+    !step4Done ? { label: t('ctaSchedule'),       fn: 'autoScheduleMatches()',         cls: 'btn-generate-matches' } :
+                 { label: t('ctaStartTournament'),fn: 'startTournament()',             cls: 'btn-start-tournament' };
 
   const stepHtml = (n, label, count, done, active) => `
     <div class="setup-step ${done ? 'done' : ''} ${active ? 'active' : ''}">
@@ -270,26 +270,26 @@ async function renderTournamentControls(tournament) {
 
   container.innerHTML = `
     <div class="setup-bar">
-      ${stepHtml(1, 'Thành viên', pCount,     step1Done, !step1Done)}
+      ${stepHtml(1, t('setupMembers'), pCount,     step1Done, !step1Done)}
       <span class="step-arrow">›</span>
-      ${stepHtml(2, 'Đội',        tCount,     step2Done, step1Done && !step2Done)}
+      ${stepHtml(2, t('setupTeams'),   tCount,     step2Done, step1Done && !step2Done)}
       <span class="step-arrow">›</span>
-      ${stepHtml(3, 'Trận đấu',   mCount,     step3Done, step2Done && !step3Done)}
+      ${stepHtml(3, t('setupMatches'), mCount,     step3Done, step2Done && !step3Done)}
       <span class="step-arrow">›</span>
-      ${stepHtml(4, 'Lịch đấu',   step3Done ? `${mScheduled}/${mCount}` : null, step4Done, step3Done && !step4Done)}
+      ${stepHtml(4, t('setupSchedule'),step3Done ? `${mScheduled}/${mCount}` : null, step4Done, step3Done && !step4Done)}
       <span class="step-arrow">›</span>
-      ${stepHtml(5, 'Bắt đầu',    null,       false,     step4Done)}
+      ${stepHtml(5, t('setupStart'),   null,       false,     step4Done)}
     </div>
     <div class="setup-cta-row">
       <button class="tournament-control-btn ${next.cls}" onclick="${next.fn}">
         ${next.label}
       </button>
       <details class="setup-other">
-        <summary>Tùy chọn khác ▾</summary>
+        <summary>${t('moreOptions')} ▾</summary>
         <div class="setup-other-actions">
-          <button class="setup-btn-sm" onclick="openMemberRegistrationModal()">👥 Sửa thành viên</button>
-          <button class="setup-btn-sm" onclick="generateRandomTeams()">🎲 Ghép lại đội</button>
-          <button class="setup-btn-sm" onclick="generateRandomMatches()">📅 Tạo lại trận đấu</button>
+          <button class="setup-btn-sm" onclick="openMemberRegistrationModal()">${t('editMembers')}</button>
+          <button class="setup-btn-sm" onclick="generateRandomTeams()">${t('repairTeams')}</button>
+          <button class="setup-btn-sm" onclick="generateRandomMatches()">${t('regenMatches')}</button>
         </div>
       </details>
     </div>`;
@@ -575,8 +575,8 @@ function matchHTML(m, stage) {
     scoreSection = `
       <div class="inline-scoring">
         <div class="scoring-hint scorer-only">
-          💡 Bấm vào tên đội <strong>vừa thắng pha bóng</strong> để +1.
-          ${canStart ? 'Trước hết hãy <strong>Chọn Giao Bóng</strong> bên dưới.' : 'Bấm đội <strong>không giao</strong> sẽ đổi giao.'}
+          ${t('hintTapWinner')}
+          ${canStart ? t('hintPickServe') : t('hintNonServerTap')}
         </div>
         <div class="scoring-teams">
           <div class="team-card ${isServingA ? 'serving' : ''}"
@@ -905,7 +905,7 @@ function adjustScore(id, field, delta) {
 // ── Save match info (time/court/referee) ──────────────────────
 async function saveMatchInfo(id) {
   if (typeof isAdmin === 'function' && !isAdmin()) {
-    setStatus('Chỉ admin mới được sửa thông tin trận', 'err');
+    setStatus(t('onlyAdminMatchInfo'), 'err');
     return;
   }
   const timeVal = document.querySelector(`input[data-id="${id}"][data-field="match_time"]`)?.value || "";
@@ -1269,7 +1269,7 @@ function renderBracketVisual(container, matches) {
  */
 async function createThirdPlaceMatch() {
   if (typeof isAdmin === 'function' && !isAdmin()) {
-    setStatus('Chỉ admin mới được tạo trận đặc biệt', 'err');
+    setStatus(t('onlyAdminSpecial'), 'err');
     return;
   }
   try {
@@ -1308,7 +1308,7 @@ async function createThirdPlaceMatch() {
  */
 async function createConsolationMatch() {
   if (typeof isAdmin === 'function' && !isAdmin()) {
-    setStatus('Chỉ admin mới được tạo trận đặc biệt', 'err');
+    setStatus(t('onlyAdminSpecial'), 'err');
     return;
   }
   try {
@@ -1347,7 +1347,7 @@ async function createConsolationMatch() {
  */
 async function openShowMatchModal() {
   if (typeof isAdmin === 'function' && !isAdmin()) {
-    setStatus('Chỉ admin mới được tạo trận đặc biệt', 'err');
+    setStatus(t('onlyAdminSpecial'), 'err');
     return;
   }
   try {
@@ -1540,13 +1540,12 @@ async function handleTeamTap(matchId, team) {
   tapDebounce.set(matchId, true);
   setTimeout(() => tapDebounce.delete(matchId), 300);
 
-  // Defensive guard — UI is already hidden by gateScoringByRole, but block here too
   if (!_activeTournament || _activeTournament.status !== 'ongoing') {
-    setStatus('⚠️ Giải đấu chưa bắt đầu — admin chưa "Bắt Đầu Giải Đấu"', 'err');
+    setStatus(t('errTournamentNotStarted'), 'err');
     return;
   }
   if (typeof canScore === 'function' && !canScore()) {
-    setStatus('⚠️ Chỉ trọng tài mới được chấm điểm', 'err');
+    setStatus(t('errOnlyReferee'), 'err');
     return;
   }
 
@@ -2615,7 +2614,7 @@ function _minToHhmm(mins) {
 
 async function autoScheduleMatches() {
   if (!isAdmin || !isAdmin()) {
-    setStatus('Chỉ admin mới được xếp lịch', 'err');
+    setStatus(t('onlyAdminSchedule'), 'err');
     return;
   }
 
@@ -2624,24 +2623,18 @@ async function autoScheduleMatches() {
   const SLOT = 15; // minutes between matches on the same court
 
   const tournamentId = tournamentManager?.getActiveTournamentId();
-  if (!tournamentId) { setStatus('Chưa chọn giải đấu', 'err'); return; }
+  if (!tournamentId) { setStatus(t('noTournamentSelected'), 'err'); return; }
 
-  // 1. Load all group-stage matches for the active tournament
   const allMatches = await fetchAllMatches();
   const groupMatches = allMatches.filter(m =>
     (!m.stage || m.stage === 'group') && m.group_name
   );
   if (groupMatches.length === 0) {
-    setStatus('Không có trận vòng bảng để xếp lịch', 'err');
+    setStatus(t('scheduleNoMatch'), 'err');
     return;
   }
 
-  if (!confirm(
-    'Sẽ ghi đè giờ, sân, trọng tài của TẤT CẢ trận vòng bảng?\n' +
-    `Giờ bắt đầu: ${_minToHhmm(startMin)} — mỗi trận cách 15 phút.\n` +
-    'Bảng A → Sân 1, Bảng B → Sân 2.\n' +
-    'Trọng tài: chọn từ thành viên cùng bảng, không đang thi đấu.'
-  )) return;
+  if (!confirm(t('scheduleConfirm', { time: _minToHhmm(startMin) }))) return;
 
   // 2. Build per-group round-robin order
   const courtMap = { A: 'Sân 1', B: 'Sân 2', C: 'Sân 3', D: 'Sân 4' };
@@ -2731,8 +2724,7 @@ async function autoScheduleMatches() {
     }
   }
 
-  // 3. Push to DB (or localStorage)
-  setStatus(`Đang xếp lịch ${updates.length} trận…`);
+  setStatus(t('scheduling', { n: updates.length }));
   try {
     if (db) {
       // Sequential to keep simple; tournaments rarely have > 30 group matches
@@ -2749,10 +2741,10 @@ async function autoScheduleMatches() {
       });
       saveLocal(localMatches);
     }
-    showOk(`✓ Đã xếp lịch ${updates.length} trận`);
+    showOk(t('scheduleSaved', { n: updates.length }));
     await fetchMatches();
     if (_activeTournament) await renderTournamentControls(_activeTournament);
   } catch (e) {
-    showError(e, 'Không thể xếp lịch. Vui lòng thử lại.');
+    showError(e, t('scheduleFail'));
   }
 }

@@ -53,9 +53,9 @@
               <circle cx="7"  cy="15" r="1.1" fill="#a16207"/>
               <circle cx="17" cy="15" r="1.1" fill="#a16207"/>
               <circle cx="12" cy="18.2" r="1" fill="#a16207"/>
-            </svg>Trọng Tài
+            </svg><span data-i18n="roleReferee">Trọng Tài</span>
           </button>
-          <button data-role="admin"   onclick="switchRole('admin')"  >👑 Admin</button>
+          <button data-role="admin"   onclick="switchRole('admin')"  >👑 <span data-i18n="roleAdmin">Admin</span></button>
           <a href="index.html" class="role-view-link" data-i18n="viewPublic" title="Xem công khai">👁 Xem</a>
         </div>
         <span id="role-badge" style="display:none;"></span>
@@ -63,7 +63,7 @@
         <span id="status-bar" class="status-chip" style="display:none;"></span>
         <button onclick="location.reload()" class="adm-btn-sm" style="background:var(--bg-card2);border:1px solid var(--border);display:flex;align-items:center;gap:4px;" title="Làm mới trang">
           <span>↺</span>
-          <span style="font-size:0.75rem;">Reload</span>
+          <span style="font-size:0.75rem;" data-i18n="reload">Reload</span>
         </button>
       </div>
     </div>
@@ -71,13 +71,13 @@
     <!-- Tournament Selector -->
     <div class="adm-section" style="background: #fff3cd; border-left: 4px solid #ffc107;">
       <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
-        <label style="font-weight: 600; color: #856404;">🏆 Giải đấu:</label>
+        <label style="font-weight: 600; color: #856404;">🏆 <span data-i18n="tournamentLabel">Giải đấu</span>:</label>
         <select id="tournament-select" onchange="switchTournament(this.value)" style="flex: 1; min-width: 200px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-          <option value="">Đang tải...</option>
+          <option value="" data-i18n="loading">Đang tải…</option>
         </select>
         <span id="tournament-status" class="status-chip"></span>
-        <a href="tournaments.html" class="adm-btn-sm admin-only" style="background: #3498db; color: white;">Quản lý giải đấu</a>
-        <a href="members.html" class="adm-btn-sm admin-only" style="background: #27ae60; color: white;">Quản lý thành viên</a>
+        <a href="tournaments.html" class="adm-btn-sm admin-only" style="background: #3498db; color: white;" data-i18n="manageTournament">Quản lý giải đấu</a>
+        <a href="members.html" class="adm-btn-sm admin-only" style="background: #27ae60; color: white;" data-i18n="manageMembers">Quản lý thành viên</a>
       </div>
     </div>
 
@@ -89,16 +89,16 @@
     <!-- Tab Navigation -->
     <div class="adm-section" style="background: white; padding: 0; border-bottom: 2px solid #e2e8f0;">
       <div class="admin-tabs" style="display: flex; gap: 0; overflow-x: auto;">
-        <button class="admin-tab active" onclick="switchAdminTab('matches')" data-tab="matches">
+        <button class="admin-tab active" onclick="switchAdminTab('matches')" data-tab="matches" data-i18n="tabMatches">
           ⚽ Trận đấu
         </button>
-        <button class="admin-tab admin-only" onclick="switchAdminTab('members')" data-tab="members">
+        <button class="admin-tab admin-only" onclick="switchAdminTab('members')" data-tab="members" data-i18n="tabMembers">
           👥 Vận động viên
         </button>
-        <button class="admin-tab admin-only" onclick="switchAdminTab('teams')" data-tab="teams">
+        <button class="admin-tab admin-only" onclick="switchAdminTab('teams')" data-tab="teams" data-i18n="tabTeams">
           🏆 Đội
         </button>
-        <button class="admin-tab" onclick="switchAdminTab('standings')" data-tab="standings">
+        <button class="admin-tab" onclick="switchAdminTab('standings')" data-tab="standings" data-i18n="tabStandings">
           📊 Bảng xếp hạng
         </button>
       </div>
@@ -109,12 +109,12 @@
 
     <!-- Auto-schedule bar (admin only, and only while tournament is upcoming) -->
     <div id="auto-schedule-bar" class="adm-section admin-only upcoming-only" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-      <span style="font-weight:700;">📅 Lịch thi đấu:</span>
+      <span style="font-weight:700;" data-i18n="scheduleHeader">📅 Lịch thi đấu:</span>
       <input type="time" id="auto-schedule-start" value="07:00" style="padding:6px 10px;border:1px solid var(--adm-border);background:var(--adm-card);color:var(--adm-text);border-radius:6px;">
-      <button class="adm-btn-sm" onclick="autoScheduleMatches()" style="background:var(--adm-purple);color:#fff;font-weight:700;padding:8px 14px;">
-        🤖 Tự động xếp lịch
+      <button class="adm-btn-sm" onclick="autoScheduleMatches()" style="background:var(--adm-purple);color:#fff;font-weight:700;padding:8px 14px;" data-i18n="ctaSchedule">
+        🤖 Set Lịch Đấu
       </button>
-      <span style="color:var(--adm-muted);font-size:0.78rem;">Bảng A → Sân 1, Bảng B → Sân 2, mỗi trận cách 15 phút</span>
+      <span style="color:var(--adm-muted);font-size:0.78rem;" data-i18n="scheduleHint">Bảng A → Sân 1, Bảng B → Sân 2, mỗi trận cách 15 phút</span>
     </div>
 
     <!-- Group Stage -->
@@ -137,16 +137,15 @@
 
     <!-- Special Matches -->
     <div class="adm-section">
-      <div class="adm-section-title">⭐ Trận Đấu Đặc Biệt</div>
-      <!-- Action buttons: admin-only. Read-only list below stays visible to all. -->
+      <div class="adm-section-title" data-i18n="specialSection">⭐ Trận Đấu Đặc Biệt</div>
       <div class="admin-only" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
-        <button class="adm-btn-sm" onclick="createThirdPlaceMatch()" style="background: #f39c12; color: white;">
+        <button class="adm-btn-sm" onclick="createThirdPlaceMatch()" style="background: #f39c12; color: white;" data-i18n="createThirdPlace">
           🥉 Tạo Trận Tranh Giải Ba
         </button>
-        <button class="adm-btn-sm" onclick="createConsolationMatch()" style="background: #9b59b6; color: white;">
+        <button class="adm-btn-sm" onclick="createConsolationMatch()" style="background: #9b59b6; color: white;" data-i18n="createConsolation">
           🎖️ Tạo Trận Khuyến Khích
         </button>
-        <button class="adm-btn-sm" onclick="openShowMatchModal()" style="background: #e74c3c; color: white;">
+        <button class="adm-btn-sm" onclick="openShowMatchModal()" style="background: #e74c3c; color: white;" data-i18n="createShowMatch">
           🎪 Tạo Trận Biểu Diễn
         </button>
       </div>

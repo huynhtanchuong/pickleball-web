@@ -1821,6 +1821,94 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
 /* Smooth scroll feel everywhere */
 html { scroll-behavior: smooth; }
 
+/* ============================================================
+   ADMIN VISUAL POLISH — micro-interactions
+   ============================================================ */
+
+/* Match cards: smooth expand/collapse */
+.adm-card-body {
+  transition: max-height 0.25s ease-in-out, opacity 0.2s ease;
+  overflow: hidden;
+}
+
+/* Tab content: fade on switch */
+.admin-tab-content { animation: tabFadeIn 0.25s ease-out both; }
+@keyframes tabFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Setup bar steps: pop when freshly active */
+.setup-step.active {
+  animation: stepPop 0.4s ease-out;
+}
+@keyframes stepPop {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.08); box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2); }
+  100% { transform: scale(1); }
+}
+
+/* Setup CTA button: gentle pulse to draw the eye */
+.setup-cta-row .tournament-control-btn {
+  animation: ctaGlow 2.4s ease-in-out infinite;
+}
+@keyframes ctaGlow {
+  0%, 100% { box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25); }
+  50%      { box-shadow: 0 6px 20px rgba(59, 130, 246, 0.45); }
+}
+
+/* Modals: fade + slight zoom-in */
+#member-registration-modal[style*="display: flex"] > div,
+#show-match-modal[style*="display: flex"] > div,
+.wizard-modal.active .wizard-content,
+.dialog-overlay { animation: modalIn 0.22s ease-out both; }
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.96) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Inline-scoring tap feedback (touch ripple-lite) */
+.team-card { transition: transform 0.12s ease, background 0.15s ease; }
+.team-card:active:not([style*="cursor:not-allowed"]) {
+  transform: scale(0.97);
+  background: rgba(34, 197, 94, 0.08);
+}
+
+/* Status chip slide-in for transient feedback */
+.status-chip:not([style*="display: none"]) {
+  animation: chipSlideIn 0.3s ease-out;
+}
+@keyframes chipSlideIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Match summary chevron rotate when open */
+.adm-collapse-icon {
+  transition: transform 0.2s ease;
+  display: inline-block;
+}
+
+/* Toast for success: gentle slide */
+.status-chip.ok {
+  animation: chipSuccess 0.4s ease-out;
+}
+@keyframes chipSuccess {
+  0%   { opacity: 0; transform: translateY(-6px) scale(0.9); }
+  60%  { transform: translateY(2px) scale(1.05); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Reduce motion respect */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Removable focus outlines on touch but keep for keyboard */
 @media (hover: none) {
   button:focus, a:focus, input:focus, select:focus { outline: none; }

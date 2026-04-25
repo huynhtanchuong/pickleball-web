@@ -93,13 +93,12 @@ function switchRole(target) {
   if (target !== 'admin' && target !== 'referee') return;
 
   const expected = ROLE_PASSWORDS[target];
-  const promptLabel = target === 'admin'
-    ? 'Mật khẩu Admin:'
-    : 'Mật khẩu Trọng Tài:';
+  const T = (typeof t === 'function') ? t : (k => k);
+  const promptLabel = target === 'admin' ? T('pwAdmin') : T('pwReferee');
   const pw = (window.prompt(promptLabel) || '').trim();
-  if (!pw) return; // user cancelled
+  if (!pw) return;
   if (pw !== expected) {
-    alert('Mật khẩu không đúng.');
+    alert(T('pwWrong'));
     return;
   }
   _setRole(target);
@@ -153,7 +152,12 @@ function applyRoleVisibility() {
   const badge = document.getElementById('role-badge');
   if (badge) {
     const PICKLEBALL_ICON = `<svg viewBox="0 0 24 24" width="11" height="11" style="vertical-align:-1px;margin-right:2px;" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="#fde047" stroke="#a16207" stroke-width="0.7"/><circle cx="8" cy="8" r="1.4" fill="#a16207"/><circle cx="16" cy="8" r="1.4" fill="#a16207"/><circle cx="12" cy="13" r="1.4" fill="#a16207"/><circle cx="7" cy="15" r="1.1" fill="#a16207"/><circle cx="17" cy="15" r="1.1" fill="#a16207"/><circle cx="12" cy="18.2" r="1" fill="#a16207"/></svg>`;
-    const labels = { admin: '👑 Admin', referee: PICKLEBALL_ICON + 'Trọng Tài', view: '' };
+    const T = (typeof t === 'function') ? t : (k => k);
+    const labels = {
+      admin: '👑 ' + T('roleAdmin'),
+      referee: PICKLEBALL_ICON + T('roleReferee'),
+      view: ''
+    };
     badge.innerHTML = labels[role] || '';
     badge.style.display = role !== 'view' ? 'inline-block' : 'none';
   }
