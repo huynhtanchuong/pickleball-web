@@ -94,21 +94,22 @@ async function swapTeamMembers(teamId) {
     return;
   }
   try {
-    const team = teamById.get(teamId);
-    if (!team) return;
-
-    // Reject if this team has any match that is already playing or done —
-    // changing positions mid-tournament would invalidate live scoring state.
-    const tid = team.tournament_id;
-    const teamMatches = await storage.read('matches', { tournament_id: tid });
-    const inProgress = (teamMatches || []).some(mm =>
-      (mm.team_a_id === teamId || mm.team_b_id === teamId) &&
-      mm.status !== 'not_started'
-    );
-    if (inProgress) {
-      setStatus('Không thể đổi vị trí — đội đã/đang thi đấu', 'err');
+    // Always re-fetch latest team state from DB so multiple swaps in a row
+    // act on the current member1/member2, not on stale cache data.
+    let team = teamById.get(teamId);
+    if (!team) {
+      await refreshTeamsCache();
+      team = teamById.get(teamId);
+    }
+    if (!team) {
+      setStatus('Không tìm thấy đội', 'err');
       return;
     }
+
+    // Per-match status guard already lives in the lineup-row visibility
+    // (it only renders for matches whose status === 'not_started'). We
+    // intentionally do NOT block here on other matches in progress —
+    // referee/admin needs the freedom to fix slots before each match starts.
 
     await storage.update('teams', teamId, {
       member1_id: team.member2_id,
@@ -614,23 +615,24 @@ function matchHTML(m, stage) {
   // Score section - Only semi/final use 3-set scoring, group uses single score
   let scoreSection = "";
   if (!ready) {
-    // Show waiting message for matches with placeholder teams
     scoreSection = `<div class="match-waiting-msg">${t("matchWaiting")}</div>`;
-  } else if (stage === "semi" || stage === "final") {
-    // 3-set scoring for semi/final
-    const { winsA, winsB } = computeSetWins(m);
-    const showSet3 = winsA >= 1 && winsB >= 1;
-    scoreSection = `
-      <div class="adm-set-wins" data-id="${m.id}">${t("sets")} ${winsA} — ${winsB}</div>
-      ${setRowHTML(m, 1, dis)}
-      ${setRowHTML(m, 2, dis)}
-      ${showSet3 || m.s3a || m.s3b || m.s3A || m.s3B
-        ? setRowHTML(m, 3, dis)
-        : `<div id="set3-${m.id}">
-             <button class="adm-add-set-btn" onclick="showSet3('${m.id}')" ${dis}>${t("addSet3")}</button>
-           </div>`}`;
   } else {
-    // Tap-to-score UI for group stage
+    // Unified tap-to-score for ALL stages.
+    // Group stage: scoreA/scoreB are the running points.
+    // Semi/Final: best-of-3, score_a/score_b are SET WINS; we pull current
+    // set's points from m.s${currentSet}a/b and increment those on tap.
+    const isBO3 = (stage === "semi" || stage === "final");
+    const setsWonA = m.scoreA || 0;
+    const setsWonB = m.scoreB || 0;
+    const currentSet = isBO3 ? (m.current_set || 1) : 1;
+    const liveScoreA = isBO3 ? (m[`s${currentSet}a`] || 0) : (m.scoreA || 0);
+    const liveScoreB = isBO3 ? (m[`s${currentSet}b`] || 0) : (m.scoreB || 0);
+
+    // Reuse via local mutation: temporarily replace m.scoreA/m.scoreB so
+    // the existing tap-to-score template renders the current set's points.
+    m.scoreA = liveScoreA;
+    m.scoreB = liveScoreB;
+
     const servingTeam = m.serving_team || null;
     const serverNumber = m.server_number || 2;
     const isServingA = servingTeam === 'A';
@@ -642,23 +644,27 @@ function matchHTML(m, stage) {
                   ? teamById.get(m.team_a_id) : null;
     const teamB = (typeof teamById !== 'undefined' && teamById)
                   ? teamById.get(m.team_b_id) : null;
-    // Pickleball:
-    //  - Score is announced "us-them-N" where N = server number (1 or 2).
-    //  - At MATCH START the starting team only gets one server; convention
-    //    calls them "Server 2" but the actual player is in slot 1 (right
-    //    court). So we default serverNumber=2 yet highlight slot 1.
-    //  - Once a score is on the board we use serverNumber directly to
-    //    decide which slot is the active server.
-    //  - Receiver TOGGLES each time the serving team scores (server moves
-    //    to opposite court → diagonal opponent changes).
-    const totalScore = (m.scoreA || 0) + (m.scoreB || 0);
-    const isMatchStart = totalScore === 0 && serverNumber === 2;
-    const baseServerSlot = isMatchStart ? 1 : serverNumber;
+    // Pickleball serving model:
+    //  - "Starting phase" = the very first serve turn of the match. The
+    //    starting team only gets one server (announced as "Server 2") and
+    //    the actual player is slot 1 (right court). They KEEP serving even
+    //    after scoring multiple points — only the receiver toggles.
+    //  - Detect: receiving team's score is 0 AND serverNumber === 2.
+    //    Once they fault, serve transfers (otherScore stays 0 only if
+    //    no transfer has occurred).
+    //  - After starting phase: server slot follows serverNumber (1=slot 1,
+    //    2=slot 2 partner takes over).
+    //  - Receiver toggles each time the serving team scores (server swaps
+    //    courts → diagonal opponent changes).
     const servingScoreNow = servingTeam === 'A' ? (m.scoreA || 0)
                           : servingTeam === 'B' ? (m.scoreB || 0) : 0;
-    const receiverSlot = (servingScoreNow % 2 === 0)
-                         ? baseServerSlot
-                         : (baseServerSlot === 1 ? 2 : 1);
+    const otherScoreNow   = servingTeam === 'A' ? (m.scoreB || 0)
+                          : servingTeam === 'B' ? (m.scoreA || 0) : 0;
+    const isStartingPhase = otherScoreNow === 0 && serverNumber === 2;
+    const baseServerSlot  = isStartingPhase ? 1 : serverNumber;
+    const receiverSlot    = (servingScoreNow % 2 === 0)
+                            ? baseServerSlot
+                            : (baseServerSlot === 1 ? 2 : 1);
     const teamCardHTML = (side) => {
       const tm        = side === 'A' ? teamA : teamB;
       const teamName  = side === 'A' ? m.teamA : m.teamB;
@@ -678,18 +684,23 @@ function matchHTML(m, stage) {
              ${canStart || dis ? 'style="opacity:0.5;cursor:not-allowed;"' : ''}>
           <div class="team-name">${esc(teamName)}</div>
           ${isServing ? `<div class="serving-badge">${pickleballBalls(serverNumber)}</div>` : ''}
-          ${(m1 || m2) ? `
-            <div class="team-players">
+          ${(m1 || m2) ? (() => {
+            // Visual mirroring: top team (A) shows slots left→right "1 | 2";
+            // bottom team (B) is mirrored "2 | 1" so each player's column
+            // matches the same physical court half (right court of A and
+            // right court of B share the same on-screen side).
+            const slot1 = `
               <div class="player-slot ${highlightSlot(1)}" data-slot="1">
                 <span class="slot-num">1</span>
                 <span class="slot-name">${esc(m1 || '—')}</span>
-              </div>
+              </div>`;
+            const slot2 = `
               <div class="player-slot ${highlightSlot(2)}" data-slot="2">
                 <span class="slot-num">2</span>
                 <span class="slot-name">${esc(m2 || '—')}</span>
-              </div>
-            </div>
-          ` : ''}
+              </div>`;
+            return `<div class="team-players">${side === 'A' ? slot1 + slot2 : slot2 + slot1}</div>`;
+          })() : ''}
           <div class="team-score">${score}</div>
         </div>`;
     };
@@ -700,6 +711,18 @@ function matchHTML(m, stage) {
           ${t('hintTapWinner')}
           ${canStart ? t('hintPickServe') : t('hintNonServerTap')}
         </div>
+        ${isBO3 ? `
+          <div class="bo3-context">
+            <span class="bo3-set">SET ${currentSet}</span>
+            <span class="bo3-wins">Sets thắng: <b>${setsWonA}</b> — <b>${setsWonB}</b></span>
+            ${[1,2,3].slice(0, Math.max(currentSet, 1)).map(n => {
+              const sa = m[`s${n}a`] || 0, sb = m[`s${n}b`] || 0;
+              const isCurrent = n === currentSet;
+              const done = !isCurrent && (sa > 0 || sb > 0);
+              return `<span class="bo3-set-history ${isCurrent?'current':''} ${done?'done':''}">S${n} ${sa}-${sb}</span>`;
+            }).join('')}
+          </div>
+        ` : ''}
         <div class="scoring-teams">
           ${teamCardHTML('A')}
           <div class="vs-divider">VS</div>
@@ -1759,35 +1782,74 @@ async function handleTeamTap(matchId, team) {
     // Save to history
     history.push(cloneGameState(current));
 
-    // Determine action
-    let action;
-    
-    if (team === current.servingTeam) {
-      // Team đang giao → Score
-      action = {
-        type: team === 'A' ? ActionTypes.SCORE_TEAM_A : ActionTypes.SCORE_TEAM_B
-      };
-    } else {
-      // Team không giao → Fault (đổi giao)
-      action = {
-        type: team === 'A' ? ActionTypes.FAULT_TEAM_B : ActionTypes.FAULT_TEAM_A
-      };
+    // Best-of-3 (semi/final): increment current set's points instead of
+    // touching score_a/score_b (which represent SETS WON).
+    const isBO3 = (match.stage === 'semi' || match.stage === 'final');
+    if (isBO3 && team === current.servingTeam) {
+      const cs = match.current_set || 1;
+      const setKey   = team === 'A' ? `s${cs}a` : `s${cs}b`;
+      const otherKey = team === 'A' ? `s${cs}b` : `s${cs}a`;
+      const newSetA  = (match[`s${cs}a`] || 0) + (team === 'A' ? 1 : 0);
+      const newSetB  = (match[`s${cs}b`] || 0) + (team === 'B' ? 1 : 0);
+
+      const TARGET = 11, MARGIN = 2;
+      const max  = Math.max(newSetA, newSetB);
+      const diff = Math.abs(newSetA - newSetB);
+
+      const payload = { [`s${cs}a`]: newSetA, [`s${cs}b`]: newSetB,
+                        updated_at: new Date().toISOString() };
+
+      if (max >= TARGET && diff >= MARGIN) {
+        // Set won — bump set wins, advance set or finish match
+        const setWinner = newSetA > newSetB ? 'A' : 'B';
+        const newWinsA = (match.scoreA || 0) + (setWinner === 'A' ? 1 : 0);
+        const newWinsB = (match.scoreB || 0) + (setWinner === 'B' ? 1 : 0);
+        payload.score_a = newWinsA;
+        payload.score_b = newWinsB;
+        if (newWinsA >= 2 || newWinsB >= 2) {
+          payload.status = 'done';
+          showOk('🏆 Trận đấu kết thúc!');
+        } else if (cs < 3) {
+          payload.current_set = cs + 1;
+          showOk(`✓ Hết Set ${cs} — bắt đầu Set ${cs + 1}`);
+        }
+      }
+
+      if (db) {
+        const { error } = await db.from('matches').update(payload).eq('id', matchId);
+        if (error) { showError(error, t('errSaveScore')); return; }
+      } else {
+        const stored = localStorage.getItem('pb_matches');
+        localMatches = stored ? JSON.parse(stored) : [];
+        const lm = localMatches.find(x => x.id === matchId);
+        if (lm) Object.assign(lm, payload);
+        saveLocal(localMatches);
+      }
+      // Tap animation
+      const teamCard = event?.target?.closest('.team-card');
+      if (teamCard) {
+        teamCard.classList.add('tap-active');
+        setTimeout(() => teamCard.classList.remove('tap-active'), 300);
+      }
+      await fetchMatches();
+      return;
     }
 
-    // Apply action using gameStateReducer
+    // Group stage (or fault on any stage) — go through gameStateReducer
+    let action;
+    if (team === current.servingTeam) {
+      action = { type: team === 'A' ? ActionTypes.SCORE_TEAM_A : ActionTypes.SCORE_TEAM_B };
+    } else {
+      action = { type: team === 'A' ? ActionTypes.FAULT_TEAM_B : ActionTypes.FAULT_TEAM_A };
+    }
     const newState = gameStateReducer(current, action);
-    
-    // Update state
     matchState.current = newState;
 
-    // Add tap animation
     const teamCard = event?.target?.closest('.team-card');
     if (teamCard) {
       teamCard.classList.add('tap-active');
       setTimeout(() => teamCard.classList.remove('tap-active'), 300);
     }
-
-    // Sync to database
     await syncMatchState(matchId, newState);
 
     // Re-render
