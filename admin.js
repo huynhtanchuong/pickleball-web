@@ -2,6 +2,25 @@
 //  admin.js — Admin panel logic
 // ============================================================
 
+// Per-match scoring history shown to the referee. Each entry:
+// { time: epoch ms, label: string }. Cleared on page reload (in-memory).
+const _matchActionLog = new Map();
+function logMatchAction(matchId, label) {
+  if (!matchId || !label) return;
+  const list = _matchActionLog.get(matchId) || [];
+  list.push({ time: Date.now(), label });
+  // Keep last 30 in memory; UI only renders the last 3
+  if (list.length > 30) list.splice(0, list.length - 30);
+  _matchActionLog.set(matchId, list);
+}
+function _formatLogTime(ms) {
+  const d = new Date(ms);
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  const ss = String(d.getSeconds()).padStart(2, '0');
+  return `${hh}:${mm}:${ss}`;
+}
+
 // Render N serving-ball icons for a match (or empty string when not serving).
 // Uses the shared pickleballBalls() helper from app.js.
 function admServingBadge(m, side) {
@@ -140,8 +159,10 @@ async function endSet(matchId) {
     }
 
     if (payload.status === 'done') {
+      logMatchAction(matchId, `🏆 Kết thúc trận (${newWinsA}-${newWinsB} sets)`);
       showOk('🏆 Trận đấu kết thúc');
     } else {
+      logMatchAction(matchId, `✓ Hết Set ${cs} (${setA}-${setB}) → Set ${cs + 1}`);
       showOk(`✓ Hết Set ${cs} — bắt đầu Set ${cs + 1}`);
     }
     await fetchMatches();
@@ -844,6 +865,20 @@ function matchHTML(m, stage) {
             ↶ Undo
           </button>
         </div>
+        ${(() => {
+          const log = _matchActionLog.get(m.id) || [];
+          if (log.length === 0) return '';
+          // Newest first, last 3
+          const recent = log.slice(-3).reverse();
+          return `
+            <div class="action-log scorer-only">
+              ${recent.map(e =>
+                `<div class="action-log-row">
+                   <span class="action-log-time">${_formatLogTime(e.time)}</span>
+                   <span class="action-log-label">${esc(e.label)}</span>
+                 </div>`).join('')}
+            </div>`;
+        })()}
       </div>`;
   }
 
@@ -1931,6 +1966,8 @@ async function handleTeamTap(matchId, team) {
                         status: 'playing',
                         updated_at: new Date().toISOString() };
 
+      logMatchAction(matchId, `+1 Đội ${team} · Set ${cs}: ${newSetA}-${newSetB}`);
+
       if (db) {
         const { error } = await db.from('matches').update(payload).eq('id', matchId);
         if (error) { showError(error, t('errSaveScore')); return; }
@@ -1966,6 +2003,15 @@ async function handleTeamTap(matchId, team) {
     }
     const newState = gameStateReducer(current, action);
     matchState.current = newState;
+
+    // Log a human-readable description of what happened for the action strip
+    if (newState.servingTeam !== current.servingTeam) {
+      logMatchAction(matchId, `↔️ Đổi giao → Đội ${newState.servingTeam}`);
+    } else if (newState.serverNumber !== current.serverNumber) {
+      logMatchAction(matchId, `⚠️ Fault — Server ${current.serverNumber}→${newState.serverNumber}`);
+    } else if (newState.scoreA !== current.scoreA || newState.scoreB !== current.scoreB) {
+      logMatchAction(matchId, `+1 Đội ${team} · ${newState.scoreA}-${newState.scoreB}`);
+    }
 
     // Derive new server_slot from state transition (gameStateReducer doesn't
     // know about it). Three cases:
@@ -2100,6 +2146,7 @@ async function selectServe(matchId, team) {
     };
 
     matchState.current = newState;
+    logMatchAction(matchId, `🥎 Bắt đầu — Đội ${team} giao trước`);
 
     await syncMatchState(matchId, newState);
 
@@ -2142,6 +2189,8 @@ async function handleUndo(matchId) {
     }
 
     const previousState = history.pop();
+
+    logMatchAction(matchId, '↶ Undo');
 
     // BO3 custom frame: revert just the set points + server_slot. Status
     // stays 'playing' — never let undo end a match.

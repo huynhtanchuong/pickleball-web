@@ -557,11 +557,14 @@
           </div>
           <div class="form-group">
             <label>Số bảng đấu</label>
-            <input type="number" id="num-groups" value="2" min="1">
+            <input type="number" id="num-groups" value="2" min="1" oninput="updateTotalTeamsHint()">
           </div>
           <div class="form-group">
             <label>Số đội mỗi bảng (dự kiến)</label>
-            <input type="number" id="teams-per-group" value="5" min="2">
+            <input type="number" id="teams-per-group" value="5" min="2" oninput="updateTotalTeamsHint()">
+          </div>
+          <div id="total-teams-hint" style="font-size:0.85rem;color:#666;margin-top:-8px;padding:6px 0;">
+            Tổng: <b>10 đội</b> ✓ (số chẵn)
           </div>
         </div>
 
@@ -1021,6 +1024,20 @@
       document.getElementById('btn-finish').style.display = currentStep === 4 ? 'inline-block' : 'none';
     }
 
+    // Live hint: total teams = numGroups × teamsPerGroup, must be even.
+    function updateTotalTeamsHint() {
+      const hint = document.getElementById('total-teams-hint');
+      if (!hint) return;
+      const ng = parseInt(document.getElementById('num-groups').value, 10) || 0;
+      const tpg = parseInt(document.getElementById('teams-per-group').value, 10) || 0;
+      const total = ng * tpg;
+      const ok = total > 0 && total % 2 === 0;
+      hint.innerHTML = ok
+        ? `Tổng: <b>${total} đội</b> ✓ (số chẵn)`
+        : `Tổng: <b style="color:#e74c3c">${total} đội</b> ✗ phải là số chẵn`;
+      hint.style.color = ok ? '#4caf50' : '#e74c3c';
+    }
+
     async function nextStep() {
       if (currentStep === 1) {
         // Validate and create tournament
@@ -1028,6 +1045,19 @@
         const date = document.getElementById('tournament-date').value;
         if (!name || !date) {
           showStatus('Vui lòng điền đầy đủ thông tin', 'error');
+          return;
+        }
+        // Total teams must be EVEN — every player is in a 2-person team,
+        // so an odd team count would leave one person unpaired.
+        const ng = parseInt(document.getElementById('num-groups').value, 10) || 0;
+        const tpg = parseInt(document.getElementById('teams-per-group').value, 10) || 0;
+        const totalTeams = ng * tpg;
+        if (ng < 1 || tpg < 2) {
+          showStatus('Số bảng ≥ 1 và số đội mỗi bảng ≥ 2', 'error');
+          return;
+        }
+        if (totalTeams % 2 !== 0) {
+          showStatus(`Tổng số đội phải chẵn (hiện tại: ${totalTeams}). Vui lòng điều chỉnh số bảng × số đội mỗi bảng để ra số chẵn.`, 'error');
           return;
         }
 

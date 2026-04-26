@@ -1049,6 +1049,41 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
   .lineup-swap  { grid-column: 1 / -1; padding: 8px; }
 }
 
+/* Action log — last 3 referee actions inside the tap-to-score panel.
+   Compact monospace timestamps + readable label, top divider. */
+.action-log {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--adm-border);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.action-log-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.7rem;
+  color: var(--adm-muted);
+  line-height: 1.35;
+}
+.action-log-time {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.65rem;
+  color: var(--adm-muted);
+  flex-shrink: 0;
+  opacity: 0.75;
+}
+.action-log-label {
+  color: var(--adm-text);
+  font-weight: 500;
+}
+/* Latest entry stands out a little */
+.action-log .action-log-row:first-child .action-log-label {
+  color: var(--adm-blue);
+  font-weight: 700;
+}
+
 /* End-of-set CTA: appears in BO3 when current set has a clear winner
    (max >= 11 AND diff >= 2). Referee taps it to either advance to next
    set or end the match — no auto-advance. */
