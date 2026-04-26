@@ -1881,29 +1881,29 @@ async function handleTeamTap(matchId, team) {
       matchState.history = new HistoryManager(10);
     }
     
-    // Always sync current scores from database
+    // Sync scores + status from DB (other clients / tabs may have changed
+    // them). DO NOT clobber serving state: it's mutated locally below and
+    // a stale read from Supabase under replica lag would lose a side-out
+    // and route the next tap as a fault → score eaten until 2nd tap.
     matchState.current.scoreA = match.scoreA || 0;
     matchState.current.scoreB = match.scoreB || 0;
-    matchState.current.servingTeam = match.serving_team;
-    matchState.current.serverNumber = match.server_number;
-    matchState.current.status = match.status === 'done' ? 'match_complete' : (match.status || 'playing');
+    if (matchState.current.servingTeam == null) {
+      matchState.current.servingTeam = match.serving_team;
+      matchState.current.serverNumber = match.server_number;
+    }
+    matchState.current.status = match.status === 'done' ? 'match_complete'
+                                                        : (match.status || 'playing');
 
     const { current, history } = matchState;
 
-    // Check if match started
     if (!current.servingTeam) {
       setStatus('⚠️ Vui lòng chọn đội giao bóng trước', 'err');
       return;
     }
-
-    // Check if match completed
     if (current.status === 'done' || current.status === 'match_complete') {
       setStatus('⚠️ Trận đấu đã kết thúc', 'err');
       return;
     }
-
-    // Save to history
-    history.push(cloneGameState(current));
 
     // Best-of-3 (semi/final): increment current set's points only — DO NOT
     // auto-advance set or auto-end match. Referee uses the dedicated
@@ -1911,10 +1911,21 @@ async function handleTeamTap(matchId, team) {
     const isBO3 = (match.stage === 'semi' || match.stage === 'final');
     if (isBO3 && team === current.servingTeam) {
       const cs = match.current_set || 1;
-      const newSetA = (match[`s${cs}a`] || 0) + (team === 'A' ? 1 : 0);
-      const newSetB = (match[`s${cs}b`] || 0) + (team === 'B' ? 1 : 0);
-      // Serving team scored → server stays, but they swap court → server_slot toggles
-      const newServerSlot = (match.server_slot || 1) === 1 ? 2 : 1;
+      const oldSa = match[`s${cs}a`] || 0;
+      const oldSb = match[`s${cs}b`] || 0;
+      const oldServerSlot = match.server_slot || 1;
+      // Push a BO3-shaped undo frame BEFORE mutating, so undo can revert
+      // the actual fields we touch (set points + server_slot) instead of
+      // the unrelated cumulative-state in matchState.current.
+      history.push({
+        kind: 'bo3', cs,
+        sa: oldSa, sb: oldSb,
+        server_slot: oldServerSlot
+      });
+
+      const newSetA = oldSa + (team === 'A' ? 1 : 0);
+      const newSetB = oldSb + (team === 'B' ? 1 : 0);
+      const newServerSlot = oldServerSlot === 1 ? 2 : 1;
       const payload = { [`s${cs}a`]: newSetA, [`s${cs}b`]: newSetB,
                         server_slot: newServerSlot,
                         status: 'playing',
@@ -1930,6 +1941,8 @@ async function handleTeamTap(matchId, team) {
         if (lm) Object.assign(lm, payload);
         saveLocal(localMatches);
       }
+      // Keep in-memory mirror in sync with what we wrote
+      matchState.current.status = 'playing';
       const teamCard = event?.target?.closest('.team-card');
       if (teamCard) {
         teamCard.classList.add('tap-active');
@@ -1940,6 +1953,11 @@ async function handleTeamTap(matchId, team) {
     }
 
     // Group stage (or fault on any stage) — go through gameStateReducer
+    // History push happens HERE (after the BO3 branch) so each frame
+    // matches what syncMatchState will write — undo restores the right
+    // before-state.
+    history.push(cloneGameState(current));
+
     let action;
     if (team === current.servingTeam) {
       action = { type: team === 'A' ? ActionTypes.SCORE_TEAM_A : ActionTypes.SCORE_TEAM_B };
@@ -2068,8 +2086,9 @@ async function selectServe(matchId, team) {
 
     const { current, history } = matchState;
 
-    // Save to history
-    history.push(current);
+    // Save to history (clone — leaking a reference would let later mutations
+    // contaminate the saved frame and corrupt undo behavior).
+    history.push(cloneGameState(current));
 
     // Update state — first serve of match: server_slot = 1 (Ô 1 starts)
     const newState = {
@@ -2112,28 +2131,51 @@ function closeServeDialog(matchId) {
 async function handleUndo(matchId) {
   try {
     const matchState = matchStates.get(matchId);
-    
     if (!matchState) {
       setStatus('❌ Không tìm thấy trạng thái trận đấu', 'err');
       return;
     }
-
     const { history } = matchState;
-
     if (!history.canUndo()) {
       setStatus('⚠️ Không có action nào để undo', 'err');
       return;
     }
 
     const previousState = history.pop();
+
+    // BO3 custom frame: revert just the set points + server_slot. Status
+    // stays 'playing' — never let undo end a match.
+    if (previousState && previousState.kind === 'bo3') {
+      const { cs, sa, sb, server_slot } = previousState;
+      const payload = {
+        [`s${cs}a`]: sa, [`s${cs}b`]: sb,
+        server_slot,
+        status: 'playing',
+        updated_at: new Date().toISOString()
+      };
+      if (db) {
+        const { error } = await db.from('matches').update(payload).eq('id', matchId);
+        if (error) { showError(error); return; }
+      } else {
+        const stored = localStorage.getItem('pb_matches');
+        localMatches = stored ? JSON.parse(stored) : [];
+        const lm = localMatches.find(x => x.id === matchId);
+        if (lm) Object.assign(lm, payload);
+        saveLocal(localMatches);
+      }
+      await fetchMatches();
+      setStatus('↶ Đã hoàn tác', 'ok');
+      return;
+    }
+
+    // Regular (group-stage) frame — guard against ending the match
+    if (previousState.status === 'match_complete') {
+      previousState.status = 'playing';
+    }
+    previousState._cameFromUndo = true; // tell syncMatchState not to write status='done'
     matchState.current = previousState;
-
-    // Sync to database
     await syncMatchState(matchId, previousState);
-
-    // Re-render
     await fetchMatches();
-    
     setStatus('↶ Đã hoàn tác', 'ok');
   } catch (error) {
     console.error('handleUndo error:', error);
@@ -2148,18 +2190,19 @@ async function syncMatchState(matchId, state) {
   // Map internal status to database status
   let dbStatus = state.status;
   if (state.status === 'set_complete' || state.status === 'match_complete') {
-    // For BO1 matches (group stage), set_complete means match is done
-    // For BO3/BO5, only match_complete means done
     if (state.config.matchFormat === 'BO1' && state.status === 'set_complete') {
       dbStatus = 'done';
     } else if (state.status === 'match_complete') {
       dbStatus = 'done';
     } else {
-      // set_complete but not match_complete → keep as 'playing'
       dbStatus = 'playing';
     }
   }
-  
+  // Undo never ends a match — even if the popped frame would map to 'done',
+  // demote it to 'playing'. Only finishMatch / endSet / resetMatch should
+  // change status away from 'playing'.
+  if (state._cameFromUndo && dbStatus === 'done') dbStatus = 'playing';
+
   const payload = {
     score_a: state.scoreA,
     score_b: state.scoreB,
