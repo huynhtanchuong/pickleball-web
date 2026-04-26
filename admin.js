@@ -1418,10 +1418,18 @@ async function generateSemifinals(silent=false) {
 
   // Look up team_a_id / team_b_id by team name so the lineup row +
   // tap-to-score player slots show actual member names in the semis.
+  // Fallback: also try the reversed "B & A" name in case the standings
+  // text was built in a different member order than the team's stored name.
   const idForName = (name) => {
     if (!name || name === 'TBD') return null;
     for (const tm of (teamById?.values() || [])) {
       if (tm.name === name) return tm.id;
+    }
+    // Reversed-order fallback
+    for (const tm of (teamById?.values() || [])) {
+      if (!tm.name || !tm.name.includes(' & ')) continue;
+      const [a, b] = tm.name.split(' & ');
+      if (`${b} & ${a}` === name) return tm.id;
     }
     return null;
   };
@@ -1479,6 +1487,11 @@ async function generateFinal(silent=false) {
     if (!name) return null;
     for (const tm of (teamById?.values() || [])) {
       if (tm.name === name) return tm.id;
+    }
+    for (const tm of (teamById?.values() || [])) {
+      if (!tm.name || !tm.name.includes(' & ')) continue;
+      const [a, b] = tm.name.split(' & ');
+      if (`${b} & ${a}` === name) return tm.id;
     }
     return null;
   };
