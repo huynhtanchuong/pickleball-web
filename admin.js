@@ -849,7 +849,7 @@ function matchHTML(m, stage) {
               Chọn Giao Bóng
             </button>
           ` : ''}
-          ${isBO3 && (() => {
+          ${isBO3 ? (() => {
             const csA = m[`s${currentSet}a`] || 0;
             const csB = m[`s${currentSet}b`] || 0;
             const max = Math.max(csA, csB), diff = Math.abs(csA - csB);
@@ -858,7 +858,7 @@ function matchHTML(m, stage) {
               <button class="btn-end-set" onclick="endSet('${m.id}')">
                 ✓ Kết thúc Set ${currentSet}
               </button>` : '';
-          })()}
+          })() : ''}
           <button class="btn-undo"
                   onclick="handleUndo('${m.id}')"
                   ${dis}>
