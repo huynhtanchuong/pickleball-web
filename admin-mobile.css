@@ -1049,39 +1049,49 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
   .lineup-swap  { grid-column: 1 / -1; padding: 8px; }
 }
 
-/* Action log — last 3 referee actions inside the tap-to-score panel.
-   Compact monospace timestamps + readable label, top divider. */
+/* Action log — last 3 referee actions. Compact mono timestamp +
+   readable label, with a dashed top divider so it's clearly meta-info. */
 .action-log {
   margin-top: 10px;
   padding-top: 8px;
   border-top: 1px dashed var(--adm-border);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 .action-log-row {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   color: var(--adm-muted);
-  line-height: 1.35;
+  line-height: 1.4;
 }
 .action-log-time {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.65rem;
+  font-size: 0.66rem;
   color: var(--adm-muted);
   flex-shrink: 0;
   opacity: 0.75;
+  min-width: 36px;
 }
 .action-log-label {
   color: var(--adm-text);
   font-weight: 500;
+  word-break: break-word;
+  flex: 1 1 auto;
 }
-/* Latest entry stands out a little */
 .action-log .action-log-row:first-child .action-log-label {
   color: var(--adm-blue);
   font-weight: 700;
+}
+
+/* Disabled Undo gets a clearly muted look */
+.btn-undo:disabled,
+.btn-undo[disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: grayscale(0.4);
 }
 
 /* End-of-set CTA: appears in BO3 when current set has a clear winner
@@ -1154,61 +1164,81 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
    + highlight server (gold) and receiver (blue)
    ============================================================ */
 
-/* 2 player slots side-by-side, mirroring the 2 halves of the court */
+/* 2 player slots side-by-side, mirroring the 2 halves of the court.
+   Slight inset margin so colored stripes / highlights never get clipped
+   at the edge of the viewport on mobile. */
 .team-players {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 4px;
-  margin: 8px 0;
+  gap: 6px;
+  margin: 10px 4px 6px;
   position: relative;
 }
 .player-slot {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 6px 4px;
-  border-radius: 6px;
-  background: rgba(255,255,255,0.04);
-  border: 2px solid transparent;
-  font-size: 0.78rem;
+  gap: 6px;
+  padding: 10px 6px 8px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.05);
+  border: 2px solid transparent; /* highlight color goes here */
+  font-size: 0.82rem;
   text-align: center;
-  transition: background 0.2s, border-color 0.2s;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+  min-height: 64px;
 }
 .player-slot .slot-num {
-  font-size: 0.6rem;
+  font-size: 0.68rem;
   font-weight: 800;
   color: var(--adm-muted);
   background: rgba(255,255,255,0.12);
   border-radius: 50%;
-  width: 18px; height: 18px;
+  width: 22px; height: 22px;
   display: inline-flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
 .player-slot .slot-name {
-  font-weight: 600;
+  font-weight: 700;
   color: var(--adm-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
+  font-size: 0.86rem;
 }
+/* Inline ĐANG PHÁT / ĐANG ĐỠ pills below the player name */
+.slot-role {
+  display: none;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+.player-slot.is-serving   .slot-role.role-serving   { display: inline-block; background: #fde047; color: #422006; }
+.player-slot.is-receiving .slot-role.role-receiving { display: inline-block; background: var(--adm-blue, #3b82f6); color: #fff; }
 
-/* Original-identity stripe on the left edge — green = was Ô 1 at start,
-   red = was Ô 2. Stays the same color for that player no matter which
-   court side they swap to during play. */
-.player-slot.orig-1 {
-  border-left: 4px solid #22c55e; /* green */
-}
-.player-slot.orig-2 {
-  border-left: 4px solid #ef4444; /* red */
-}
+/* Original-identity stripe — implemented via inset box-shadow so it never
+   clips at the edge of the screen on mobile (a real left-border on a
+   full-width card is invisible at the screen edge). Green = was Ô 1 at
+   start, Red = was Ô 2. */
+.player-slot.orig-1 { box-shadow: inset 4px 0 0 0 #22c55e; }
+.player-slot.orig-2 { box-shadow: inset 4px 0 0 0 #ef4444; }
 
-/* Server highlight: gold ring + soft glow */
+/* Server highlight: gold ring inside the card (inset shadow → no clip). */
 .player-slot.is-serving {
   background: rgba(253, 224, 71, 0.18);
   border-color: #fde047;
-  box-shadow: 0 0 0 2px rgba(253, 224, 71, 0.25);
+}
+.player-slot.is-serving.orig-1 {
+  box-shadow: inset 4px 0 0 0 #22c55e, 0 0 14px rgba(253, 224, 71, 0.45);
+  animation: livePulse 1.5s ease-in-out infinite;
+}
+.player-slot.is-serving.orig-2 {
+  box-shadow: inset 4px 0 0 0 #ef4444, 0 0 14px rgba(253, 224, 71, 0.45);
   animation: livePulse 1.5s ease-in-out infinite;
 }
 .player-slot.is-serving .slot-num { background: #fde047; color: #422006; }
@@ -1217,7 +1247,12 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
 .player-slot.is-receiving {
   background: rgba(59, 130, 246, 0.15);
   border-color: var(--adm-blue);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+.player-slot.is-receiving.orig-1 {
+  box-shadow: inset 4px 0 0 0 #22c55e, 0 0 10px rgba(59, 130, 246, 0.35);
+}
+.player-slot.is-receiving.orig-2 {
+  box-shadow: inset 4px 0 0 0 #ef4444, 0 0 10px rgba(59, 130, 246, 0.35);
 }
 .player-slot.is-receiving .slot-num { background: var(--adm-blue); color: #fff; }
 

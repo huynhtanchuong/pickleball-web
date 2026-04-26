@@ -2,14 +2,15 @@
 //  admin.js — Admin panel logic
 // ============================================================
 
-// Per-match scoring history shown to the referee. Each entry:
-// { time: epoch ms, label: string }. Cleared on page reload (in-memory).
+// Per-match scoring history shown to the referee. Each entry stores enough
+// state to render full team names + the player serving + the receiver +
+// the 3-digit score "us-them-N", computed at the time of the action.
+// In-memory only — cleared on page reload.
 const _matchActionLog = new Map();
-function logMatchAction(matchId, label) {
-  if (!matchId || !label) return;
+function logMatchAction(matchId, entry) {
+  if (!matchId || !entry) return;
   const list = _matchActionLog.get(matchId) || [];
-  list.push({ time: Date.now(), label });
-  // Keep last 30 in memory; UI only renders the last 3
+  list.push({ time: Date.now(), ...entry });
   if (list.length > 30) list.splice(0, list.length - 30);
   _matchActionLog.set(matchId, list);
 }
@@ -17,8 +18,33 @@ function _formatLogTime(ms) {
   const d = new Date(ms);
   const hh = String(d.getHours()).padStart(2, '0');
   const mm = String(d.getMinutes()).padStart(2, '0');
-  const ss = String(d.getSeconds()).padStart(2, '0');
-  return `${hh}:${mm}:${ss}`;
+  return `${hh}:${mm}`;
+}
+// Render one log entry into a sentence the referee can read at a glance
+function formatLogEntry(e) {
+  if (e.type === 'serve_pick') {
+    return `Bắt đầu — ${e.servingTeamName} giao trước`;
+  }
+  if (e.type === 'score') {
+    const score = `${e.servingScore}-${e.otherScore}-${e.serverNumber || 1}`;
+    const parts = [`${e.servingTeamName}: ${score}`];
+    if (e.serverName)   parts.push(`Phát: ${e.serverName}`);
+    if (e.receiverName) parts.push(`Đỡ: ${e.receiverName}`);
+    return parts.join('  ·  ');
+  }
+  if (e.type === 'fault_partner') {
+    return `Đổi server trong đội ${e.teamName} (Server ${e.fromServer}→${e.toServer})`;
+  }
+  if (e.type === 'side_out') {
+    return `Đổi giao → ${e.newServingTeamName}`;
+  }
+  if (e.type === 'set_end') {
+    return e.matchEnded
+      ? `Hết trận (${e.setsA}-${e.setsB} sets)`
+      : `Hết Set ${e.set} (${e.sa}-${e.sb}) → Set ${e.set + 1}`;
+  }
+  if (e.type === 'undo') return 'Hoàn tác';
+  return e.label || '';
 }
 
 // Render N serving-ball icons for a match (or empty string when not serving).
@@ -159,10 +185,13 @@ async function endSet(matchId) {
     }
 
     if (payload.status === 'done') {
-      logMatchAction(matchId, `🏆 Kết thúc trận (${newWinsA}-${newWinsB} sets)`);
+      logMatchAction(matchId, { type: 'set_end', matchEnded: true,
+                                set: cs, sa: setA, sb: setB,
+                                setsA: newWinsA, setsB: newWinsB });
       showOk('🏆 Trận đấu kết thúc');
     } else {
-      logMatchAction(matchId, `✓ Hết Set ${cs} (${setA}-${setB}) → Set ${cs + 1}`);
+      logMatchAction(matchId, { type: 'set_end', matchEnded: false,
+                                set: cs, sa: setA, sb: setB });
       showOk(`✓ Hết Set ${cs} — bắt đầu Set ${cs + 1}`);
     }
     await fetchMatches();
@@ -803,16 +832,15 @@ function matchHTML(m, stage) {
             // .orig-1 (green) / .orig-2 (red) left border stripe.
             // Highlight (is-serving / is-receiving) frames the rest of
             // the card.
-            const leftSlot = `
-              <div class="player-slot ${highlightSlot(1)} ${leftOrigCls}" data-slot="1">
-                <span class="slot-num">1</span>
-                <span class="slot-name">${esc(leftName || '—')}</span>
+            const renderSlot = (posSlot, origCls, name) => `
+              <div class="player-slot ${highlightSlot(posSlot)} ${origCls}" data-slot="${posSlot}">
+                <span class="slot-num">${posSlot}</span>
+                <span class="slot-name">${esc(name || '—')}</span>
+                <span class="slot-role role-serving">PHÁT</span>
+                <span class="slot-role role-receiving">ĐỠ</span>
               </div>`;
-            const rightSlot = `
-              <div class="player-slot ${highlightSlot(2)} ${rightOrigCls}" data-slot="2">
-                <span class="slot-num">2</span>
-                <span class="slot-name">${esc(rightName || '—')}</span>
-              </div>`;
+            const leftSlot  = renderSlot(1, leftOrigCls,  leftName);
+            const rightSlot = renderSlot(2, rightOrigCls, rightName);
             return `<div class="team-players">${side === 'A' ? leftSlot + rightSlot : rightSlot + leftSlot}</div>`;
           })() : ''}
           <div class="team-score">${score}</div>
@@ -859,23 +887,26 @@ function matchHTML(m, stage) {
                 ✓ Kết thúc Set ${currentSet}
               </button>` : '';
           })() : ''}
-          <button class="btn-undo"
-                  onclick="handleUndo('${m.id}')"
-                  ${dis}>
-            ↶ Undo
-          </button>
+          ${(() => {
+            const hasUndo = (matchStates.get(m.id)?.history?.canUndo?.()) || false;
+            return `
+              <button class="btn-undo"
+                      onclick="handleUndo('${m.id}')"
+                      ${dis} ${hasUndo ? '' : 'disabled'}>
+                ↶ Undo
+              </button>`;
+          })()}
         </div>
         ${(() => {
           const log = _matchActionLog.get(m.id) || [];
           if (log.length === 0) return '';
-          // Newest first, last 3
           const recent = log.slice(-3).reverse();
           return `
             <div class="action-log scorer-only">
               ${recent.map(e =>
                 `<div class="action-log-row">
                    <span class="action-log-time">${_formatLogTime(e.time)}</span>
-                   <span class="action-log-label">${esc(e.label)}</span>
+                   <span class="action-log-label">${esc(formatLogEntry(e))}</span>
                  </div>`).join('')}
             </div>`;
         })()}
@@ -1979,7 +2010,31 @@ async function handleTeamTap(matchId, team) {
                         status: 'playing',
                         updated_at: new Date().toISOString() };
 
-      logMatchAction(matchId, `+1 Đội ${team} · Set ${cs}: ${newSetA}-${newSetB}`);
+      // Compute server / receiver names based on current Ô positions
+      const tA = teamById.get(match.team_a_id);
+      const tB = teamById.get(match.team_b_id);
+      const teamRec = team === 'A' ? tA : tB;
+      const oppRec  = team === 'A' ? tB : tA;
+      const teamScore = team === 'A' ? newSetA : newSetB;
+      const oppScore  = team === 'A' ? newSetB : newSetA;
+      // After scoring: serving team had pre-score parity = (teamScore - 1)
+      // The server is whoever is in oldServerSlot before the swap.
+      const preTeamSwapped = ((teamScore - 1) % 2 === 1);
+      const serverMemberId = oldServerSlot === 1
+        ? (preTeamSwapped ? teamRec?.member2_id : teamRec?.member1_id)
+        : (preTeamSwapped ? teamRec?.member1_id : teamRec?.member2_id);
+      const receiverMemberId = oldServerSlot === 1
+        ? (oppScore % 2 === 1 ? oppRec?.member2_id : oppRec?.member1_id)
+        : (oppScore % 2 === 1 ? oppRec?.member1_id : oppRec?.member2_id);
+      logMatchAction(matchId, {
+        type: 'score',
+        servingTeamName: team === 'A' ? match.team_a : match.team_b,
+        servingScore: teamScore,
+        otherScore: oppScore,
+        serverNumber: match.server_number || 2,
+        serverName: memberById.get(serverMemberId)?.name,
+        receiverName: memberById.get(receiverMemberId)?.name
+      });
 
       if (db) {
         const { error } = await db.from('matches').update(payload).eq('id', matchId);
@@ -2019,11 +2074,42 @@ async function handleTeamTap(matchId, team) {
 
     // Log a human-readable description of what happened for the action strip
     if (newState.servingTeam !== current.servingTeam) {
-      logMatchAction(matchId, `↔️ Đổi giao → Đội ${newState.servingTeam}`);
+      logMatchAction(matchId, {
+        type: 'side_out',
+        newServingTeamName: newState.servingTeam === 'A' ? match.team_a : match.team_b
+      });
     } else if (newState.serverNumber !== current.serverNumber) {
-      logMatchAction(matchId, `⚠️ Fault — Server ${current.serverNumber}→${newState.serverNumber}`);
+      logMatchAction(matchId, {
+        type: 'fault_partner',
+        teamName: newState.servingTeam === 'A' ? match.team_a : match.team_b,
+        fromServer: current.serverNumber,
+        toServer:   newState.serverNumber
+      });
     } else if (newState.scoreA !== current.scoreA || newState.scoreB !== current.scoreB) {
-      logMatchAction(matchId, `+1 Đội ${team} · ${newState.scoreA}-${newState.scoreB}`);
+      // Group-stage score (server team scored)
+      const tA = teamById.get(match.team_a_id);
+      const tB = teamById.get(match.team_b_id);
+      const teamRec = team === 'A' ? tA : tB;
+      const oppRec  = team === 'A' ? tB : tA;
+      const teamScore = team === 'A' ? newState.scoreA : newState.scoreB;
+      const oppScore  = team === 'A' ? newState.scoreB : newState.scoreA;
+      const preTeamSwapped = ((teamScore - 1) % 2 === 1);
+      const slot = newSlot; // server's slot AFTER the toggle; pre-toggle = oldSlot
+      const serverMemberId = oldSlot === 1
+        ? (preTeamSwapped ? teamRec?.member2_id : teamRec?.member1_id)
+        : (preTeamSwapped ? teamRec?.member1_id : teamRec?.member2_id);
+      const receiverMemberId = oldSlot === 1
+        ? (oppScore % 2 === 1 ? oppRec?.member2_id : oppRec?.member1_id)
+        : (oppScore % 2 === 1 ? oppRec?.member1_id : oppRec?.member2_id);
+      logMatchAction(matchId, {
+        type: 'score',
+        servingTeamName: team === 'A' ? match.team_a : match.team_b,
+        servingScore: teamScore,
+        otherScore: oppScore,
+        serverNumber: newState.serverNumber || 2,
+        serverName: memberById.get(serverMemberId)?.name,
+        receiverName: memberById.get(receiverMemberId)?.name
+      });
     }
 
     // Derive new server_slot from state transition (gameStateReducer doesn't
@@ -2159,7 +2245,10 @@ async function selectServe(matchId, team) {
     };
 
     matchState.current = newState;
-    logMatchAction(matchId, `🥎 Bắt đầu — Đội ${team} giao trước`);
+    logMatchAction(matchId, {
+      type: 'serve_pick',
+      servingTeamName: team === 'A' ? matchState.current.teamA : matchState.current.teamB
+    });
 
     await syncMatchState(matchId, newState);
 
@@ -2203,7 +2292,7 @@ async function handleUndo(matchId) {
 
     const previousState = history.pop();
 
-    logMatchAction(matchId, '↶ Undo');
+    logMatchAction(matchId, { type: 'undo' });
 
     // BO3 custom frame: revert just the set points + server_slot. Status
     // stays 'playing' — never let undo end a match.
