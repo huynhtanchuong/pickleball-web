@@ -38,10 +38,16 @@ html { scroll-behavior: smooth; }
    ============================================================ */
 
 /* Page-load fade-in */
+/* Page fade-in: opacity only — DO NOT add transform here. Per the CSS
+   spec any element with `transform` (even an identity transform) becomes
+   the containing block for `position:fixed` descendants. That breaks
+   modal overlays (e.g. the serve-selection dialog), which then anchor
+   to the body instead of the viewport and end up off-screen when the
+   user has scrolled. */
 body { animation: pageFadeIn 0.35s ease-out both; }
 @keyframes pageFadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 /* Match cards: subtle hover lift (desktop only) */
