@@ -2018,13 +2018,17 @@ async function handleTeamTap(matchId, team) {
       const oppRec  = team === 'A' ? tB : tA;
       const teamScore = team === 'A' ? newSetA : newSetB;
       const oppScore  = team === 'A' ? newSetB : newSetA;
-      // After scoring: serving team had pre-score parity = (teamScore - 1)
-      // The server is whoever is in oldServerSlot before the swap.
+      // Server: same person who just scored — was in oldServerSlot before
+      //   the swap. Pre-score team parity = (teamScore - 1) % 2.
+      // Receiver: matches the visual "is-receiving" highlight, which uses
+      //   the POST-toggle slot (= newServerSlot) — i.e., who is now lined up
+      //   diagonally from the server in their new position. Opp didn't move
+      //   on this rally, so opp parity = oppScore (unchanged).
       const preTeamSwapped = ((teamScore - 1) % 2 === 1);
       const serverMemberId = oldServerSlot === 1
         ? (preTeamSwapped ? teamRec?.member2_id : teamRec?.member1_id)
         : (preTeamSwapped ? teamRec?.member1_id : teamRec?.member2_id);
-      const receiverMemberId = oldServerSlot === 1
+      const receiverMemberId = newServerSlot === 1
         ? (oppScore % 2 === 1 ? oppRec?.member2_id : oppRec?.member1_id)
         : (oppScore % 2 === 1 ? oppRec?.member1_id : oppRec?.member2_id);
       logMatchAction(matchId, {
@@ -2113,11 +2117,13 @@ async function handleTeamTap(matchId, team) {
       const teamScore = team === 'A' ? newState.scoreA : newState.scoreB;
       const oppScore  = team === 'A' ? newState.scoreB : newState.scoreA;
       const preTeamSwapped = ((teamScore - 1) % 2 === 1);
-      // Server is in oldSlot BEFORE the score (slot toggles afterwards)
+      // Server is in oldSlot BEFORE the score (slot toggles afterwards).
+      // Receiver matches the visual "is-receiving" highlight, which uses
+      // the POST-toggle slot (= newSlot) — diagonal of where server now is.
       const serverMemberId = oldSlot === 1
         ? (preTeamSwapped ? teamRec?.member2_id : teamRec?.member1_id)
         : (preTeamSwapped ? teamRec?.member1_id : teamRec?.member2_id);
-      const receiverMemberId = oldSlot === 1
+      const receiverMemberId = newSlot === 1
         ? (oppScore % 2 === 1 ? oppRec?.member2_id : oppRec?.member1_id)
         : (oppScore % 2 === 1 ? oppRec?.member1_id : oppRec?.member2_id);
       logMatchAction(matchId, {
