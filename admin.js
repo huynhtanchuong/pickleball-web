@@ -20,30 +20,32 @@ function _formatLogTime(ms) {
   const mm = String(d.getMinutes()).padStart(2, '0');
   return `${hh}:${mm}`;
 }
-// Render one log entry into a sentence the referee can read at a glance
+// Render one log entry into a sentence the referee can read at a glance.
+// All strings come from i18n.js so the log switches with EN / VI.
 function formatLogEntry(e) {
   if (e.type === 'serve_pick') {
-    return `Bắt đầu — ${e.servingTeamName} giao trước`;
+    return t('logStartedTeam', { team: e.servingTeamName });
   }
   if (e.type === 'score') {
-    const score = `${e.servingScore}-${e.otherScore}-${e.serverNumber || 1}`;
-    const parts = [`${e.servingTeamName}: ${score}`];
-    if (e.serverName)   parts.push(`Phát: ${e.serverName}`);
-    if (e.receiverName) parts.push(`Đỡ: ${e.receiverName}`);
+    const parts = [t('logScore', {
+      team: e.servingTeamName, a: e.servingScore, b: e.otherScore, n: e.serverNumber || 1
+    })];
+    if (e.serverName)   parts.push(t('logServerLabel',   { name: e.serverName }));
+    if (e.receiverName) parts.push(t('logReceiverLabel', { name: e.receiverName }));
     return parts.join('  ·  ');
   }
   if (e.type === 'fault_partner') {
-    return `Đổi server trong đội ${e.teamName} (Server ${e.fromServer}→${e.toServer})`;
+    return t('logFaultPartner', { team: e.teamName, from: e.fromServer, to: e.toServer });
   }
   if (e.type === 'side_out') {
-    return `Đổi giao → ${e.newServingTeamName}`;
+    return t('logSideOut', { team: e.newServingTeamName });
   }
   if (e.type === 'set_end') {
     return e.matchEnded
-      ? `Hết trận (${e.setsA}-${e.setsB} sets)`
-      : `Hết Set ${e.set} (${e.sa}-${e.sb}) → Set ${e.set + 1}`;
+      ? t('logMatchEnd', { a: e.setsA, b: e.setsB })
+      : t('logSetEnd', { set: e.set, a: e.sa, b: e.sb, next: e.set + 1 });
   }
-  if (e.type === 'undo') return 'Hoàn tác';
+  if (e.type === 'undo') return t('logUndo');
   return e.label || '';
 }
 
@@ -151,7 +153,7 @@ async function endSet(matchId) {
     const setA = m[`s${cs}a`] || 0;
     const setB = m[`s${cs}b`] || 0;
     if (setA === setB) {
-      setStatus('Set đang hòa — chưa có người thắng', 'err');
+      setStatus(t('setTied'), 'err');
       return;
     }
     const setWinner = setA > setB ? 'A' : 'B';
@@ -214,7 +216,7 @@ async function swapTeamMembers(teamId) {
       team = teamById.get(teamId);
     }
     if (!team) {
-      setStatus('Không tìm thấy đội', 'err');
+      setStatus(t('teamNotFound'), 'err');
       return;
     }
 
@@ -277,7 +279,7 @@ async function checkAndMigrate() {
     const needsMigration = await tournamentManager.needsMigration();
     
     if (needsMigration) {
-      setStatus('🔄 Đang di chuyển dữ liệu cũ...', 'ok');
+      setStatus(t('migrating'), 'ok');
       
       const result = await tournamentManager.migrateExistingMatches();
       
@@ -289,7 +291,7 @@ async function checkAndMigrate() {
     }
   } catch (error) {
     console.error('Migration error:', error);
-    setStatus('⚠️ Lỗi di chuyển dữ liệu: ' + error.message, 'err');
+    setStatus(t('migrateErr', { msg: error.message }), 'err');
   }
 }
 
@@ -367,9 +369,9 @@ async function switchTournament(tournamentId) {
     await fetchMatches();
     await renderTournamentControls(_activeTournament);
 
-    setStatus('Đã chuyển giải đấu', 'ok');
+    setStatus(t('matchSwitched'), 'ok');
   } catch (error) {
-    setStatus('Lỗi khi chuyển giải đấu: ' + error.message, 'err');
+    setStatus(t('matchSwitchErr', { msg: error.message }), 'err');
   }
 }
 
@@ -1199,7 +1201,7 @@ async function toggleSetLock(id, setNum) {
   // Supabase path
   const { error } = await db.from("matches").update(payload).eq("id", id);
   if (error) {
-    setStatus("❌ Không thể cập nhật khóa", "err");
+    setStatus(t('cantUpdateLock'), "err");
     return;
   }
   
@@ -1260,7 +1262,7 @@ async function saveMatchInfo(id) {
   const { error } = await db.from("matches")
     .update({ match_time: timeVal, court: courtVal, referee_name: refVal }).eq("id", id);
   if (error) { 
-    setStatus("❌ Không thể lưu thông tin trận đấu", "err"); 
+    setStatus(t('cantSaveMatchInfo'), "err");
     return; 
   }
   setStatus(t("infoSaved"), "ok");
@@ -1297,7 +1299,7 @@ async function resetMatch(id) {
     Object.assign(m, payload);
     saveLocal(localMatches);
     fetchMatches();
-    setStatus("✓ Đã đặt lại trận đấu", "ok");
+    setStatus(t('matchResetOk'), "ok");
     return;
   }
 
@@ -1305,17 +1307,16 @@ async function resetMatch(id) {
   const conflict = await checkConflict(id);
   if (conflict) {
     handleConflict(id);
-    alert("⚠️ Trận đấu đã được cập nhật bởi admin khác!\n\n" +
-      "Vui lòng bấm Reload để xem dữ liệu mới nhất trước khi reset.");
+    alert(t('matchUpdatedOther'));
     return;
   }
 
   // 1. Reset the match
   const { error } = await db.from("matches").update(payload).eq("id", id);
-  if (error) { 
-    setStatus("❌ Không thể đặt lại trận đấu", "err");
-    alert(`Không thể đặt lại trận đấu!\n\nVui lòng thử lại hoặc liên hệ quản trị viên.`);
-    return; 
+  if (error) {
+    setStatus(t('cantResetMatch'), "err");
+    alert(t('cantResetMatch'));
+    return;
   }
 
   // Update known timestamp after successful reset
@@ -1344,7 +1345,7 @@ async function resetMatch(id) {
 
 // ── Re-generate bracket (delete old + create new) ─────────────
 async function regenSemifinals() {
-  if (!confirm("Xóa bán kết cũ và gen lại?")) return;
+  if (!confirm(t('confirmRegenSemi'))) return;
 
   if (!db) {
     localMatches = (localMatches||[]).filter(m => m.stage !== "semi");
@@ -1359,7 +1360,7 @@ async function regenSemifinals() {
   // Delete existing semis and wait for confirmation
   const { error: delErr } = await db.from("matches").delete().eq("stage", "semi");
   if (delErr) { 
-    setStatus("❌ Không thể xóa bán kết cũ", "err"); 
+    setStatus(t('cantDeleteSemi'), "err");
     return; 
   }
 
@@ -1369,7 +1370,7 @@ async function regenSemifinals() {
 }
 
 async function regenFinal() {
-  if (!confirm("Xóa chung kết cũ và gen lại?")) return;
+  if (!confirm(t('confirmRegenFinal'))) return;
 
   if (!db) {
     localMatches = (localMatches||[]).filter(m => m.stage !== "final");
@@ -1382,7 +1383,7 @@ async function regenFinal() {
 
   const { error: delErr } = await db.from("matches").delete().eq("stage", "final");
   if (delErr) { 
-    setStatus("❌ Không thể xóa chung kết cũ", "err"); 
+    setStatus(t('cantDeleteFinal'), "err");
     return; 
   }
 
@@ -1423,14 +1424,14 @@ async function generateSemifinals(silent=false) {
   const existing = matches.filter(m => m.stage === "semi");
 
   if (existing.length > 0) {
-    if (!silent) alert("Bán kết đã tồn tại! Dùng nút Re-gen.");
+    if (!silent) alert(t('semiExists'));
     return;
   }
 
   const tops = getTopTeamsByGroup(matches);
   const groupKeys = Object.keys(tops).sort();
   if (groupKeys.length < 2) {
-    if (!silent) alert("Cần ít nhất 2 bảng.");
+    if (!silent) alert(t('needTwoGroups'));
     return;
   }
 
@@ -1439,7 +1440,7 @@ async function generateSemifinals(silent=false) {
   // semifinals appear.
   const tournamentId = tournamentManager?.getActiveTournamentId();
   if (!tournamentId) {
-    if (!silent) alert("Chưa chọn giải đấu");
+    if (!silent) alert(t('noTournamentSelected'));
     return;
   }
 
@@ -1482,7 +1483,7 @@ async function generateSemifinals(silent=false) {
 
   const { error } = await db.from("matches").insert(semis);
   if (error) { 
-    setStatus("❌ Không thể tạo bán kết", "err"); 
+    setStatus(t('cantCreateSemi'), "err");
     return; 
   }
   if (!silent) setStatus(t("semiCreated"), "ok");
@@ -1496,17 +1497,17 @@ async function generateFinal(silent=false) {
   const finals = matches.filter(m => m.stage === "final");
 
   if (finals.length > 0) {
-    if (!silent) alert("Chung kết đã tồn tại! Dùng nút Re-gen.");
+    if (!silent) alert(t('finalExists'));
     return;
   }
   if (semis.length < 2) {
-    if (!silent) alert("Cần hoàn thành cả 2 bán kết.");
+    if (!silent) alert(t('needTwoSemiDone'));
     return;
   }
 
   const tournamentId = tournamentManager?.getActiveTournamentId();
   if (!tournamentId) {
-    if (!silent) alert("Chưa chọn giải đấu");
+    if (!silent) alert(t('noTournamentSelected'));
     return;
   }
   const getWinner = m => (m.score_a ?? m.scoreA ?? 0) >= (m.score_b ?? m.scoreB ?? 0)
@@ -1543,7 +1544,7 @@ async function generateFinal(silent=false) {
 
   const { error } = await db.from("matches").insert([finalMatch]);
   if (error) { 
-    setStatus("❌ Không thể tạo chung kết", "err"); 
+    setStatus(t('cantCreateFinal'), "err");
     return; 
   }
   if (!silent) setStatus(t("finalCreated"), "ok");
@@ -1656,13 +1657,13 @@ async function createThirdPlaceMatch() {
   }
   try {
     if (!tournamentManager) {
-      setStatus('❌ Tournament manager not initialized', 'err');
+      setStatus(t('tmNotInit'), 'err');
       return;
     }
 
     const activeId = tournamentManager.getActiveTournamentId();
     if (!activeId) {
-      setStatus('❌ Chưa chọn giải đấu', 'err');
+      setStatus('❌ ' + t('noTournamentSelected'), 'err');
       return;
     }
 
@@ -1671,17 +1672,17 @@ async function createThirdPlaceMatch() {
     const existingThirdPlace = matches.find(m => m.stage === 'third_place' || m.match_type === 'third_place');
     
     if (existingThirdPlace) {
-      setStatus('⚠️ Trận tranh giải ba đã tồn tại', 'err');
+      setStatus(t('thirdPlaceExists'), 'err');
       return;
     }
 
     // Generate third-place match
     const thirdPlaceMatch = await tournamentManager.generateThirdPlaceMatch(activeId);
     
-    setStatus('✓ Đã tạo trận tranh giải ba', 'ok');
+    setStatus(t('thirdPlaceCreated'), 'ok');
     await fetchMatches();
   } catch (error) {
-    setStatus('❌ Lỗi: ' + error.message, 'err');
+    setStatus(t('genericErr', { msg: error.message }), 'err');
   }
 }
 
@@ -1695,13 +1696,13 @@ async function createConsolationMatch() {
   }
   try {
     if (!tournamentManager) {
-      setStatus('❌ Tournament manager not initialized', 'err');
+      setStatus(t('tmNotInit'), 'err');
       return;
     }
 
     const activeId = tournamentManager.getActiveTournamentId();
     if (!activeId) {
-      setStatus('❌ Chưa chọn giải đấu', 'err');
+      setStatus('❌ ' + t('noTournamentSelected'), 'err');
       return;
     }
 
@@ -1710,17 +1711,17 @@ async function createConsolationMatch() {
     const existingConsolation = matches.find(m => m.stage === 'consolation' || m.match_type === 'consolation');
     
     if (existingConsolation) {
-      setStatus('⚠️ Trận khuyến khích đã tồn tại', 'err');
+      setStatus(t('consolationExists'), 'err');
       return;
     }
 
     // Generate consolation match
     const consolationMatch = await tournamentManager.generateConsolationMatch(activeId);
     
-    setStatus('✓ Đã tạo trận khuyến khích', 'ok');
+    setStatus(t('consolationCreated'), 'ok');
     await fetchMatches();
   } catch (error) {
-    setStatus('❌ Lỗi: ' + error.message, 'err');
+    setStatus(t('genericErr', { msg: error.message }), 'err');
   }
 }
 
@@ -1734,7 +1735,7 @@ async function openShowMatchModal() {
   }
   try {
     if (!storage) {
-      setStatus('❌ Storage not initialized', 'err');
+      setStatus(t('storageNotInit'), 'err');
       return;
     }
 
@@ -1763,7 +1764,7 @@ async function openShowMatchModal() {
       modal.style.display = 'flex';
     }
   } catch (error) {
-    setStatus('❌ Lỗi: ' + error.message, 'err');
+    setStatus(t('genericErr', { msg: error.message }), 'err');
   }
 }
 
@@ -1793,13 +1794,13 @@ function closeShowMatchModal() {
 async function createShowMatch() {
   try {
     if (!tournamentManager) {
-      setStatus('❌ Tournament manager not initialized', 'err');
+      setStatus(t('tmNotInit'), 'err');
       return;
     }
 
     const activeId = tournamentManager.getActiveTournamentId();
     if (!activeId) {
-      setStatus('❌ Chưa chọn giải đấu', 'err');
+      setStatus('❌ ' + t('noTournamentSelected'), 'err');
       return;
     }
 
@@ -1811,7 +1812,7 @@ async function createShowMatch() {
 
     // Validate
     if (!teamAMember1 || !teamAMember2 || !teamBMember1 || !teamBMember2) {
-      setStatus('❌ Vui lòng chọn đủ 4 thành viên', 'err');
+      setStatus(t('needFourMembers'), 'err');
       return;
     }
 
@@ -1819,7 +1820,7 @@ async function createShowMatch() {
     const selected = [teamAMember1, teamAMember2, teamBMember1, teamBMember2];
     const unique = new Set(selected);
     if (unique.size !== 4) {
-      setStatus('❌ Không được chọn trùng thành viên', 'err');
+      setStatus(t('noDuplicateMember'), 'err');
       return;
     }
 
@@ -1837,11 +1838,11 @@ async function createShowMatch() {
       customNames
     );
 
-    setStatus('✓ Đã tạo trận biểu diễn', 'ok');
+    setStatus(t('showMatchCreated'), 'ok');
     closeShowMatchModal();
     await fetchMatches();
   } catch (error) {
-    setStatus('❌ Lỗi: ' + error.message, 'err');
+    setStatus(t('genericErr', { msg: error.message }), 'err');
   }
 }
 
@@ -1937,7 +1938,7 @@ async function handleTeamTap(matchId, team) {
     const match = matches.find(m => m.id === matchId);
     
     if (!match) {
-      setStatus('❌ Không tìm thấy trận đấu', 'err');
+      setStatus('❌ ' + t('errMatchNotFound'), 'err');
       return;
     }
     
@@ -1976,11 +1977,11 @@ async function handleTeamTap(matchId, team) {
     const { current, history } = matchState;
 
     if (!current.servingTeam) {
-      setStatus('⚠️ Vui lòng chọn đội giao bóng trước', 'err');
+      setStatus(t('pickServeFirst'), 'err');
       return;
     }
     if (current.status === 'done' || current.status === 'match_complete') {
-      setStatus('⚠️ Trận đấu đã kết thúc', 'err');
+      setStatus(t('matchEnded'), 'err');
       return;
     }
 
@@ -2072,6 +2073,24 @@ async function handleTeamTap(matchId, team) {
     const newState = gameStateReducer(current, action);
     matchState.current = newState;
 
+    // Derive new server_slot from state transition (gameStateReducer doesn't
+    // know about it). Three cases:
+    //  - servingTeam changed → side-out → reset to 1 (new team's Ô 1 serves)
+    //  - servingTeam same, serverNumber went 1→2 → toggle (partner is on
+    //    the opposite court half)
+    //  - servingTeam same, score went up → toggle (server keeps serving but
+    //    swaps court with partner per pickleball rules)
+    const oldSlot = match.server_slot || 1;
+    let newSlot = oldSlot;
+    if (newState.servingTeam !== current.servingTeam) {
+      newSlot = 1;
+    } else if (newState.serverNumber !== current.serverNumber) {
+      newSlot = oldSlot === 1 ? 2 : 1;
+    } else if (newState.scoreA !== current.scoreA || newState.scoreB !== current.scoreB) {
+      newSlot = oldSlot === 1 ? 2 : 1;
+    }
+    newState._serverSlot = newSlot; // pass through to syncMatchState
+
     // Log a human-readable description of what happened for the action strip
     if (newState.servingTeam !== current.servingTeam) {
       logMatchAction(matchId, {
@@ -2094,7 +2113,7 @@ async function handleTeamTap(matchId, team) {
       const teamScore = team === 'A' ? newState.scoreA : newState.scoreB;
       const oppScore  = team === 'A' ? newState.scoreB : newState.scoreA;
       const preTeamSwapped = ((teamScore - 1) % 2 === 1);
-      const slot = newSlot; // server's slot AFTER the toggle; pre-toggle = oldSlot
+      // Server is in oldSlot BEFORE the score (slot toggles afterwards)
       const serverMemberId = oldSlot === 1
         ? (preTeamSwapped ? teamRec?.member2_id : teamRec?.member1_id)
         : (preTeamSwapped ? teamRec?.member1_id : teamRec?.member2_id);
@@ -2112,24 +2131,6 @@ async function handleTeamTap(matchId, team) {
       });
     }
 
-    // Derive new server_slot from state transition (gameStateReducer doesn't
-    // know about it). Three cases:
-    //  - servingTeam changed → side-out → reset to 1 (new team's Ô 1 serves)
-    //  - servingTeam same, serverNumber went 1→2 → toggle (partner is on
-    //    the opposite court half)
-    //  - servingTeam same, score went up → toggle (server keeps serving but
-    //    swaps court with partner per pickleball rules)
-    const oldSlot = match.server_slot || 1;
-    let newSlot = oldSlot;
-    if (newState.servingTeam !== current.servingTeam) {
-      newSlot = 1;
-    } else if (newState.serverNumber !== current.serverNumber) {
-      newSlot = oldSlot === 1 ? 2 : 1;
-    } else if (newState.scoreA !== current.scoreA || newState.scoreB !== current.scoreB) {
-      newSlot = oldSlot === 1 ? 2 : 1;
-    }
-    newState._serverSlot = newSlot; // pass through to syncMatchState
-
     const teamCard = event?.target?.closest('.team-card');
     if (teamCard) {
       teamCard.classList.add('tap-active');
@@ -2140,10 +2141,10 @@ async function handleTeamTap(matchId, team) {
     // Re-render
     await fetchMatches();
     
-    setStatus('✓ Đã cập nhật điểm', 'ok');
+    setStatus(t('scoreUpdated'), 'ok');
   } catch (error) {
     console.error('handleTeamTap error:', error);
-    setStatus('❌ Lỗi: ' + error.message, 'err');
+    setStatus(t('genericErr', { msg: error.message }), 'err');
   }
 }
 
@@ -2179,27 +2180,27 @@ function showServeDialog(matchId, state) {
   const dialog = `
     <div class="dialog-overlay" id="serve-dialog-${matchId}" onclick="if(event.target===this) closeServeDialog('${matchId}')">
       <div class="dialog">
-        <h2>Chọn Đội Giao Bóng Đầu Tiên</h2>
-        
+        <h2>${t('serveDialogTitle')}</h2>
+
         <button class="serve-option" onclick="selectServe('${matchId}', 'A')">
           <div class="team-name">${esc(state.teamA)}</div>
-          <div class="serve-label">Giao Bóng Trước</div>
+          <div class="serve-label">${t('serveBefore')}</div>
         </button>
-        
+
         <button class="serve-option" onclick="selectServe('${matchId}', 'B')">
           <div class="team-name">${esc(state.teamB)}</div>
-          <div class="serve-label">Giao Bóng Trước</div>
+          <div class="serve-label">${t('serveBefore')}</div>
         </button>
 
         <button class="serve-option serve-random" onclick="selectServe('${matchId}', Math.random() < 0.5 ? 'A' : 'B')">
-          <div class="team-name">🎲 Random</div>
-          <div class="serve-label">Hệ thống chọn ngẫu nhiên</div>
+          <div class="team-name">${t('serveRandom')}</div>
+          <div class="serve-label">${t('serveRandomSub')}</div>
         </button>
 
-        <p class="serve-note">Mặc định: Server 2</p>
+        <p class="serve-note">${t('serveDefault')}</p>
 
         <button class="btn-secondary" onclick="closeServeDialog('${matchId}')">
-          Hủy
+          ${t('cancel')}
         </button>
       </div>
     </div>
@@ -2220,7 +2221,7 @@ async function selectServe(matchId, team) {
       const match = matches.find(m => m.id === matchId);
       
       if (!match) {
-        setStatus('❌ Không tìm thấy trận đấu', 'err');
+        setStatus('❌ ' + t('errMatchNotFound'), 'err');
         return;
       }
       
@@ -2258,10 +2259,10 @@ async function selectServe(matchId, team) {
     // Re-render
     await fetchMatches();
     
-    setStatus(`✓ Đã chọn Team ${team} giao bóng`, 'ok');
+    setStatus(t('serveTeamPicked', { team }), 'ok');
   } catch (error) {
     console.error('selectServe error:', error);
-    setStatus('❌ Lỗi: ' + error.message, 'err');
+    setStatus(t('genericErr', { msg: error.message }), 'err');
   }
 }
 
@@ -2281,12 +2282,12 @@ async function handleUndo(matchId) {
   try {
     const matchState = matchStates.get(matchId);
     if (!matchState) {
-      setStatus('❌ Không tìm thấy trạng thái trận đấu', 'err');
+      setStatus(t('matchStateMissing'), 'err');
       return;
     }
     const { history } = matchState;
     if (!history.canUndo()) {
-      setStatus('⚠️ Không có action nào để undo', 'err');
+      setStatus(t('noUndo'), 'err');
       return;
     }
 
@@ -2315,7 +2316,7 @@ async function handleUndo(matchId) {
         saveLocal(localMatches);
       }
       await fetchMatches();
-      setStatus('↶ Đã hoàn tác', 'ok');
+      setStatus(t('undone'), 'ok');
       return;
     }
 
@@ -2327,10 +2328,10 @@ async function handleUndo(matchId) {
     matchState.current = previousState;
     await syncMatchState(matchId, previousState);
     await fetchMatches();
-    setStatus('↶ Đã hoàn tác', 'ok');
+    setStatus(t('undone'), 'ok');
   } catch (error) {
     console.error('handleUndo error:', error);
-    setStatus('❌ Lỗi: ' + error.message, 'err');
+    setStatus(t('genericErr', { msg: error.message }), 'err');
   }
 }
 
@@ -2396,7 +2397,7 @@ async function openMemberRegistrationModal() {
   try {
     const tournamentId = tournamentManager.getActiveTournamentId();
     if (!tournamentId) {
-      setStatus('❌ Vui lòng chọn giải đấu', 'err');
+      setStatus('❌ ' + t('noTournamentSelected'), 'err');
       return;
     }
 
@@ -2411,7 +2412,7 @@ async function openMemberRegistrationModal() {
     console.log('Members loaded:', members); // DEBUG
     
     if (members.length === 0) {
-      setStatus('❌ Chưa có thành viên nào. Vui lòng thêm thành viên trước.', 'err');
+      setStatus(t('noMembersYet'), 'err');
       return;
     }
 
@@ -2465,7 +2466,7 @@ async function openMemberRegistrationModal() {
     modal.style.display = 'flex';
   } catch (error) {
     console.error('openMemberRegistrationModal error:', error);
-    setStatus('❌ Lỗi: ' + error.message, 'err');
+    setStatus(t('genericErr', { msg: error.message }), 'err');
   }
 }
 
@@ -2487,7 +2488,7 @@ async function saveMemberRegistration() {
     const tournamentId = tournamentManager.getActiveTournamentId();
     
     if (!tournamentId) {
-      setStatus('❌ Vui lòng chọn giải đấu', 'err');
+      setStatus('❌ ' + t('noTournamentSelected'), 'err');
       return;
     }
 
@@ -2515,8 +2516,8 @@ async function saveMemberRegistration() {
 
     // Validation: minimum 4 members
     if (participants.length < 4) {
-      setStatus('❌ Cần ít nhất 4 thành viên để tạo giải đấu', 'err');
-      alert('Cần ít nhất 4 thành viên để tạo giải đấu.\n\nVui lòng chọn thêm thành viên.');
+      setStatus(t('needFourMembersTour'), 'err');
+      alert(t('needFourMembersTour'));
       return;
     }
 
@@ -2546,7 +2547,7 @@ async function generateRandomTeams() {
     // 3.1: Get active tournament
     const tournamentId = tournamentManager.getActiveTournamentId();
     if (!tournamentId) {
-      setStatus('❌ Vui lòng chọn giải đấu', 'err');
+      setStatus('❌ ' + t('noTournamentSelected'), 'err');
       return;
     }
 
@@ -2554,7 +2555,7 @@ async function generateRandomTeams() {
     
     // Check tournament status
     if (tournament.status !== 'upcoming') {
-      setStatus('❌ Chỉ có thể tạo đội khi giải đấu chưa bắt đầu', 'err');
+      setStatus(t('onlyBeforeStartTeam'), 'err');
       return;
     }
     
@@ -2562,8 +2563,8 @@ async function generateRandomTeams() {
     const participants = await tournamentManager.getParticipantsWithMembers(tournamentId);
     
     if (participants.length < 4) {
-      setStatus('❌ Cần ít nhất 4 thành viên để tạo đội', 'err');
-      alert('Cần ít nhất 4 thành viên để tạo đội.\n\nVui lòng thêm thành viên trước.');
+      setStatus(t('needFourMembersTeam'), 'err');
+      alert(t('needFourMembersTeam'));
       return;
     }
     
@@ -2622,7 +2623,7 @@ async function generateRandomMatches() {
   const tournamentId = tournamentManager.getActiveTournamentId();
   
   if (!tournamentId) {
-    alert('Vui lòng chọn giải đấu');
+    alert(t('noTournamentSelected'));
     return;
   }
   
@@ -2631,7 +2632,7 @@ async function generateRandomMatches() {
     
     // Validate tournament status
     if (tournament.status !== 'upcoming') {
-      alert('Chỉ có thể tạo trận đấu khi giải đấu chưa bắt đầu');
+      alert(t('onlyBeforeStartMatch'));
       return;
     }
     
@@ -2639,7 +2640,7 @@ async function generateRandomMatches() {
     const teams = await tournamentManager.getTeams(tournamentId);
     
     if (teams.length === 0) {
-      alert('Vui lòng tạo đội trước khi tạo trận đấu');
+      alert(t('needMembersFirst'));
       return;
     }
     
@@ -2685,7 +2686,7 @@ async function startTournament() {
   const tournamentId = tournamentManager.getActiveTournamentId();
   
   if (!tournamentId) {
-    alert('Vui lòng chọn giải đấu');
+    alert(t('noTournamentSelected'));
     return;
   }
   
@@ -2694,7 +2695,7 @@ async function startTournament() {
     
     // Validate tournament status
     if (tournament.status !== 'upcoming') {
-      alert('Giải đấu đã bắt đầu');
+      alert(t('tournamentStartedAlready'));
       return;
     }
     
@@ -2705,17 +2706,17 @@ async function startTournament() {
     
     // Validate minimum requirements
     if (participants.length < 4) {
-      alert('Cần ít nhất 4 thành viên để bắt đầu giải đấu');
+      alert(t('needFourToStart'));
       return;
     }
     
     if (teams.length < 1) {
-      alert('Vui lòng tạo đội trước khi bắt đầu giải đấu');
+      alert(t('needTeamsToStart'));
       return;
     }
     
     if (matches.length < 1) {
-      alert('Vui lòng tạo trận đấu trước khi bắt đầu giải đấu');
+      alert(t('needMatchesToStart'));
       return;
     }
     
@@ -2735,7 +2736,7 @@ async function startTournament() {
     _activeTournament = await tournamentManager.getTournament(tournamentId);
     applyTournamentStatusVisibility(); // hide auto-schedule bar etc.
 
-    setStatus('✓ Giải đấu đã bắt đầu!', 'ok');
+    setStatus(t('tournamentStartedOk'), 'ok');
 
     // 5.5: Reload tournament selector and UI after status change
     await loadTournamentSelector();
@@ -2767,7 +2768,7 @@ async function resetTournament() {
   const tournamentId = tournamentManager.getActiveTournamentId();
   
   if (!tournamentId) {
-    alert('Vui lòng chọn giải đấu');
+    alert(t('noTournamentSelected'));
     return;
   }
   
@@ -2776,7 +2777,7 @@ async function resetTournament() {
     
     // Validate tournament status - only allow reset for ongoing or completed tournaments
     if (tournament.status === 'upcoming') {
-      alert('Giải đấu chưa bắt đầu, không cần reset');
+      alert(t('notStartedNoReset'));
       return;
     }
     
@@ -2791,7 +2792,7 @@ async function resetTournament() {
       return;
     }
     
-    setStatus('🔄 Đang reset giải đấu...', 'ok');
+    setStatus(t('tournamentResetting'), 'ok');
     
     // 6.3: Delete all matches for tournament (batch delete)
     try {
@@ -2854,7 +2855,7 @@ async function resetTournament() {
     // 6.6: Call tournamentManager.updateStatus(tournamentId, 'upcoming')
     await tournamentManager.updateStatus(tournamentId, 'upcoming');
     
-    setStatus('✓ Giải đấu đã được reset', 'ok');
+    setStatus(t('tournamentResetOk'), 'ok');
     
     // 6.7: Reload tournament selector and UI after reset
     await loadTournamentSelector();
@@ -3079,16 +3080,16 @@ async function clearTeams() {
   const tournamentId = tournamentManager.getActiveTournamentId();
   
   if (!tournamentId) {
-    alert('Vui lòng chọn giải đấu');
+    alert(t('noTournamentSelected'));
     return;
   }
   
-  if (!confirm('Bạn có chắc muốn xóa tất cả đội?\n\nHành động này không thể hoàn tác!')) {
+  if (!confirm(t('confirmDeleteAllTeams'))) {
     return;
   }
   
   try {
-    setStatus('🔄 Đang xóa đội...', 'ok');
+    setStatus(t('teamsDeletingMsg'), 'ok');
     
     // Delete all teams
     if (storage.provider.client) {
@@ -3105,12 +3106,12 @@ async function clearTeams() {
       }
     }
     
-    setStatus('✓ Đã xóa tất cả đội', 'ok');
+    setStatus(t('teamsDeletedOk'), 'ok');
     loadTeamsTab();
 
   } catch (error) {
     console.error('Error clearing teams:', error);
-    setStatus('❌ Lỗi khi xóa đội', 'err');
+    setStatus(t('teamsDeleteErr'), 'err');
   }
 }
 
