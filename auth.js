@@ -80,13 +80,13 @@ function doLogout() {
  *   - already on target role → no-op
  * Reloads the page on successful switch so role-gated UI re-renders correctly.
  */
-function switchRole(target) {
+function switchRole(target, redirectTo) {
   const current = getRole();
-  if (current === target) return;
+  if (current === target && !redirectTo) return;
 
   if (target === 'view') {
     clearRole();
-    location.reload();
+    if (redirectTo) location.href = redirectTo; else location.reload();
     return;
   }
 
@@ -102,7 +102,7 @@ function switchRole(target) {
     return;
   }
   _setRole(target);
-  location.reload();
+  if (redirectTo) location.href = redirectTo; else location.reload();
 }
 
 // ── Page-level guards ─────────────────────────────────────────
