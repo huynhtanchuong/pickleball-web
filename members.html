@@ -386,6 +386,7 @@
       <h1>📋 Quản Lý Thành Viên</h1>
       <div class="header-actions">
         <button class="btn btn-success" onclick="openAddModal()">+ Thêm Thành Viên</button>
+        <button class="btn btn-primary" onclick="openPasteImportModal()">📋 Import Text</button>
         <button class="btn btn-secondary" onclick="exportMembers()">📥 Export CSV</button>
         <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()">📤 Import CSV</button>
         <input type="file" id="import-file" accept=".csv" style="display: none;" onchange="importMembers(event)">
@@ -479,6 +480,34 @@
           <button type="submit" class="btn btn-primary">Lưu</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Paste-Import Modal — bulk add via text -->
+  <div id="paste-import-modal" class="modal">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h2>📋 Import bằng text</h2>
+        <button class="close-btn" onclick="closePasteImportModal()">&times;</button>
+      </div>
+      <p style="color:#555; font-size:14px; margin:0 0 8px;">
+        Mỗi mục: <code>tên,tier</code>. Phân cách bằng <code>;</code> hoặc xuống dòng.
+        Tier có thể ghi <code>1</code>, <code>tier 1</code>, hoặc <code>T1</code>.
+      </p>
+      <pre style="background:#f4f6f8; padding:8px 12px; border-radius:4px; font-size:12px; margin:0 0 14px; overflow-x:auto;">thanh,tier 1
+chuong,tier 2
+mai,3</pre>
+      <div class="form-group">
+        <label>Dán danh sách</label>
+        <textarea id="paste-import-text" rows="9"
+                  style="width:100%; padding:10px; border:1px solid #ddd; border-radius:4px; font-family:monospace; font-size:14px; resize:vertical;"
+                  placeholder="thanh,tier 1;chuong,tier 2;mai,3"></textarea>
+      </div>
+      <div id="paste-import-preview" style="font-size:13px; color:#555; margin-bottom:12px;"></div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" onclick="closePasteImportModal()">Hủy</button>
+        <button type="button" class="btn btn-primary" onclick="runPasteImport()">Import</button>
+      </div>
     </div>
   </div>
 
@@ -706,6 +735,79 @@
       } catch (error) {
         showStatus('Lỗi khi export: ' + error.message, 'error');
       }
+    }
+
+    // ── Paste-Import: bulk add via pasted text ──
+    // Format: "name,tier" per item; items separated by ';' or newline.
+    // Tier accepts "1", "tier 1", "Tier 1", "T1" — first digit wins.
+    function parsePasteImport(text) {
+      return (text || '')
+        .split(/[;\n\r]+/)
+        .map(s => s.trim())
+        .filter(Boolean)
+        .map(line => {
+          const parts = line.split(',').map(p => p.trim());
+          const name = parts[0] || '';
+          const tierStr = parts[1] || '';
+          const m = tierStr.match(/[123]/);
+          const tier = m ? parseInt(m[0], 10) : null;
+          return { name, tier, raw: line };
+        });
+    }
+
+    function renderPasteImportPreview() {
+      const text = document.getElementById('paste-import-text').value;
+      const parsed = parsePasteImport(text);
+      const preview = document.getElementById('paste-import-preview');
+      if (parsed.length === 0) { preview.textContent = ''; return; }
+      const valid = parsed.filter(p => p.name && p.tier);
+      const invalid = parsed.filter(p => !p.name || !p.tier);
+      preview.innerHTML = `Sẽ thêm <b>${valid.length}</b> thành viên`
+        + (invalid.length > 0 ? ` · <span style="color:#c0392b;">bỏ qua ${invalid.length} dòng lỗi</span>` : '');
+    }
+
+    function openPasteImportModal() {
+      document.getElementById('paste-import-text').value = '';
+      document.getElementById('paste-import-preview').textContent = '';
+      document.getElementById('paste-import-modal').classList.add('active');
+      const ta = document.getElementById('paste-import-text');
+      ta.oninput = renderPasteImportPreview;
+      setTimeout(() => ta.focus(), 50);
+    }
+
+    function closePasteImportModal() {
+      document.getElementById('paste-import-modal').classList.remove('active');
+    }
+
+    async function runPasteImport() {
+      const text = document.getElementById('paste-import-text').value;
+      const parsed = parsePasteImport(text);
+      const valid = parsed.filter(p => p.name && p.tier);
+      if (valid.length === 0) {
+        showStatus('Không có dòng hợp lệ để import. Mỗi dòng phải có tên và tier 1-3.', 'error');
+        return;
+      }
+      // De-dupe against existing names (case-insensitive trim)
+      const existingNames = new Set(allMembers.map(m => (m.name || '').trim().toLowerCase()));
+      let added = 0, skipped = 0, failed = 0;
+      for (const item of valid) {
+        const key = item.name.trim().toLowerCase();
+        if (existingNames.has(key)) { skipped++; continue; }
+        try {
+          await memberManager.createMember({ name: item.name, tier: item.tier });
+          existingNames.add(key);
+          added++;
+        } catch (e) {
+          console.warn('Import row failed:', item.raw, e);
+          failed++;
+        }
+      }
+      const msgParts = [`Đã thêm ${added}`];
+      if (skipped > 0) msgParts.push(`bỏ qua ${skipped} (trùng tên)`);
+      if (failed > 0)  msgParts.push(`lỗi ${failed}`);
+      showStatus(msgParts.join(' · '), failed > 0 ? 'error' : 'success');
+      closePasteImportModal();
+      await loadMembers();
     }
 
     // Import members
