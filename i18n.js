@@ -225,6 +225,9 @@ const TRANSLATIONS = {
     btnStart:         "▶ Bắt đầu",
     lineupBeforeMatch:"📋 Đội hình (vị trí 1 / 2) — chỉ chỉnh trước khi vào trận",
     lineupSetTitle:   "📋 Đội hình Set {set} — chỉnh vị trí trước khi bắt đầu set",
+    lineupLocked:     "🔒 Đội hình Set {set} (đã khoá — chờ hết set để đổi)",
+    swap:             "Đổi",
+    swapLocked:       "Chỉ đổi được khi set chưa có điểm",
 
     // ── Special matches ──
     specialSection:   "⭐ Trận Đấu Đặc Biệt",
@@ -569,6 +572,9 @@ const TRANSLATIONS = {
     btnStart:         "▶ Start",
     lineupBeforeMatch:"📋 Lineup (positions 1 / 2) — adjust before the match starts",
     lineupSetTitle:   "📋 Set {set} lineup — adjust positions before the set starts",
+    lineupLocked:     "🔒 Set {set} lineup (locked — wait until set ends)",
+    swap:             "Swap",
+    swapLocked:       "Can only swap when the set has no points yet",
 
     // Special matches
     specialSection:   "⭐ Special Matches",

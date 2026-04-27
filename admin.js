@@ -1018,37 +1018,47 @@ function matchHTML(m, stage) {
   // serve is picked, so admin can configure positions ahead of play.
   const teamARec = teamById && teamById.get && teamById.get(m.team_a_id);
   const teamBRec = teamById && teamById.get && teamById.get(m.team_b_id);
+  // BO3 set state — when set points are 0-0, swap is enabled; once a
+  // point is scored in the set, swap locks until the next set boundary.
+  const cs = m.current_set || 1;
+  const curSetA = m[`s${cs}a`] || 0;
+  const curSetB = m[`s${cs}b`] || 0;
+  const isBO3Match = (stage === 'semi' || stage === 'final');
+  const swapEnabled = m.status === 'not_started'
+                   || (isBO3Match && m.status !== 'done'
+                       && curSetA === 0 && curSetB === 0);
   const slotInfo = (rec) => {
     if (!rec) return '';
     const m1 = rec.member1_id ? (memberById.get(rec.member1_id)?.name || '—') : '—';
     const m2 = rec.member2_id ? (memberById.get(rec.member2_id)?.name || '—') : '—';
+    const swapBtn = swapEnabled
+      ? `<button class="lineup-swap" onclick="swapTeamMembers('${rec.id}')"
+                 title="${esc(t('swapHint'))}">⇅ ${esc(t('swap') || 'Đổi')}</button>`
+      : `<button class="lineup-swap" disabled
+                 title="${esc(t('swapLocked'))}">⇅ ${esc(t('swap') || 'Đổi')}</button>`;
     return `
       <div class="lineup-team">
         <div class="lineup-name">${esc(rec.name || '')}</div>
         <div class="lineup-slots">
           <span class="lineup-slot"><b>1</b> ${esc(m1)}</span>
           <span class="lineup-slot"><b>2</b> ${esc(m2)}</span>
-          <button class="lineup-swap" onclick="swapTeamMembers('${rec.id}')"
-                  title="Đổi vị trí 1 ↔ 2">⇅ Đổi</button>
+          ${swapBtn}
         </div>
       </div>`;
   };
-  // Lineup is editable:
-  //  • before the match starts (status='not_started'), OR
-  //  • for BO3 (semi/final) at any set boundary — i.e. the current set
-  //    has 0-0 points, so referees can re-arrange Ô 1 / Ô 2 before a
-  //    new set begins. Once anyone scores in the set, positions lock.
-  const cs = m.current_set || 1;
-  const curSetA = m[`s${cs}a`] || 0;
-  const curSetB = m[`s${cs}b`] || 0;
-  const isBO3Match = (stage === 'semi' || stage === 'final');
-  const isBetweenSets = isBO3Match && m.status !== 'done'
-                        && curSetA === 0 && curSetB === 0;
-  const canEditLineup = m.status === 'not_started' || isBetweenSets;
-  const lineupTitle = m.status === 'not_started'
-    ? t('lineupBeforeMatch')
-    : t('lineupSetTitle', { set: cs });
-  const lineupRow = (canEditLineup && (teamARec || teamBRec)) ? `
+  // Lineup row visibility:
+  //  • Group stage: only before the match starts (existing behaviour).
+  //  • BO3 (semi/final): always visible while not done, so the swap
+  //    button is discoverable at any point — disabled mid-set, enabled
+  //    at set boundaries (0-0 in current set).
+  const showLineup = (m.status === 'not_started')
+                  || (isBO3Match && m.status !== 'done');
+  const lineupTitle = swapEnabled
+    ? (m.status === 'not_started'
+        ? t('lineupBeforeMatch')
+        : t('lineupSetTitle', { set: cs }))
+    : t('lineupLocked', { set: cs });
+  const lineupRow = (showLineup && (teamARec || teamBRec)) ? `
     <div class="adm-lineup auth-only">
       <div class="adm-lineup-title">${lineupTitle}</div>
       ${slotInfo(teamARec)}
