@@ -1028,12 +1028,24 @@ function matchHTML(m, stage) {
         </div>
       </div>`;
   };
-  // Lineup is only editable BEFORE the match starts. Once status moves
-  // to 'playing' or 'done', positions are locked.
-  const canEditLineup = m.status === 'not_started';
+  // Lineup is editable:
+  //  • before the match starts (status='not_started'), OR
+  //  • for BO3 (semi/final) at any set boundary — i.e. the current set
+  //    has 0-0 points, so referees can re-arrange Ô 1 / Ô 2 before a
+  //    new set begins. Once anyone scores in the set, positions lock.
+  const cs = m.current_set || 1;
+  const curSetA = m[`s${cs}a`] || 0;
+  const curSetB = m[`s${cs}b`] || 0;
+  const isBO3Match = (stage === 'semi' || stage === 'final');
+  const isBetweenSets = isBO3Match && m.status !== 'done'
+                        && curSetA === 0 && curSetB === 0;
+  const canEditLineup = m.status === 'not_started' || isBetweenSets;
+  const lineupTitle = m.status === 'not_started'
+    ? t('lineupBeforeMatch')
+    : t('lineupSetTitle', { set: cs });
   const lineupRow = (canEditLineup && (teamARec || teamBRec)) ? `
     <div class="adm-lineup auth-only">
-      <div class="adm-lineup-title">📋 Đội hình (vị trí 1 / 2) — chỉ chỉnh trước khi vào trận</div>
+      <div class="adm-lineup-title">${lineupTitle}</div>
       ${slotInfo(teamARec)}
       ${slotInfo(teamBRec)}
     </div>` : '';

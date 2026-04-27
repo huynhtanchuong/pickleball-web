@@ -223,6 +223,8 @@ const TRANSLATIONS = {
     servePicking:     "Đang chọn ngẫu nhiên...",
     serveWinner:      "🎉 {team} giao trước",
     btnStart:         "▶ Bắt đầu",
+    lineupBeforeMatch:"📋 Đội hình (vị trí 1 / 2) — chỉ chỉnh trước khi vào trận",
+    lineupSetTitle:   "📋 Đội hình Set {set} — chỉnh vị trí trước khi bắt đầu set",
 
     // ── Special matches ──
     specialSection:   "⭐ Trận Đấu Đặc Biệt",
@@ -565,6 +567,8 @@ const TRANSLATIONS = {
     servePicking:     "Picking randomly...",
     serveWinner:      "🎉 {team} serves first",
     btnStart:         "▶ Start",
+    lineupBeforeMatch:"📋 Lineup (positions 1 / 2) — adjust before the match starts",
+    lineupSetTitle:   "📋 Set {set} lineup — adjust positions before the set starts",
 
     // Special matches
     specialSection:   "⭐ Special Matches",
