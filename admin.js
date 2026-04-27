@@ -2074,7 +2074,28 @@ async function handleTeamTap(matchId, team) {
     } else {
       action = { type: team === 'A' ? ActionTypes.FAULT_TEAM_B : ActionTypes.FAULT_TEAM_A };
     }
-    const newState = gameStateReducer(current, action);
+    // For BO3 faults, swap match-level scores (which are sets-won) for the
+    // current set's points before invoking the reducer. Otherwise
+    // rotateServer's "first-serve single" check (currentSet===1 && scoreA===0
+    // && scoreB===0) stays true for the entire first set in BO3 — making
+    // every fault a side-out instead of a fault-to-partner. After the
+    // reducer returns we restore match-level scores so downstream logic
+    // (slot derivation, syncMatchState) still sees sets-won.
+    let reducerInput = current;
+    if (isBO3) {
+      const cs = match.current_set || 1;
+      reducerInput = {
+        ...current,
+        scoreA: match[`s${cs}a`] || 0,
+        scoreB: match[`s${cs}b`] || 0,
+        currentSet: cs
+      };
+    }
+    const newState = gameStateReducer(reducerInput, action);
+    if (isBO3) {
+      newState.scoreA = current.scoreA;
+      newState.scoreB = current.scoreB;
+    }
     matchState.current = newState;
 
     // Derive new server_slot from state transition (gameStateReducer doesn't
