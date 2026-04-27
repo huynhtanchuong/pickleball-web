@@ -867,7 +867,7 @@ function updateStatusBadgeInPlace(id, status) {
 async function finishMatch(id) {
   // Get match info to determine if it needs sets
   let m = null;
-  
+
   if (!db) {
     // Demo mode: read from localStorage
     const stored = localStorage.getItem("pb_matches");
@@ -877,6 +877,13 @@ async function finishMatch(id) {
     // Supabase mode: fetch from DB to get stage info
     const { data } = await db.from("matches").select("*").eq("id", id).single();
     m = data;
+  }
+
+  // Confirm before ending — irreversible action
+  if (typeof t === 'function') {
+    if (!confirm(t('confirmEndMatch'))) return;
+  } else {
+    if (!confirm('Kết thúc trận đấu? Không thể thay đổi sau khi xác nhận.')) return;
   }
 
   let payload = { status: "done", updated_at: new Date().toISOString() };

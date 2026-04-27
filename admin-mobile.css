@@ -1289,6 +1289,52 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
 }
 .serve-option.serve-random .team-name { color: var(--adm-purple, #7c3aed); }
 
+/* Random serve picker — spin stage shown after user clicks 🎲 Random.
+   Cycles team names with a decelerating delay; lands on the picked team
+   with a glow + scale pulse, then exposes a "Start" button. */
+.serve-spin-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 110px;
+  margin: 14px 0 6px;
+  padding: 16px;
+  border: 2px dashed var(--adm-purple, #7c3aed);
+  border-radius: 14px;
+  background: rgba(124, 58, 237, 0.06);
+}
+.serve-spin-display {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--adm-text);
+  text-align: center;
+  letter-spacing: 0.5px;
+  transition: color 0.2s, transform 0.2s;
+}
+.serve-spin-display.serve-spin-final {
+  color: var(--adm-purple, #7c3aed);
+  transform: scale(1.12);
+  text-shadow: 0 0 18px rgba(124, 58, 237, 0.55);
+  animation: serveSpinPop 0.45s ease-out;
+}
+@keyframes serveSpinPop {
+  0%   { transform: scale(0.85); opacity: 0.6; }
+  60%  { transform: scale(1.22); opacity: 1; }
+  100% { transform: scale(1.12); opacity: 1; }
+}
+.serve-spin-hint {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--adm-muted);
+  margin: 6px 0 14px;
+  min-height: 1.2em;
+}
+.serve-confirm-btn {
+  background: linear-gradient(135deg, #3b82f6, #7c3aed) !important;
+  border-color: transparent !important;
+}
+.serve-confirm-btn .team-name { color: #fff !important; }
+
 .serve-note {
   text-align: center;
   font-size: 0.85rem;
@@ -1616,8 +1662,10 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
 }
 
 @media (max-width: 600px) {
-  .role-switcher button { padding: 4px 8px; font-size: 0.68rem; }
-  .role-switcher button:not(.active) span { display: none; }
+  .role-switcher button,
+  .role-switcher .role-view-link { padding: 4px 7px; font-size: 0.66rem; gap: 2px; }
+  .role-switcher button span,
+  .role-switcher .role-view-link span { display: inline; }
 }
 
 /* ============================================================

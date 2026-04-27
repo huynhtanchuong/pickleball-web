@@ -157,8 +157,14 @@ async function endSet(matchId) {
       return;
     }
     const setWinner = setA > setB ? 'A' : 'B';
+    const winnerName = setWinner === 'A' ? (m.team_a || m.teamA) : (m.team_b || m.teamB);
     const newWinsA = (m.scoreA || 0) + (setWinner === 'A' ? 1 : 0);
     const newWinsB = (m.scoreB || 0) + (setWinner === 'B' ? 1 : 0);
+    const willFinishMatch = (newWinsA >= 2 || newWinsB >= 2 || cs >= 3);
+    const confirmMsg = willFinishMatch
+      ? t('confirmEndMatchSets', { a: newWinsA, b: newWinsB })
+      : t('confirmEndSet', { set: cs, a: setA, b: setB, winner: winnerName });
+    if (!confirm(confirmMsg)) return;
 
     const payload = {
       score_a: newWinsA,
@@ -190,11 +196,11 @@ async function endSet(matchId) {
       logMatchAction(matchId, { type: 'set_end', matchEnded: true,
                                 set: cs, sa: setA, sb: setB,
                                 setsA: newWinsA, setsB: newWinsB });
-      showOk('🏆 Trận đấu kết thúc');
+      showOk(t('matchEndedOk'));
     } else {
       logMatchAction(matchId, { type: 'set_end', matchEnded: false,
                                 set: cs, sa: setA, sb: setB });
-      showOk(`✓ Hết Set ${cs} — bắt đầu Set ${cs + 1}`);
+      showOk(t('setEndedOk', { cs, next: cs + 1 }));
     }
     await fetchMatches();
   } catch (e) {
@@ -2219,7 +2225,7 @@ function showServeDialog(matchId, state) {
           <div class="serve-label">${t('serveBefore')}</div>
         </button>
 
-        <button class="serve-option serve-random" onclick="selectServe('${matchId}', Math.random() < 0.5 ? 'A' : 'B')">
+        <button class="serve-option serve-random" onclick="startRandomServe('${matchId}')">
           <div class="team-name">${t('serveRandom')}</div>
           <div class="serve-label">${t('serveRandomSub')}</div>
         </button>
@@ -2232,8 +2238,68 @@ function showServeDialog(matchId, state) {
       </div>
     </div>
   `;
-  
+
   document.body.insertAdjacentHTML('beforeend', dialog);
+}
+
+/**
+ * Random serve picker — replaces dialog with a 3s spinning animation that
+ * cycles between the two team names (decelerating), lands on the picked
+ * team, and shows an OK button to confirm + start the match.
+ */
+function startRandomServe(matchId) {
+  const matchState = matchStates.get(matchId);
+  if (!matchState) return;
+  const { teamA, teamB } = matchState.current;
+  const overlay = document.getElementById(`serve-dialog-${matchId}`);
+  if (!overlay) return;
+  const dialog = overlay.querySelector('.dialog');
+  if (!dialog) return;
+
+  // Decide outcome up front so the visual is honest about the result.
+  const result = Math.random() < 0.5 ? 'A' : 'B';
+  const winnerName = result === 'A' ? teamA : teamB;
+
+  // Disable closing during spin — overlay click was the only way out.
+  overlay.setAttribute('onclick', 'event.stopPropagation();');
+
+  dialog.innerHTML = `
+    <h2>${t('serveRandom')}</h2>
+    <div class="serve-spin-stage">
+      <div class="serve-spin-display" id="serve-spin-${matchId}">${esc(teamA)}</div>
+    </div>
+    <p class="serve-spin-hint" id="serve-spin-hint-${matchId}">${t('servePicking')}</p>
+  `;
+
+  const display = document.getElementById(`serve-spin-${matchId}`);
+  const hint    = document.getElementById(`serve-spin-hint-${matchId}`);
+  const totalMs = 3000;
+  const start = performance.now();
+  let toggle = false;
+
+  function tick() {
+    const elapsed = performance.now() - start;
+    if (elapsed >= totalMs) {
+      // Settle on the winner
+      display.textContent = winnerName;
+      display.classList.add('serve-spin-final');
+      hint.textContent = t('serveWinner', { team: winnerName });
+      // Append confirm button
+      const okBtn = document.createElement('button');
+      okBtn.className = 'serve-option serve-confirm-btn';
+      okBtn.innerHTML = `<div class="team-name">${esc(t('btnStart'))}</div>`;
+      okBtn.onclick = () => selectServe(matchId, result);
+      dialog.appendChild(okBtn);
+      return;
+    }
+    toggle = !toggle;
+    display.textContent = toggle ? teamB : teamA;
+    // Decelerate: start fast (~60ms), end slow (~280ms)
+    const progress = elapsed / totalMs;
+    const delay = 60 + (progress * progress) * 220;
+    setTimeout(tick, delay);
+  }
+  tick();
 }
 
 /**

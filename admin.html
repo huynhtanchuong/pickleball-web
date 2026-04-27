@@ -44,19 +44,36 @@
       </div>
       <div class="adm-header-right">
         <div class="role-switcher" title="Chuyển vai trò">
-          <button data-role="referee" onclick="switchRole('referee')">
-            <svg viewBox="0 0 24 24" width="13" height="13" style="vertical-align:-2px;margin-right:3px;" aria-hidden="true">
-              <circle cx="12" cy="12" r="10.5" fill="#fde047" stroke="#a16207" stroke-width="0.7"/>
-              <circle cx="8"  cy="8"  r="1.4" fill="#a16207"/>
-              <circle cx="16" cy="8"  r="1.4" fill="#a16207"/>
-              <circle cx="12" cy="13" r="1.4" fill="#a16207"/>
-              <circle cx="7"  cy="15" r="1.1" fill="#a16207"/>
-              <circle cx="17" cy="15" r="1.1" fill="#a16207"/>
-              <circle cx="12" cy="18.2" r="1" fill="#a16207"/>
+          <button data-role="referee" onclick="switchRole('referee')" title="Trọng tài">
+            <svg viewBox="0 0 24 24" width="14" height="14" style="vertical-align:-2px;margin-right:4px;" aria-hidden="true">
+              <!-- Mouthpiece -->
+              <rect x="2.5" y="11" width="5.5" height="3" rx="1" fill="#fbbf24" stroke="#7c2d12" stroke-width="0.8"/>
+              <!-- Whistle body -->
+              <ellipse cx="14" cy="12.5" rx="6" ry="5.5" fill="#fbbf24" stroke="#7c2d12" stroke-width="0.8"/>
+              <!-- Air slot on top -->
+              <ellipse cx="14" cy="9.4" rx="2.2" ry="0.8" fill="#7c2d12"/>
+              <!-- Lanyard ring -->
+              <circle cx="19" cy="8" r="1.3" fill="none" stroke="#7c2d12" stroke-width="0.9"/>
             </svg><span data-i18n="roleReferee">Trọng Tài</span>
           </button>
-          <button data-role="admin"   onclick="switchRole('admin')"  >👑 <span data-i18n="roleAdmin">Admin</span></button>
-          <a href="index.html" class="role-view-link" data-i18n="viewPublic" title="Xem công khai">👁 Xem</a>
+          <button data-role="admin"   onclick="switchRole('admin')"   title="Admin">
+            <svg viewBox="0 0 24 24" width="14" height="14" style="vertical-align:-2px;margin-right:4px;" aria-hidden="true">
+              <!-- Crown -->
+              <path d="M3 8l3.5 4 3-5L12 5l2.5 2 3 5L21 8l-1.5 10h-15z" fill="#fbbf24" stroke="#7c2d12" stroke-width="0.9" stroke-linejoin="round"/>
+              <!-- Crown band -->
+              <rect x="4.5" y="16" width="15" height="2.2" rx="0.4" fill="#7c2d12"/>
+              <!-- Gem -->
+              <circle cx="12" cy="11" r="1.1" fill="#dc2626" stroke="#7c2d12" stroke-width="0.6"/>
+            </svg><span data-i18n="roleAdmin">Admin</span>
+          </button>
+          <a href="index.html" class="role-view-link" title="Xem công khai">
+            <svg viewBox="0 0 24 24" width="14" height="14" style="vertical-align:-2px;margin-right:4px;" aria-hidden="true">
+              <!-- Eye outline -->
+              <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+              <!-- Iris -->
+              <circle cx="12" cy="12" r="3" fill="currentColor"/>
+            </svg><span data-i18n="viewPublic">Xem</span>
+          </a>
         </div>
         <span id="role-badge" style="display:none;"></span>
         <span id="realtime-indicator" class="pulse" style="display:none;"></span>
