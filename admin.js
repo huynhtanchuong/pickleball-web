@@ -175,8 +175,13 @@ async function endSet(matchId) {
       payload.status = 'done';
     } else if (cs < 3) {
       payload.current_set = cs + 1;
-      // Reset positions for new set: server_slot back to 1
+      // Reset positions for new set per USA Pickleball rule 4.A.5:
+      //  • server_slot back to 1 (right service court)
+      //  • server_number back to 2 — at the start of EACH set (game) the
+      //    first-serving team is limited to one server, then side-out;
+      //    the other team gets the regular two servers afterward.
       payload.server_slot = 1;
+      payload.server_number = 2;
     } else {
       payload.status = 'done';
     }
