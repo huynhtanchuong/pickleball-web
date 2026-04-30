@@ -2305,9 +2305,11 @@ function showServeDialog(matchId, state) {
 }
 
 /**
- * Random serve picker — replaces dialog with a 3s spinning animation that
- * cycles between the two team names (decelerating), lands on the picked
- * team, and shows an OK button to confirm + start the match.
+ * Random serve picker — wheel-of-fortune style animation. Renders a
+ * conic-split wheel (red = team A on right, blue = team B on left), spins
+ * for 3s with cubic-bezier deceleration, and lands the top pointer on the
+ * pre-chosen winner. After the wheel settles, a confirm button starts the
+ * match. Honors prefers-reduced-motion by skipping the animation.
  */
 function startRandomServe(matchId) {
   const matchState = matchStates.get(matchId);
@@ -2327,41 +2329,59 @@ function startRandomServe(matchId) {
 
   dialog.innerHTML = `
     <h2>${t('serveRandom')}</h2>
-    <div class="serve-spin-stage">
-      <div class="serve-spin-display" id="serve-spin-${matchId}">${esc(teamA)}</div>
+    <div class="serve-wheel-stage">
+      <div class="serve-wheel-legend">
+        <span class="serve-wheel-key serve-wheel-key-a"></span>
+        <span class="serve-wheel-team">${esc(teamA)}</span>
+        <span class="serve-wheel-vs">·</span>
+        <span class="serve-wheel-key serve-wheel-key-b"></span>
+        <span class="serve-wheel-team">${esc(teamB)}</span>
+      </div>
+      <div class="serve-wheel-shell">
+        <div class="serve-wheel-pointer">▼</div>
+        <div class="serve-wheel" id="serve-wheel-${matchId}"></div>
+      </div>
+      <p class="serve-spin-hint" id="serve-spin-hint-${matchId}">${t('servePicking')}</p>
     </div>
-    <p class="serve-spin-hint" id="serve-spin-hint-${matchId}">${t('servePicking')}</p>
   `;
 
-  const display = document.getElementById(`serve-spin-${matchId}`);
-  const hint    = document.getElementById(`serve-spin-hint-${matchId}`);
-  const totalMs = 3000;
-  const start = performance.now();
-  let toggle = false;
+  const wheel = document.getElementById(`serve-wheel-${matchId}`);
+  const hint = document.getElementById(`serve-spin-hint-${matchId}`);
 
-  function tick() {
-    const elapsed = performance.now() - start;
-    if (elapsed >= totalMs) {
-      // Settle on the winner
-      display.textContent = winnerName;
-      display.classList.add('serve-spin-final');
-      hint.textContent = t('serveWinner', { team: winnerName });
-      // Append confirm button
-      const okBtn = document.createElement('button');
-      okBtn.className = 'serve-option serve-confirm-btn';
-      okBtn.innerHTML = `<div class="team-name">${esc(t('btnStart'))}</div>`;
-      okBtn.onclick = () => selectServe(matchId, result);
-      dialog.appendChild(okBtn);
-      return;
-    }
-    toggle = !toggle;
-    display.textContent = toggle ? teamB : teamA;
-    // Decelerate: start fast (~60ms), end slow (~280ms)
-    const progress = elapsed / totalMs;
-    const delay = 60 + (progress * progress) * 220;
-    setTimeout(tick, delay);
+  // Geometry: conic-gradient(from 0deg, red 0..180, blue 180..360).
+  // Pointer sits at the top (wheel angle 0°). After rotating the wheel by R
+  // clockwise, the pointer sees wheel angle (-R mod 360). To land in A
+  // (segment center 90°) → R ≡ 270°. For B (center 270°) → R ≡ 90°.
+  // Add full spins for the dramatic build-up + a small jitter so it doesn't
+  // always halt exactly at the segment midpoint.
+  const baseSpins = 6;
+  const segmentCenter = result === 'A' ? 270 : 90;
+  const jitter = Math.random() * 120 - 60; // ±60° within the 180° segment
+  const finalRotation = baseSpins * 360 + segmentCenter + jitter;
+
+  const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const settleMs = reducedMotion ? 100 : 3050;
+
+  if (reducedMotion) {
+    wheel.style.transition = 'none';
   }
-  tick();
+
+  // Two RAFs so the browser commits the initial 0deg + transition before the
+  // target rotation paints — without this the transform jumps to its final
+  // value on some engines (Safari was the worst culprit).
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    wheel.style.transform = `rotate(${finalRotation}deg)`;
+  }));
+
+  setTimeout(() => {
+    hint.textContent = t('serveWinner', { team: winnerName });
+    hint.classList.add('serve-spin-final-text');
+    const okBtn = document.createElement('button');
+    okBtn.className = 'serve-option serve-confirm-btn';
+    okBtn.innerHTML = `<div class="team-name">${esc(t('btnStart'))}</div>`;
+    okBtn.onclick = () => selectServe(matchId, result);
+    dialog.appendChild(okBtn);
+  }, settleMs);
 }
 
 /**

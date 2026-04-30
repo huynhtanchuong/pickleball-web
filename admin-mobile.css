@@ -1298,34 +1298,8 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
 }
 .serve-option.serve-random .team-name { color: var(--adm-purple, #7c3aed); }
 
-/* Random serve picker — spin stage shown after user clicks 🎲 Random.
-   Cycles team names with a decelerating delay; lands on the picked team
-   with a glow + scale pulse, then exposes a "Start" button. */
-.serve-spin-stage {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 110px;
-  margin: 14px 0 6px;
-  padding: 16px;
-  border: 2px dashed var(--adm-purple, #7c3aed);
-  border-radius: 14px;
-  background: rgba(124, 58, 237, 0.06);
-}
-.serve-spin-display {
-  font-size: 1.6rem;
-  font-weight: 800;
-  color: var(--adm-text);
-  text-align: center;
-  letter-spacing: 0.5px;
-  transition: color 0.2s, transform 0.2s;
-}
-.serve-spin-display.serve-spin-final {
-  color: var(--adm-purple, #7c3aed);
-  transform: scale(1.12);
-  text-shadow: 0 0 18px rgba(124, 58, 237, 0.55);
-  animation: serveSpinPop 0.45s ease-out;
-}
+/* Random serve picker shared keyframes (used by .serve-spin-final-text
+   below the wheel + any future settle animations). */
 @keyframes serveSpinPop {
   0%   { transform: scale(0.85); opacity: 0.6; }
   60%  { transform: scale(1.22); opacity: 1; }
@@ -1343,6 +1317,128 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
   border-color: transparent !important;
 }
 .serve-confirm-btn .team-name { color: #fff !important; }
+
+/* ── Wheel-of-fortune random serve picker ──
+   Conic-gradient wheel (red = team A right, blue = team B left), spins 3s
+   with cubic-bezier deceleration, top pointer marks the winner. Replaces
+   the previous text-toggle in startRandomServe. */
+.serve-wheel-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0 4px;
+  margin: 8px 0 6px;
+}
+.serve-wheel-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--adm-text);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.serve-wheel-team {
+  max-width: 7rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+  vertical-align: middle;
+}
+.serve-wheel-key {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+  vertical-align: middle;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+}
+.serve-wheel-key-a { background: #ef4444; }
+.serve-wheel-key-b { background: #3b82f6; }
+.serve-wheel-vs {
+  color: var(--adm-muted);
+  font-weight: 400;
+  margin: 0 4px;
+}
+
+.serve-wheel-shell {
+  position: relative;
+  width: 220px;
+  height: 232px;
+  display: flex;
+  justify-content: center;
+  padding-top: 16px;
+}
+.serve-wheel-pointer {
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.6rem;
+  color: #fbbf24;
+  text-shadow: 0 0 10px rgba(251, 191, 36, 0.7);
+  z-index: 2;
+  line-height: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.4));
+}
+
+.serve-wheel {
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background:
+    conic-gradient(from 0deg,
+      #ef4444 0deg 180deg,
+      #3b82f6 180deg 360deg);
+  border: 3px solid var(--adm-border, #1e2d45);
+  box-shadow:
+    0 6px 24px rgba(0, 0, 0, 0.45),
+    inset 0 0 14px rgba(0, 0, 0, 0.4);
+  position: relative;
+  /* Cubic-bezier picked for a fast launch + long graceful settle. */
+  transition: transform 3s cubic-bezier(0.17, 0.67, 0.21, 1);
+  transform: rotate(0deg);
+  /* Performance: hint to the browser this will animate. */
+  will-change: transform;
+}
+/* Center hub (purely cosmetic — anchors the eye) */
+.serve-wheel::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 36px;
+  height: 36px;
+  margin: -18px 0 0 -18px;
+  background: var(--adm-card, #111827);
+  border: 2px solid var(--adm-border, #1e2d45);
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+/* Outer ring tick marks for visual texture (12 evenly-spaced) */
+.serve-wheel::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px dotted rgba(255, 255, 255, 0.18);
+  pointer-events: none;
+}
+
+.serve-spin-final-text {
+  color: var(--adm-purple, #7c3aed);
+  font-weight: 800;
+  font-size: 1rem;
+  animation: serveSpinPop 0.45s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .serve-wheel { transition: none !important; }
+}
 
 .serve-note {
   text-align: center;
