@@ -1,0 +1,230 @@
+/* ============================================================
+   ANIMATIONS — UI polish layer (subtle, ~240ms, smooth ease-out)
+   Loaded AFTER styles.css and admin-mobile.css, so tokens here
+   override only the transitions/timings that benefit from polish.
+   No transform on <body> — modal positioning depends on it
+   (see styles.css comment around `pageFadeIn`).
+   ============================================================ */
+
+:root {
+  --anim-fast:    180ms;
+  --anim-base:    240ms;
+  --anim-slow:    340ms;
+  --anim-ease:    cubic-bezier(.2, .8, .2, 1);
+  --anim-ease-in: cubic-bezier(.4, 0, .8, .3);
+}
+
+/* ── Respect reduced-motion globally ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================
+   PAGE TRANSITION
+   ============================================================ */
+
+/* Manual fade-out class set by JS before location.assign(). */
+body.is-leaving #app-root,
+body.is-leaving main,
+body.is-leaving .scoreboard-main,
+body.is-leaving .tournaments-page,
+body.is-leaving .admin-shell {
+  animation: pageContentLeave var(--anim-base) var(--anim-ease-in) forwards;
+}
+@keyframes pageContentLeave {
+  to { opacity: 0; transform: translateY(-6px); }
+}
+
+/* Native View Transitions API (Chrome/Edge today, Safari/FF later).
+   Free upgrade: the browser cross-fades between docs automatically. */
+@view-transition { navigation: auto; }
+::view-transition-old(root) { animation: vtFadeOut var(--anim-base) var(--anim-ease) both; }
+::view-transition-new(root) { animation: vtFadeIn  var(--anim-slow) var(--anim-ease) both; }
+@keyframes vtFadeOut { to   { opacity: 0; transform: translateY(-6px); } }
+@keyframes vtFadeIn  { from { opacity: 0; transform: translateY(8px); } }
+
+/* ============================================================
+   TAB SYSTEM — smooth switching
+   ============================================================ */
+
+/* Underline indicator that scales-in under active tab. */
+.admin-tab,
+.tabs .tab {
+  position: relative;
+}
+.admin-tab::after,
+.tabs .tab::after {
+  content: "";
+  position: absolute;
+  left: 16%;
+  right: 16%;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform var(--anim-base) var(--anim-ease);
+  opacity: 0.9;
+  pointer-events: none;
+}
+.admin-tab.active::after,
+.tabs .tab.active::after {
+  transform: scaleX(1);
+}
+
+/* Tab content pane — JS-driven crossfade-friendly. */
+.admin-tab-content,
+.tab-pane {
+  will-change: opacity, transform;
+}
+/* When animations.js takes over, it stamps `data-anim-tab="ready"`. Until then,
+   inline `display:none` continues to work — fully backwards-compatible. */
+
+/* ============================================================
+   COLLAPSIBLE / EXPAND-COLLAPSE
+   ============================================================ */
+
+[data-collapsible] {
+  overflow: hidden;
+  transition: max-height var(--anim-slow) var(--anim-ease);
+}
+[data-collapsible][aria-hidden="true"] {
+  max-height: 0 !important;
+}
+[data-collapsible-trigger] {
+  cursor: pointer;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.anim-chevron {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform var(--anim-fast) var(--anim-ease);
+  margin-bottom: 2px;
+}
+[data-collapsible-trigger][aria-expanded="false"] .anim-chevron {
+  transform: rotate(-45deg);
+  margin-bottom: 0;
+  margin-top: -2px;
+}
+
+/* ============================================================
+   MATCH CARD / TOURNAMENT CARD — smoother enter & expand
+   ============================================================ */
+
+/* Sharper ease for the existing match-card hover/expand transitions. */
+.match-card {
+  transition:
+    transform    var(--anim-base) var(--anim-ease),
+    box-shadow   var(--anim-base) var(--anim-ease),
+    border-color var(--anim-fast) var(--anim-ease),
+    opacity      var(--anim-base) var(--anim-ease),
+    scale        var(--anim-base) var(--anim-ease) !important;
+}
+
+/* Staggered enter for match cards inside .match-grid.
+   JS sets --idx on each card so they ripple in sequence. */
+.match-grid > .match-card {
+  animation: cardSlideIn var(--anim-slow) var(--anim-ease) both;
+  animation-delay: calc(var(--idx, 0) * 35ms);
+}
+@keyframes cardSlideIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+/* Stop the stagger on cards that are added LATER (live updates):
+   JS strips the animation by setting data-stagger="off". */
+.match-grid > .match-card[data-stagger="off"] {
+  animation: none !important;
+}
+
+/* Tournament cards stagger in tournaments.html grid. */
+.tournaments-grid > * {
+  animation: cardSlideIn var(--anim-slow) var(--anim-ease) both;
+  animation-delay: calc(var(--idx, 0) * 40ms);
+}
+
+/* When a match card is expanded, dim siblings smoothly (already in styles.css
+   via :has, here we just sharpen the ease). */
+.match-grid:has(.match-expanded) .match-card:not(.match-expanded) {
+  transition:
+    opacity   var(--anim-base) var(--anim-ease),
+    transform var(--anim-base) var(--anim-ease) !important;
+}
+
+/* ============================================================
+   BUTTONS / INPUTS — micro polish
+   ============================================================ */
+
+button:focus-visible,
+.header-link:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--blue, #3b82f6);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Ripple effect — opt-in via .has-ripple OR auto-applied by JS to common buttons */
+.has-ripple,
+.btn,
+.adm-btn-sm,
+.tab,
+.admin-tab,
+.header-link {
+  position: relative;
+  overflow: hidden;
+}
+.anim-ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.28);
+  pointer-events: none;
+  transform: scale(0);
+  animation: rippleExpand 520ms ease-out;
+}
+@keyframes rippleExpand {
+  to { transform: scale(2.4); opacity: 0; }
+}
+
+/* Skeleton shimmer for any element with .anim-skeleton */
+.anim-skeleton {
+  background: linear-gradient(90deg,
+    rgba(255,255,255,0.04) 0%,
+    rgba(255,255,255,0.10) 50%,
+    rgba(255,255,255,0.04) 100%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.4s linear infinite;
+  border-radius: 8px;
+}
+@keyframes skeletonShimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+
+/* ============================================================
+   MODAL / DIALOG — softer entry
+   ============================================================ */
+
+.wizard-modal[style*="display: flex"] .wizard-content,
+dialog[open] {
+  animation: modalIn var(--anim-slow) var(--anim-ease) both;
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
