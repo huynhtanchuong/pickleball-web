@@ -1,2 +1,5 @@
 # MCP config contains personal access token — never commit
 .mcp.json
+
+# Claude Code per-user settings (permissions, etc.) — not for team
+.claude/settings.local.json

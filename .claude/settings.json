@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git fetch:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(gh pr:*)",
+      "Bash(gh issue:*)",
+      "Bash(node *.test.js)",
+      "Bash(node referee-*.test.js)",
+      "Bash(node verify-*.js)",
+      "Bash(npm test:*)",
+      "Bash(npm run:*)",
+      "Bash(npx prettier:*)",
+      "mcp__supabase__list_tables",
+      "mcp__supabase__list_migrations",
+      "mcp__supabase__list_extensions",
+      "mcp__supabase__execute_sql",
+      "mcp__supabase__apply_migration",
+      "mcp__supabase__get_advisors",
+      "mcp__supabase__get_logs"
+    ],
+    "ask": [
+      "Bash(*DROP TABLE*)",
+      "Bash(*TRUNCATE*)",
+      "Bash(*reset-and-seed*)",
+      "Bash(rm -rf:*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/format-on-edit.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
