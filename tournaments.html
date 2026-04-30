@@ -999,24 +999,30 @@
     }
 
     function updateWizardStep() {
-      // Update step indicators
+      // Step indicators 2-4 were removed when the wizard was simplified to a
+      // single name+date page; btn-back / btn-finish were dropped from the
+      // footer too. Skip silently if the elements are gone — defensive null
+      // checks keep openWizard() working without re-introducing dead markup.
       for (let i = 1; i <= 4; i++) {
         const indicator = document.getElementById(`step-indicator-${i}`);
+        if (!indicator) continue;
         indicator.classList.remove('active', 'completed');
         if (i < currentStep) indicator.classList.add('completed');
         if (i === currentStep) indicator.classList.add('active');
       }
 
-      // Show/hide step content
       for (let i = 1; i <= 4; i++) {
         const content = document.getElementById(`step-${i}`);
+        if (!content) continue;
         content.classList.toggle('active', i === currentStep);
       }
 
-      // Update buttons
-      document.getElementById('btn-back').style.display = currentStep > 1 ? 'inline-block' : 'none';
-      document.getElementById('btn-next').style.display = currentStep < 4 ? 'inline-block' : 'none';
-      document.getElementById('btn-finish').style.display = currentStep === 4 ? 'inline-block' : 'none';
+      const btnBack   = document.getElementById('btn-back');
+      const btnNext   = document.getElementById('btn-next');
+      const btnFinish = document.getElementById('btn-finish');
+      if (btnBack)   btnBack.style.display   = currentStep > 1 ? 'inline-block' : 'none';
+      if (btnNext)   btnNext.style.display   = currentStep < 4 ? 'inline-block' : 'none';
+      if (btnFinish) btnFinish.style.display = currentStep === 4 ? 'inline-block' : 'none';
     }
 
     // Live hint: total teams = numGroups × teamsPerGroup, must be even.
