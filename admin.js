@@ -349,11 +349,38 @@ async function loadTournamentSelector() {
         applyTournamentStatusVisibility();
         await refreshTeamsCache();
         await renderTournamentControls(activeTournament);
+        await maybeAutoFocusSetupTab(activeTournament);
       }
     }
   } catch (error) {
     console.error('Error loading tournaments:', error);
   }
+}
+
+/**
+ * After tournaments.html creates a brand-new giải and redirects here, jump
+ * straight to the VĐV tab so the admin can start adding players. We mark
+ * the freshly-created flag in localStorage on the wizard side and clear it
+ * here after one read so it only fires once.
+ *
+ * Also, even without the flag, an empty upcoming tournament with no VĐV
+ * yet → focus the VĐV tab on first load (it's the obvious next step).
+ */
+async function maybeAutoFocusSetupTab(tournament) {
+  if (!tournament || tournament.status !== 'upcoming') return;
+  const justCreated = localStorage.getItem('pb_just_created') === String(tournament.id);
+  if (justCreated) {
+    localStorage.removeItem('pb_just_created');
+    if (typeof switchAdminTab === 'function') switchAdminTab('members');
+    return;
+  }
+  // Soft fallback: if there are 0 participants, also nudge to VĐV.
+  try {
+    const ps = await tournamentManager.getParticipants(tournament.id);
+    if (!ps || ps.length === 0) {
+      if (typeof switchAdminTab === 'function') switchAdminTab('members');
+    }
+  } catch (_) { /* don't block load on this */ }
 }
 
 function getStatusText(status) {
@@ -3095,19 +3122,26 @@ function switchAdminTab(tabName) {
  */
 async function loadMembersTab() {
   const container = document.getElementById('members-list-container');
-  
+
   try {
     const tournamentId = tournamentManager.getActiveTournamentId();
     if (!tournamentId) {
       container.innerHTML = '<p class="empty">Vui lòng chọn giải đấu</p>';
       return;
     }
-    
+
     // Get participants WITH member details for this tournament
     const participants = await tournamentManager.getParticipantsWithMembers(tournamentId);
-    
+
+    // Validation banner — total players must divide cleanly into pairs (teams)
+    // AND the team count must split evenly across the 2 default groups.
+    // → players % 4 === 0 (≥ 8 to make a real bracket).
+    const banner = renderMembersValidationBanner(participants.length);
+
     if (participants.length === 0) {
-      container.innerHTML = '<p class="empty">Chưa có thành viên nào. Bấm "Thêm/Xóa Thành viên" để thêm.</p>';
+      container.innerHTML = banner +
+        '<p class="empty">Chưa có thành viên nào. Bấm "Thêm/Xóa Thành viên" để thêm.</p>';
+      applyTournamentStatusVisibility();
       return;
     }
     
@@ -3154,13 +3188,58 @@ async function loadMembersTab() {
       }
     });
     
-    container.innerHTML = html;
+    // Footer: "Chốt VĐV → sang tab Đội" — only useful while still upcoming
+    // (CRUD locked once tournament starts; commit guard already enforces).
+    const validCount = participants.length >= 8 && participants.length % 4 === 0;
+    const footer = `
+      <div class="setup-commit-row upcoming-only">
+        <button class="setup-commit-btn" onclick="commitMembers()" ${validCount ? '' : 'disabled'}>
+          ✓ Chốt vận động viên — Sang tab Đội
+        </button>
+      </div>`;
+
+    container.innerHTML = banner + html + footer;
     applyTournamentStatusVisibility();
 
   } catch (error) {
     console.error('Error loading members:', error);
     container.innerHTML = '<p class="empty" style="color: #ef4444;">Lỗi khi tải danh sách thành viên</p>';
   }
+}
+
+/**
+ * Render the "members count is/isn't valid" banner shown above the
+ * participant list. Total players must be divisible by 4 (so we end up
+ * with an even number of pairs that can split across 2 default groups).
+ */
+function renderMembersValidationBanner(count) {
+  const valid = count >= 8 && count % 4 === 0;
+  const numTeams = Math.floor(count / 2);
+  const nextValid = valid ? count : Math.ceil(Math.max(count, 8) / 4) * 4;
+  const need = nextValid - count;
+  const colorBg = valid ? 'rgba(34,197,94,0.10)' : 'rgba(239,68,68,0.10)';
+  const colorBorder = valid ? '#22c55e' : '#ef4444';
+  const colorText = valid ? '#22c55e' : '#fca5a5';
+  const message = valid
+    ? `${count} VĐV → ${numTeams} đội (chia 2 bảng × ${numTeams / 2} đội/bảng)`
+    : count < 8
+      ? `${count} VĐV — cần ít nhất 8 VĐV (4 đội). Thêm ${8 - count} VĐV nữa.`
+      : `${count} VĐV — không chia hết 4. Thêm ${need} VĐV (${nextValid}) hoặc bớt ${count % 4} VĐV.`;
+  return `
+    <div style="margin: 0 0 16px; padding: 12px 14px; border-radius: 8px;
+                background: ${colorBg}; border-left: 4px solid ${colorBorder};
+                color: ${colorText}; font-weight: 600; font-size: 0.95rem;">
+      ${valid ? '✓' : '⚠'} ${message}
+    </div>`;
+}
+
+/**
+ * "Chốt VĐV" — switch to the teams tab so the user can pair them up.
+ * Doesn't actually persist anything new (participants were saved at add
+ * time); this is purely a flow nudge.
+ */
+function commitMembers() {
+  switchAdminTab('teams');
 }
 
 /**
@@ -3178,12 +3257,18 @@ async function loadTeamsTab() {
     
     // Get teams WITH member details for this tournament
     const teams = await tournamentManager.getTeamsWithMembers(tournamentId);
-    
+
+    // Validation banner — needs ≥ 4 teams AND even count (split across 2 groups)
+    const validTeams = teams.length >= 4 && teams.length % 2 === 0;
+    const banner = renderTeamsValidationBanner(teams.length);
+
     if (teams.length === 0) {
-      container.innerHTML = '<p class="empty">Chưa có đội nào. Bấm "Tạo Đội Ngẫu nhiên" để tạo đội.</p>';
+      container.innerHTML = banner +
+        '<p class="empty">Chưa có đội nào. Bấm "Tạo Đội Ngẫu nhiên" để tạo đội, hoặc kéo-thả VĐV để xếp tay.</p>';
+      applyTournamentStatusVisibility();
       return;
     }
-    
+
     // Group by bảng
     const byGroup = {};
     teams.forEach(team => {
@@ -3193,7 +3278,18 @@ async function loadTeamsTab() {
       }
       byGroup[group].push(team);
     });
-    
+
+    // Member-row markup is shared with drag-drop wiring. data-team-id +
+    // data-slot let the drop handler swap members across teams without a
+    // round-trip to the server beyond the final update.
+    const memberRow = (team, slot, name, badgeColor, badgeText) => `
+      <div class="team-member-row" data-team-id="${team.id}" data-slot="${slot}"
+           draggable="true">
+        <span class="team-member-grip" aria-hidden="true">⠿</span>
+        <span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:${badgeColor};color:#fff;font-size:0.7rem;font-weight:800;text-align:center;line-height:18px;margin-right:6px;">${badgeText}</span>
+        <span class="team-member-name">${esc(name)}</span>
+      </div>`;
+
     let html = '';
     Object.keys(byGroup).sort().forEach(group => {
       html += `
@@ -3203,30 +3299,22 @@ async function loadTeamsTab() {
           </h3>
           <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px;">
             ${byGroup[group].map(team => {
-              // Use helper function if available, otherwise fallback
-              const member1Name = typeof getMemberDisplayName === 'function' 
+              const member1Name = typeof getMemberDisplayName === 'function'
                 ? getMemberDisplayName(team.member1)
                 : (team.member1?.name || team.member1?.phone || `Thành viên ${team.member1_id}`);
-              
               const member2Name = typeof getMemberDisplayName === 'function'
                 ? getMemberDisplayName(team.member2)
                 : (team.member2?.name || team.member2?.phone || `Thành viên ${team.member2_id}`);
-              
+
               return `
-              <div style="background: #1a2235; padding: 15px; border-radius: 8px; border-left: 4px solid #3b82f6;">
+              <div class="team-card" style="background: #1a2235; padding: 15px; border-radius: 8px; border-left: 4px solid #3b82f6;">
                 <div style="font-weight: 600; font-size: 16px; margin-bottom: 8px;">
                   ${team.display_name || team.name || 'Đội'}
                   ${team.is_seeded ? ' 🌟' : ''}
                 </div>
                 <div style="font-size: 13px; color: #94a3b8; line-height: 1.6;">
-                  <div>
-                    <span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:#22c55e;color:#052e16;font-size:0.7rem;font-weight:800;text-align:center;line-height:18px;margin-right:6px;">1</span>
-                    ${esc(member1Name)}
-                  </div>
-                  <div>
-                    <span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:#ef4444;color:#fff;font-size:0.7rem;font-weight:800;text-align:center;line-height:18px;margin-right:6px;">2</span>
-                    ${esc(member2Name)}
-                  </div>
+                  ${memberRow(team, 1, member1Name, '#22c55e', '1')}
+                  ${memberRow(team, 2, member2Name, '#ef4444', '2')}
                   <div style="margin-top: 5px; color: #64748b;">
                     Tier: ${team.tier || 'N/A'}
                   </div>
@@ -3240,13 +3328,158 @@ async function loadTeamsTab() {
         </div>
       `;
     });
-    
-    container.innerHTML = html;
+
+    // Footer: "Chốt Đội — Tạo lịch thi đấu". Triggers generateRandomMatches
+    // (which the existing setup wizard already calls) and switches to the
+    // Matches tab so the user sees the generated bracket immediately.
+    const footer = `
+      <div class="setup-commit-row upcoming-only">
+        <p class="setup-commit-hint">
+          ${validTeams
+            ? '👆 Mẹo: kéo-thả tên vận động viên giữa các đội để xếp tay.'
+            : ''}
+        </p>
+        <button class="setup-commit-btn" onclick="commitTeams()" ${validTeams ? '' : 'disabled'}>
+          ✓ Chốt đội — Tạo lịch thi đấu
+        </button>
+      </div>`;
+
+    container.innerHTML = banner + html + footer;
+    wireTeamMemberDragDrop();
     applyTournamentStatusVisibility();
 
   } catch (error) {
     console.error('Error loading teams:', error);
     container.innerHTML = '<p class="empty" style="color: #ef4444;">Lỗi khi tải danh sách đội</p>';
+  }
+}
+
+/**
+ * Banner shown above the team list — mirrors the members banner pattern.
+ */
+function renderTeamsValidationBanner(count) {
+  const valid = count >= 4 && count % 2 === 0;
+  const colorBg = valid ? 'rgba(34,197,94,0.10)' : 'rgba(239,68,68,0.10)';
+  const colorBorder = valid ? '#22c55e' : '#ef4444';
+  const colorText = valid ? '#22c55e' : '#fca5a5';
+  const message = valid
+    ? `${count} đội — sẵn sàng tạo lịch (chia 2 bảng × ${count / 2} đội).`
+    : count === 0
+      ? `Chưa có đội nào.`
+      : count < 4
+        ? `${count} đội — cần tối thiểu 4 đội.`
+        : `${count} đội — số đội phải chẵn để chia 2 bảng đều.`;
+  return `
+    <div style="margin: 0 0 16px; padding: 12px 14px; border-radius: 8px;
+                background: ${colorBg}; border-left: 4px solid ${colorBorder};
+                color: ${colorText}; font-weight: 600; font-size: 0.95rem;">
+      ${valid ? '✓' : '⚠'} ${message}
+    </div>`;
+}
+
+/**
+ * "Chốt Đội" → generate matches + switch to the Matches tab.
+ */
+async function commitTeams() {
+  try {
+    if (typeof generateRandomMatches === 'function') {
+      await generateRandomMatches();
+    }
+    switchAdminTab('matches');
+  } catch (error) {
+    console.error('commitTeams error:', error);
+    setStatus(`❌ Lỗi: ${error.message}`, 'err');
+  }
+}
+
+/**
+ * Wire HTML5 drag-drop on the rendered team-member rows so admins can
+ * drag a player from one team's slot and drop it onto another team's
+ * slot to swap. Re-runs every time loadTeamsTab() rerenders, so dynamic
+ * adds/removes get picked up automatically.
+ */
+function wireTeamMemberDragDrop() {
+  const rows = document.querySelectorAll('#teams-list-container .team-member-row');
+  if (!rows.length) return;
+  // Only allow drag while the tournament is still in setup (upcoming).
+  const isUpcoming = _activeTournament && _activeTournament.status === 'upcoming';
+  if (!isUpcoming) {
+    rows.forEach(r => { r.draggable = false; r.classList.add('drag-disabled'); });
+    return;
+  }
+
+  let dragSrc = null;
+  rows.forEach(row => {
+    row.addEventListener('dragstart', (e) => {
+      dragSrc = row;
+      row.classList.add('dragging');
+      // Required for Firefox to start the drag.
+      try { e.dataTransfer.setData('text/plain', row.dataset.teamId + ':' + row.dataset.slot); } catch (_) {}
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    row.addEventListener('dragend', () => {
+      row.classList.remove('dragging');
+      document.querySelectorAll('.team-member-row.drag-over').forEach(r => r.classList.remove('drag-over'));
+      dragSrc = null;
+    });
+    row.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (row !== dragSrc) row.classList.add('drag-over');
+    });
+    row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+    row.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      row.classList.remove('drag-over');
+      if (!dragSrc || row === dragSrc) return;
+      await swapAcrossTeams(
+        dragSrc.dataset.teamId, parseInt(dragSrc.dataset.slot, 10),
+        row.dataset.teamId,     parseInt(row.dataset.slot, 10)
+      );
+    });
+  });
+}
+
+/**
+ * Swap one player slot from team A with one player slot from team B
+ * (or two slots within the same team). Updates the DB, refreshes caches,
+ * and rerenders the teams tab.
+ */
+async function swapAcrossTeams(srcTeamId, srcSlot, dstTeamId, dstSlot) {
+  if (typeof isAdmin === 'function' && !isAdmin()) {
+    setStatus(t('errPermission'), 'err');
+    return;
+  }
+  try {
+    // Fresh fetch — caches may be stale after rapid sequential swaps.
+    const allTeams = await tournamentManager.getTeams(tournamentManager.getActiveTournamentId());
+    const src = allTeams.find(team => team.id == srcTeamId);
+    const dst = allTeams.find(team => team.id == dstTeamId);
+    if (!src || !dst) { setStatus('❌ Không tìm thấy đội', 'err'); return; }
+
+    const srcMid = srcSlot === 1 ? src.member1_id : src.member2_id;
+    const dstMid = dstSlot === 1 ? dst.member1_id : dst.member2_id;
+
+    if (srcTeamId === dstTeamId) {
+      // Same team → just swap slots
+      await storage.update('teams', srcTeamId, {
+        member1_id: src.member2_id,
+        member2_id: src.member1_id
+      });
+    } else {
+      // Cross-team: write the swap into both rows
+      await storage.update('teams', srcTeamId,
+        srcSlot === 1 ? { member1_id: dstMid } : { member2_id: dstMid });
+      await storage.update('teams', dstTeamId,
+        dstSlot === 1 ? { member1_id: srcMid } : { member2_id: srcMid });
+    }
+
+    if (typeof refreshTeamsCache === 'function') await refreshTeamsCache();
+    await loadTeamsTab();
+    showOk('✓ Đã đổi cặp đội');
+  } catch (error) {
+    console.error('swapAcrossTeams error:', error);
+    setStatus(`❌ Lỗi: ${error.message}`, 'err');
   }
 }
 

@@ -1440,6 +1440,91 @@ body { background: var(--adm-bg); color: var(--adm-text); font-family: 'Segoe UI
   .serve-wheel { transition: none !important; }
 }
 
+/* ============================================================
+   Setup flow — VĐV → Đội → Lịch (commit buttons + drag-drop)
+   ============================================================ */
+.setup-commit-row {
+  margin: 24px 0 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.setup-commit-hint {
+  font-size: 0.82rem;
+  color: var(--adm-muted);
+  margin: 0;
+  text-align: center;
+}
+.setup-commit-btn {
+  background: linear-gradient(135deg, #3b82f6, var(--adm-purple, #7c3aed));
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 14px 28px;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+}
+.setup-commit-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(124, 58, 237, 0.5);
+}
+.setup-commit-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.setup-commit-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: var(--adm-card-2, #1a2235);
+  color: var(--adm-muted);
+  box-shadow: none;
+}
+
+/* Team-member rows — draggable for manual pairing in tab Đội. */
+.team-member-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 6px;
+  margin: 1px 0;
+  border-radius: 6px;
+  cursor: grab;
+  transition: background 0.12s ease, transform 0.1s ease;
+  user-select: none;
+}
+.team-member-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+.team-member-row.dragging {
+  opacity: 0.45;
+  cursor: grabbing;
+}
+.team-member-row.drag-over {
+  background: rgba(59, 130, 246, 0.18);
+  outline: 2px dashed #3b82f6;
+  outline-offset: -2px;
+}
+.team-member-row.drag-disabled {
+  cursor: default;
+}
+.team-member-grip {
+  color: var(--adm-muted);
+  font-size: 0.85rem;
+  letter-spacing: -1px;
+  opacity: 0.5;
+}
+.team-member-row:hover .team-member-grip { opacity: 0.9; }
+.team-member-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .serve-note {
   text-align: center;
   font-size: 0.85rem;

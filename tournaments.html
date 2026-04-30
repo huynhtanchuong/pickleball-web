@@ -1058,10 +1058,9 @@
             enableConsolation: false
           });
           await window.tournamentManager.setActiveTournament(tournament.id);
+          // Flag so admin.html jumps straight to the VĐV tab on landing.
+          localStorage.setItem('pb_just_created', String(tournament.id));
           showStatus('Tạo giải đấu thành công — đang chuyển sang trang quản lý…', 'success');
-          // Redirect to admin to continue setup. setActiveTournament has
-          // already persisted the id in localStorage so admin.html will
-          // pick it up.
           setTimeout(() => { window.location.assign('admin.html'); }, 350);
         } catch (error) {
           console.error('❌ Error creating tournament:', error);
