@@ -3100,7 +3100,8 @@ async function loadMembersTab() {
     });
     
     container.innerHTML = html;
-    
+    applyTournamentStatusVisibility();
+
   } catch (error) {
     console.error('Error loading members:', error);
     container.innerHTML = '<p class="empty" style="color: #ef4444;">Lỗi khi tải danh sách thành viên</p>';
@@ -3175,7 +3176,7 @@ async function loadTeamsTab() {
                     Tier: ${team.tier || 'N/A'}
                   </div>
                 </div>
-                <button class="lineup-swap auth-only" onclick="swapTeamMembers('${team.id}')"
+                <button class="lineup-swap auth-only upcoming-only" onclick="swapTeamMembers('${team.id}')"
                         style="margin-top:10px;width:100%;">⇅ Đổi vị trí 1 ↔ 2</button>
               </div>
             `;
@@ -3186,7 +3187,8 @@ async function loadTeamsTab() {
     });
     
     container.innerHTML = html;
-    
+    applyTournamentStatusVisibility();
+
   } catch (error) {
     console.error('Error loading teams:', error);
     container.innerHTML = '<p class="empty" style="color: #ef4444;">Lỗi khi tải danh sách đội</p>';
