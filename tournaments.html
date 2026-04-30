@@ -534,20 +534,14 @@
       <div class="wizard-header">
         <div>
           <h2 id="wizard-title" style="margin: 0 0 12px 0;">Tạo Giải Đấu Mới</h2>
-          <div class="wizard-steps">
-            <div class="wizard-step active" id="step-indicator-1"></div>
-            <div class="wizard-step" id="step-indicator-2"></div>
-            <div class="wizard-step" id="step-indicator-3"></div>
-            <div class="wizard-step" id="step-indicator-4"></div>
-          </div>
         </div>
         <button class="close-btn" onclick="closeWizard()">&times;</button>
       </div>
 
       <div class="wizard-body">
-        <!-- Step 1: Basic Info -->
+        <!-- Step 1: Basic Info — only name + date. Setup VĐV / Đội / Lịch
+             happens inside admin.html after redirect. -->
         <div id="step-1" class="step-content active">
-          <h3>Bước 1: Thông tin cơ bản</h3>
           <div class="form-group">
             <label>Tên giải đấu <span class="required">*</span></label>
             <input type="text" id="tournament-name" required placeholder="VD: Giải Pickleball Tháng 3">
@@ -556,21 +550,21 @@
             <label>Ngày bắt đầu <span class="required">*</span></label>
             <input type="date" id="tournament-date" required>
           </div>
-          <div class="form-group">
-            <label>Số bảng đấu</label>
-            <input type="number" id="num-groups" value="2" min="1" oninput="updateTotalTeamsHint()">
-          </div>
-          <div class="form-group">
-            <label>Số đội mỗi bảng (dự kiến)</label>
-            <input type="number" id="teams-per-group" value="5" min="2" oninput="updateTotalTeamsHint()">
-          </div>
-          <div id="total-teams-hint" style="font-size:0.85rem;color:#666;margin-top:-8px;padding:6px 0;">
-            Tổng: <b>10 đội</b> ✓ (số chẵn)
-          </div>
+          <p style="font-size:0.85rem;color:#666;line-height:1.5;margin-top:8px;">
+            Sau khi tạo, bạn sẽ được chuyển sang trang quản lý để thêm vận động viên,
+            xếp đội và tạo lịch thi đấu.
+          </p>
+          <!-- Hidden defaults — kept so existing createTournament path doesn't break.
+               Số bảng / đội mỗi bảng có thể chỉnh sau bên trong admin nếu cần. -->
+          <input type="hidden" id="num-groups" value="2">
+          <input type="hidden" id="teams-per-group" value="5">
         </div>
 
+        <!-- Steps 2-4 below are legacy. The new flow redirects to admin.html
+             after step 1, so these are hidden but kept to avoid breaking
+             unrelated JS that references them. -->
         <!-- Step 2: Select Participants -->
-        <div id="step-2" class="step-content">
+        <div id="step-2" class="step-content" style="display:none;">
           <h3>Bước 2: Chọn thành viên</h3>
           <div class="form-group">
             <input type="text" id="participant-search" placeholder="🔍 Tìm kiếm thành viên..." oninput="filterParticipants()">
@@ -634,11 +628,9 @@
       </div>
 
       <div class="wizard-footer">
-        <button class="btn btn-secondary" id="btn-back" onclick="previousStep()" style="display: none;">← Quay lại</button>
         <div>
           <button class="btn btn-secondary" onclick="closeWizard()">Hủy</button>
-          <button class="btn btn-primary" id="btn-next" onclick="nextStep()">Tiếp theo →</button>
-          <button class="btn btn-success" id="btn-finish" onclick="finishWizard()" style="display: none;">✓ Tạo Giải Đấu</button>
+          <button class="btn btn-primary" id="btn-next" onclick="nextStep()">+ Tạo Giải Đấu</button>
         </div>
       </div>
     </div>
@@ -1043,56 +1035,39 @@
 
     async function nextStep() {
       if (currentStep === 1) {
-        // Validate and create tournament
-        const name = document.getElementById('tournament-name').value;
+        // New flow: only name + date here. After tournament is created we
+        // mark it active and redirect to admin.html, where the rest of
+        // setup (VĐV → Đội → Lịch) lives inline.
+        const name = (document.getElementById('tournament-name').value || '').trim();
         const date = document.getElementById('tournament-date').value;
         if (!name || !date) {
           showStatus('Vui lòng điền đầy đủ thông tin', 'error');
           return;
         }
-        // Total teams must be EVEN — every player is in a 2-person team,
-        // so an odd team count would leave one person unpaired.
-        const ng = parseInt(document.getElementById('num-groups').value, 10) || 0;
-        const tpg = parseInt(document.getElementById('teams-per-group').value, 10) || 0;
-        const totalTeams = ng * tpg;
-        if (ng < 1 || tpg < 2) {
-          showStatus('Số bảng ≥ 1 và số đội mỗi bảng ≥ 2', 'error');
-          return;
-        }
-        if (totalTeams % 2 !== 0) {
-          showStatus(`Tổng số đội phải chẵn (hiện tại: ${totalTeams}). Vui lòng điều chỉnh số bảng × số đội mỗi bảng để ra số chẵn.`, 'error');
-          return;
-        }
 
         try {
-          // Debug logging
-          console.log('Creating tournament...');
-          console.log('  - window.tournamentManager:', window.tournamentManager);
-          console.log('  - createTournament method:', typeof window.tournamentManager?.createTournament);
-          
           if (!window.tournamentManager) {
             throw new Error('tournamentManager chưa được khởi tạo');
           }
-          
-          if (typeof window.tournamentManager.createTournament !== 'function') {
-            throw new Error('createTournament không phải là function');
-          }
-
-          wizardData.tournament = await window.tournamentManager.createTournament({
+          const tournament = await window.tournamentManager.createTournament({
             name: name,
             start_date: date,
-            numGroups: parseInt(document.getElementById('num-groups').value),
-            teamsPerGroup: parseInt(document.getElementById('teams-per-group').value),
+            numGroups: 2,
+            teamsPerGroup: 5,
             enableThirdPlace: true,
             enableConsolation: false
           });
-          
-          console.log('✅ Tournament created:', wizardData.tournament);
+          await window.tournamentManager.setActiveTournament(tournament.id);
+          showStatus('Tạo giải đấu thành công — đang chuyển sang trang quản lý…', 'success');
+          // Redirect to admin to continue setup. setActiveTournament has
+          // already persisted the id in localStorage so admin.html will
+          // pick it up.
+          setTimeout(() => { window.location.assign('admin.html'); }, 350);
         } catch (error) {
           console.error('❌ Error creating tournament:', error);
           showStatus('Lỗi: ' + error.message, 'error');
-          return;
         }
+        return;
       } else if (currentStep === 2) {
         // Save participants
         const selected = [];

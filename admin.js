@@ -1613,6 +1613,8 @@ function updateBracketUI(matches) {
 function renderBracketVisual(container, matches) {
   const semis  = matches.filter(m=>m.stage==="semi");
   const finals = matches.filter(m=>m.stage==="final");
+  const thirdPlace = matches.find(m => (m.stage || m.match_type) === 'third_place');
+  const consolation = matches.find(m => (m.stage || m.match_type) === 'consolation');
   const getWinner = m => m.status==="done" ? (m.scoreA>=m.scoreB?m.teamA:m.teamB) : null;
   
   // Always show bracket structure (even before matches are generated)
@@ -1675,7 +1677,29 @@ function renderBracketVisual(container, matches) {
           <div class="champion-name">${esc(champ)}</div></div></div>`;
   }
   html+='</div>';
-  container.innerHTML=html;
+
+  // ── EXTRAS: third-place + consolation (rendered as a stacked row below
+  //    the main bracket so the W-L flow stays uncluttered).
+  const renderExtra = (m, label, badge) => {
+    if (!m) return '';
+    const wA = m.status === 'done' && m.scoreA > m.scoreB;
+    const wB = m.status === 'done' && m.scoreB > m.scoreA;
+    return `
+      <div class="bracket-extra-card">
+        <div class="bracket-extra-label">${badge} ${label}</div>
+        <div class="bracket-match-card">
+          <div class="bracket-team-row ${wA ? 'winner' : ''}"><span>${esc(m.teamA || '—')}</span><span class="bracket-score-val">${m.status === 'done' ? m.scoreA : '-'}</span></div>
+          <div class="bracket-team-row ${wB ? 'winner' : ''}"><span>${esc(m.teamB || '—')}</span><span class="bracket-score-val">${m.status === 'done' ? m.scoreB : '-'}</span></div>
+        </div>
+      </div>`;
+  };
+  const extras = renderExtra(thirdPlace, 'Tranh hạng 3', '🥉')
+               + renderExtra(consolation, 'Khuyến khích', '🎖️');
+  if (extras) {
+    html += `<div class="bracket-extras">${extras}</div>`;
+  }
+
+  container.innerHTML = html;
 }
 
 // ── Special Match Types ──────────────────────────────────────
@@ -1888,6 +1912,17 @@ function renderSpecialMatches(matches) {
     return k === 'third_place' || k === 'consolation' || k === 'exhibition';
   };
   const specialMatches = matches.filter(isSpecial);
+
+  // Hide "create" buttons for special matches that already exist — once the
+  // 3rd-place or consolation match is generated there's nothing to create
+  // again, and showing the button just lets the admin trigger a duplicate
+  // attempt that would error out.
+  const hasThirdPlace  = matches.some(m => (m.stage || m.match_type) === 'third_place');
+  const hasConsolation = matches.some(m => (m.stage || m.match_type) === 'consolation');
+  const btn3 = document.getElementById('btn-create-third-place');
+  const btnC = document.getElementById('btn-create-consolation');
+  if (btn3) btn3.style.display = hasThirdPlace  ? 'none' : '';
+  if (btnC) btnC.style.display = hasConsolation ? 'none' : '';
 
   const container = document.getElementById('match-list-special');
   if (!container) return;
