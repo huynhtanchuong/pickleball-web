@@ -1393,13 +1393,19 @@ function renderPublicBracket(container, matches) {
 // ── Helper: Check if team name is a placeholder ──
 function isTeamPlaceholder(teamName) {
   if (!teamName) return true;
-  const placeholders = [
-    "Winner", "Thắng", "Nhất", "Nhì", "TBD", "1st", "2nd",
-    t("bracketPlaceholder1A"), t("bracketPlaceholder2B"),
-    t("bracketPlaceholder1B"), t("bracketPlaceholder2A"),
-    t("bracketWinnerSF1"), t("bracketWinnerSF2")
+  const n = teamName.trim();
+  // Exact one-word tokens that could never be part of a real player name.
+  if (n === 'Winner' || n === 'TBD' || n === '1st' || n === '2nd') return true;
+  // Full localized phrases bracket renderer emits when a slot hasn't been
+  // resolved yet. Exact-equal only so real names that happen to CONTAIN a
+  // placeholder word (e.g. "Michael Thắng", "Nguyễn Nhất") aren't flagged
+  // as waiting-for-previous-match placeholders.
+  const phrases = [
+    t('bracketPlaceholder1A'), t('bracketPlaceholder2B'),
+    t('bracketPlaceholder1B'), t('bracketPlaceholder2A'),
+    t('bracketWinnerSF1'),     t('bracketWinnerSF2')
   ];
-  return placeholders.some(p => teamName.includes(p));
+  return phrases.some(p => p && n === p);
 }
 
 // ── Toggle public group collapse ──────────────────────────────
