@@ -346,6 +346,7 @@ async function loadTournamentSelector() {
       const activeTournament = tournaments.find(t => t.id == activeId);
       if (activeTournament) {
         _activeTournament = activeTournament;
+        window._activeTournament = _activeTournament;
         applyTournamentStatusVisibility();
         await refreshTeamsCache();
         await renderTournamentControls(activeTournament);
@@ -401,6 +402,7 @@ async function switchTournament(tournamentId) {
 
     // Cache the active tournament so gateScoringByRole can read .status
     _activeTournament = await tournamentManager.getTournament(tournamentId);
+    window._activeTournament = _activeTournament;
     applyTournamentStatusVisibility();
     await refreshTeamsCache();
 
@@ -432,15 +434,36 @@ function updateTournamentStatus() {
 // ── Tournament Controls Rendering ────────────────────────────
 async function renderTournamentControls(tournament) {
   const container = document.getElementById('tournament-controls');
-  
+
   if (!container) return;
-  
+
   // Hide controls for non-admin users
   if (!isAdmin()) {
     container.style.display = 'none';
     return;
   }
-  
+
+  // Mini-game mode: the 5-step bracket wizard doesn't apply (users create
+  // VĐV / cặp / trận manually from the tabs). Show just the start/reset
+  // controls via the bottom link, nothing else.
+  if (window.minigame && window.minigame.isMinigame(tournament)) {
+    container.innerHTML = `
+      <div class="mg-start-bar">
+        <div class="mg-start-label">${tournament.status === 'upcoming'
+          ? '🧩 Chế độ mini-game — Tự thêm VĐV, tạo cặp, tạo trận. Sẵn sàng thì bấm Bắt đầu.'
+          : (tournament.status === 'ongoing'
+              ? '🎾 Giải đang diễn ra — trọng tài chấm điểm bên tab Trận.'
+              : '✅ Giải đã kết thúc.')}
+        </div>
+        ${tournament.status === 'upcoming'
+          ? `<button class="tournament-control-btn btn-start-tournament" onclick="startTournament()">▶️ Bắt đầu giải</button>`
+          : ''}
+      </div>`;
+    container.style.display = 'block';
+    renderResetBottomLink(tournament.status === 'upcoming' ? null : tournament);
+    return;
+  }
+
   container.style.display = 'block';
 
   // For ongoing/completed: hide the controls section entirely (no setup wizard).
@@ -538,15 +561,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // ── Override renderMatches for admin ─────────────────────────
 function renderMatches(matches) {
-  const groupMatches = matches.filter(m => !m.stage || m.stage === "group");
-  const semiMatches  = matches.filter(m => m.stage === "semi");
-  const finalMatches = matches.filter(m => m.stage === "final");
+  // Mini-game: treat stage='minigame' as "group" (flat list), inject the
+  // match builder, and skip the KO bracket entirely.
+  const isMini = window.minigame && window._activeTournament && window.minigame.isMinigame(window._activeTournament);
+  const groupMatches = isMini
+    ? matches.filter(m => m.stage === 'minigame')
+    : matches.filter(m => !m.stage || m.stage === 'group');
+  const semiMatches  = isMini ? [] : matches.filter(m => m.stage === 'semi');
+  const finalMatches = isMini ? [] : matches.filter(m => m.stage === 'final');
 
   renderStageList("match-list-group", groupMatches, "group");
   renderStageList("match-list-semi",  semiMatches,  "semi");
   renderStageList("match-list-final", finalMatches, "final");
-  renderSpecialMatches(matches);
-  updateBracketUI(matches);
+  if (!isMini) renderSpecialMatches(matches);
+  if (!isMini) updateBracketUI(matches);
+  if (isMini) {
+    window.minigame.renderMatchBuilder(window._activeTournament);
+    // Also keep the standings tab fresh since it reads from matches.
+    window.minigame.renderStandings(window._activeTournament);
+  }
 
   // Re-apply .admin-only / .scorer-only visibility on the freshly rendered
   // match cards (the .admin-only edit form inside each card otherwise
@@ -2936,6 +2969,7 @@ async function startTournament() {
 
     // Refresh cached tournament so gateScoringByRole unlocks scoring
     _activeTournament = await tournamentManager.getTournament(tournamentId);
+    window._activeTournament = _activeTournament;
     applyTournamentStatusVisibility(); // hide auto-schedule bar etc.
 
     setStatus(t('tournamentStartedOk'), 'ok');
@@ -3114,6 +3148,16 @@ function switchAdminTab(tabName) {
     loadMembersTab();
   } else if (tabName === 'teams') {
     loadTeamsTab();
+  } else if (tabName === 'standings' && window.minigame
+             && window._activeTournament
+             && window.minigame.isMinigame(window._activeTournament)) {
+    // Mini-game: bảng xếp hạng = tổng kết 2 CLB
+    window.minigame.renderStandings(window._activeTournament);
+  } else if (tabName === 'matches' && window.minigame
+             && window._activeTournament
+             && window.minigame.isMinigame(window._activeTournament)) {
+    // Re-inject the match builder when returning to the matches tab.
+    window.minigame.renderMatchBuilder(window._activeTournament);
   }
 }
 
@@ -3121,6 +3165,11 @@ function switchAdminTab(tabName) {
  * Load members tab content
  */
 async function loadMembersTab() {
+  // Mini-game mode (2-club exhibition) swaps out the whole renderer.
+  if (window.minigame && window._activeTournament && window.minigame.isMinigame(window._activeTournament)) {
+    return window.minigame.renderMembersTab(window._activeTournament);
+  }
+
   const container = document.getElementById('members-list-container');
 
   try {
@@ -3246,15 +3295,20 @@ function commitMembers() {
  * Load teams tab content
  */
 async function loadTeamsTab() {
+  // Mini-game: delegate the ad-hoc pair UI.
+  if (window.minigame && window._activeTournament && window.minigame.isMinigame(window._activeTournament)) {
+    return window.minigame.renderTeamsTab(window._activeTournament);
+  }
+
   const container = document.getElementById('teams-list-container');
-  
+
   try {
     const tournamentId = tournamentManager.getActiveTournamentId();
     if (!tournamentId) {
       container.innerHTML = '<p class="empty">Vui lòng chọn giải đấu</p>';
       return;
     }
-    
+
     // Get teams WITH member details for this tournament
     const teams = await tournamentManager.getTeamsWithMembers(tournamentId);
 
