@@ -714,6 +714,89 @@
           ? 'Chưa có trận nào kết thúc.'
           : `Đang hoà: ${ranked.map(r => `${esc(r.club)} ${r.wins}`).join(' - ')}`;
 
+      // Per-player stats table — for each member of every done match,
+      // credit/debit wins, losses, pointsFor, pointsAgainst.
+      const members = await window.storage.read('members');
+      const participants = await window.tournamentManager.getParticipantsWithMembers(tournament.id);
+      const memberById = new Map(members.map(m => [String(m.id), m]));
+      const partById  = new Map(participants.map(p => [String(p.member_id), p]));
+      const teamById  = new Map(teams.map(t => [String(t.id), t]));
+      const playerStats = new Map();
+      const bumpPlayer = (mid, winLoss, scored, conceded) => {
+        if (!mid) return;
+        if (!playerStats.has(mid)) {
+          const mem = memberById.get(String(mid));
+          const pt  = partById.get(String(mid));
+          playerStats.set(mid, {
+            memberId: mid,
+            name: mem?.name || `#${mid}`,
+            club: pt?.club_name || '',
+            wins: 0, losses: 0, played: 0,
+            pointsFor: 0, pointsAgainst: 0
+          });
+        }
+        const s = playerStats.get(mid);
+        s.played++;
+        if (winLoss) s[winLoss]++;   // null on the (rare) draw path
+        s.pointsFor += scored;
+        s.pointsAgainst += conceded;
+      };
+      matches.forEach(m => {
+        if (m.stage !== 'minigame') return;
+        if (m.status !== 'done' && m.status !== 'completed') return;
+        const tA = teamById.get(String(m.team_a_id));
+        const tB = teamById.get(String(m.team_b_id));
+        if (!tA || !tB) return;
+        const sa = m.score_a || 0, sb = m.score_b || 0;
+        const aWon = sa > sb, bWon = sb > sa;
+        [tA.member1_id, tA.member2_id].forEach(mid =>
+          bumpPlayer(mid, aWon ? 'wins' : bWon ? 'losses' : null, sa, sb));
+        [tB.member1_id, tB.member2_id].forEach(mid =>
+          bumpPlayer(mid, bWon ? 'wins' : aWon ? 'losses' : null, sb, sa));
+      });
+
+      const playerRows = Array.from(playerStats.values())
+        .sort((x, y) => (y.wins - x.wins)
+                     || ((y.pointsFor - y.pointsAgainst) - (x.pointsFor - x.pointsAgainst))
+                     || (y.played - x.played)
+                     || x.name.localeCompare(y.name));
+
+      const playerTable = playerRows.length ? `
+        <div class="mg-player-stats">
+          <div class="mg-player-stats-title">
+            👤 Thống kê theo vận động viên
+            <span class="mg-player-stats-sub">${playerRows.length} VĐV đã ra sân</span>
+          </div>
+          <div class="mg-player-table-wrap">
+            <table class="mg-standings-table mg-player-table">
+              <thead>
+                <tr>
+                  <th>#</th><th>VĐV</th><th>CLB</th>
+                  <th>T</th><th>T̄</th><th>Trận</th>
+                  <th>+</th><th>−</th><th>+/−</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${playerRows.map((p, i) => {
+                  const c = clubColor(p.club);
+                  const diff = p.pointsFor - p.pointsAgainst;
+                  return `<tr>
+                    <td class="mg-rank">${i + 1}</td>
+                    <td class="mg-player-name">${esc(p.name)}</td>
+                    <td><span class="mg-club-chip" style="background:${c.bg};color:${c.fg};">${esc(p.club)}</span></td>
+                    <td><b>${p.wins}</b></td>
+                    <td>${p.losses}</td>
+                    <td>${p.played}</td>
+                    <td>${p.pointsFor}</td>
+                    <td>${p.pointsAgainst}</td>
+                    <td>${diff > 0 ? '+' : ''}${diff}</td>
+                  </tr>`;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>` : '';
+
       container.innerHTML = `
         <div class="mg-standings-top">
           ${leader}
@@ -738,7 +821,8 @@
               </tr>`;
             }).join('')}
           </tbody>
-        </table>`;
+        </table>
+        ${playerTable}`;
     } catch (err) {
       console.error('mg renderStandings:', err);
       container.innerHTML = '<p class="empty" style="color:#ef4444;">Lỗi khi tải bảng xếp hạng</p>';

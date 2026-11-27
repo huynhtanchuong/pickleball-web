@@ -684,6 +684,45 @@
   .mg-standings-table th, .mg-standings-table td { padding: 8px 6px; }
 }
 
+/* Per-player stats table (below the 2-club standings) */
+.mg-player-stats {
+  margin-top: 22px;
+}
+.mg-player-stats-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--adm-text, #f1f5f9);
+}
+.mg-player-stats-sub {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--adm-muted, #94a3b8);
+  background: rgba(255,255,255,0.05);
+  padding: 2px 10px;
+  border-radius: 999px;
+}
+.mg-player-table-wrap {
+  overflow-x: auto;
+}
+.mg-player-table th,
+.mg-player-table td {
+  padding: 8px 10px;
+}
+.mg-player-name {
+  font-weight: 600;
+  min-width: 140px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+@media (max-width: 600px) {
+  .mg-player-table th, .mg-player-table td { padding: 6px 5px; font-size: 0.78rem; }
+  .mg-player-name { min-width: 110px; }
+}
+
 /* ============================================================
    MODE: minigame — strip KO-tournament UI entirely.
    Body carries .mode-minigame when the active giải has
