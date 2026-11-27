@@ -712,22 +712,24 @@ function renderStageList(containerId, matches, stage) {
     return;
   }
 
-  // Sort: playing → not_started → done, then by time
+  // Mini-game matches are meant to run in match_order 1..25 — not by time —
+  // so for that batch we sort strictly by match_order and ignore status/time.
+  const allMinigame = matches.length > 0 && matches.every(m => m.stage === 'minigame');
   const statusOrder = { playing: 0, not_started: 1, pending: 1, done: 2 };
-  const sorted = [...matches].sort((a, b) => {
-    // First: sort by status
-    const statusDiff = (statusOrder[a.status] ?? 1) - (statusOrder[b.status] ?? 1);
-    if (statusDiff !== 0) return statusDiff;
-    
-    // Second: sort by match_time (parsed numerically)
-    // Use parseMatchTime from app.js (available globally)
-    const timeA = typeof parseMatchTime === 'function' ? parseMatchTime(a.match_time) : 9999;
-    const timeB = typeof parseMatchTime === 'function' ? parseMatchTime(b.match_time) : 9999;
-    if (timeA !== timeB) return timeA - timeB;
-    
-    // Third: keep original order
-    return 0;
-  });
+  const sorted = allMinigame
+    ? [...matches].sort((a, b) => (a.match_order ?? 999) - (b.match_order ?? 999))
+    : [...matches].sort((a, b) => {
+        // First: sort by status
+        const statusDiff = (statusOrder[a.status] ?? 1) - (statusOrder[b.status] ?? 1);
+        if (statusDiff !== 0) return statusDiff;
+
+        // Second: sort by match_time (parsed numerically)
+        const timeA = typeof parseMatchTime === 'function' ? parseMatchTime(a.match_time) : 9999;
+        const timeB = typeof parseMatchTime === 'function' ? parseMatchTime(b.match_time) : 9999;
+        if (timeA !== timeB) return timeA - timeB;
+
+        return 0;
+      });
 
   if (stage === "group") {
     const groups = {};
