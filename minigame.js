@@ -15,12 +15,21 @@
 (function () {
   "use strict";
 
-  const BADGE_COLORS = {
-    'Sóc Sơn':  { bg: '#3b82f6', fg: '#fff', soft: 'rgba(59,130,246,0.14)' },
-    'Đà Nẵng':  { bg: '#ef4444', fg: '#fff', soft: 'rgba(239,68,68,0.14)' },
-  };
+  // Palette assigned by club INDEX in tournament.config.clubs so any club
+  // name (even after a rename) still gets a distinct color.
+  const CLUB_PALETTE = [
+    { bg: '#3b82f6', fg: '#fff', soft: 'rgba(59,130,246,0.14)' },  // blue  → CLB 1
+    { bg: '#ef4444', fg: '#fff', soft: 'rgba(239,68,68,0.14)' },   // red   → CLB 2
+    { bg: '#22c55e', fg: '#fff', soft: 'rgba(34,197,94,0.14)' },   // green
+    { bg: '#f59e0b', fg: '#fff', soft: 'rgba(245,158,11,0.14)' },  // amber
+  ];
+  const FALLBACK_COLOR = { bg: '#7c3aed', fg: '#fff', soft: 'rgba(124,58,237,0.14)' };
   function clubColor(name) {
-    return BADGE_COLORS[name] || { bg: '#7c3aed', fg: '#fff', soft: 'rgba(124,58,237,0.14)' };
+    const t = window._activeTournament || window._publicTournament;
+    const clubs = t ? getClubs(t) : [];
+    const idx = clubs.indexOf(name);
+    if (idx >= 0 && CLUB_PALETTE[idx]) return CLUB_PALETTE[idx];
+    return FALLBACK_COLOR;
   }
 
   function esc(s) {
@@ -455,21 +464,36 @@
         renderStageList(`mg-cat-${c.key}`, sub, 'group');
       }
     });
-    // Decorate each .adm-match-card with an "Đổi cặp" button so admin can
-    // swap which two pairs play that match.
+    // Decorate each .adm-match-card:
+    //  1. Match-order badge (#N) in the top-left so the referee can see
+    //     the planned order at a glance.
+    //  2. 🔀 "Đổi cặp" admin button in the top-right.
+    const matchById = new Map(matches.map(m => [String(m.id), m]));
     host.querySelectorAll('.adm-match-card').forEach(card => {
       const id = card.getAttribute('data-id');
-      if (!id || card.querySelector('.mg-match-pair-edit')) return;
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'mg-match-pair-edit admin-only';
-      btn.title = 'Đổi cặp cho trận này';
-      btn.textContent = '🔀';
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation(); // don't toggle the card
-        window.mgOpenMatchEdit(id);
-      });
-      card.appendChild(btn);
+      if (!id) return;
+      if (!card.querySelector('.mg-match-order')) {
+        const m = matchById.get(String(id));
+        const ord = m?.match_order;
+        if (ord) {
+          const tag = document.createElement('span');
+          tag.className = 'mg-match-order';
+          tag.textContent = `#${ord}`;
+          card.appendChild(tag);
+        }
+      }
+      if (!card.querySelector('.mg-match-pair-edit')) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'mg-match-pair-edit admin-only';
+        btn.title = 'Đổi cặp cho trận này';
+        btn.textContent = '🔀';
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation(); // don't toggle the card
+          window.mgOpenMatchEdit(id);
+        });
+        card.appendChild(btn);
+      }
     });
     if (typeof applyRoleVisibility === 'function') applyRoleVisibility();
   }
