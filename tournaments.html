@@ -231,6 +231,41 @@
       font-size: 14px;
     }
 
+    /* Tournament type picker — two card-like radios */
+    .tournament-type-picker {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    @media (max-width: 500px) {
+      .tournament-type-picker { grid-template-columns: 1fr; }
+    }
+    .tournament-type-option {
+      display: flex;
+      gap: 10px;
+      padding: 12px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, transform 0.1s;
+      background: #fff;
+    }
+    .tournament-type-option:hover { border-color: #7c3aed; background: #faf5ff; }
+    .tournament-type-option:has(input:checked) {
+      border-color: #7c3aed;
+      background: linear-gradient(135deg, #faf5ff, #f3e8ff);
+      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.15);
+    }
+    .tournament-type-option input[type="radio"] {
+      margin: 3px 0 0 0;
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      accent-color: #7c3aed;
+    }
+    .tt-title { font-weight: 700; font-size: 0.95rem; color: #333; margin-bottom: 2px; }
+    .tt-sub   { font-size: 0.78rem; color: #666; line-height: 1.35; }
+
     .participant-list {
       display: flex;
       flex-direction: column;
@@ -539,7 +574,7 @@
       </div>
 
       <div class="wizard-body">
-        <!-- Step 1: Basic Info — only name + date. Setup VĐV / Đội / Lịch
+        <!-- Step 1: Basic Info — tên + ngày + loại giải. Setup VĐV / Đội / Lịch
              happens inside admin.html after redirect. -->
         <div id="step-1" class="step-content active">
           <div class="form-group">
@@ -550,6 +585,41 @@
             <label>Ngày bắt đầu <span class="required">*</span></label>
             <input type="date" id="tournament-date" required>
           </div>
+
+          <div class="form-group">
+            <label>Loại giải đấu <span class="required">*</span></label>
+            <div class="tournament-type-picker">
+              <label class="tournament-type-option">
+                <input type="radio" name="tournament-mode" value="groups" checked
+                       onchange="onTournamentModeChange()">
+                <div>
+                  <div class="tt-title">🏆 Giải chia bảng</div>
+                  <div class="tt-sub">Vòng tròn 2 bảng → bán kết → chung kết. Format BO3.</div>
+                </div>
+              </label>
+              <label class="tournament-type-option">
+                <input type="radio" name="tournament-mode" value="minigame"
+                       onchange="onTournamentModeChange()">
+                <div>
+                  <div class="tt-title">🤝 Giao lưu 2 CLB</div>
+                  <div class="tt-sub">2 CLB chia cặp ad-hoc, nhiều trận BO1 chạm 11, tổng kết thắng/thua theo CLB.</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Only shown when mode = minigame -->
+          <div id="minigame-club-fields" style="display:none;">
+            <div class="form-group">
+              <label>Tên CLB 1 <span class="required">*</span></label>
+              <input type="text" id="club-name-a" placeholder="VD: Sóc Sơn" value="Sóc Sơn">
+            </div>
+            <div class="form-group">
+              <label>Tên CLB 2 <span class="required">*</span></label>
+              <input type="text" id="club-name-b" placeholder="VD: Đà Nẵng" value="Đà Nẵng">
+            </div>
+          </div>
+
           <p style="font-size:0.85rem;color:#666;line-height:1.5;margin-top:8px;">
             Sau khi tạo, bạn sẽ được chuyển sang trang quản lý để thêm vận động viên,
             xếp đội và tạo lịch thi đấu.
@@ -1039,16 +1109,47 @@
       hint.style.color = ok ? '#4caf50' : '#e74c3c';
     }
 
+    // Show/hide the "2 CLB" fields when user flips the tournament-mode radio.
+    function onTournamentModeChange() {
+      const mode = document.querySelector('input[name="tournament-mode"]:checked')?.value || 'groups';
+      const clubFields = document.getElementById('minigame-club-fields');
+      if (clubFields) clubFields.style.display = (mode === 'minigame') ? 'block' : 'none';
+    }
+
     async function nextStep() {
       if (currentStep === 1) {
-        // New flow: only name + date here. After tournament is created we
+        // New flow: tên + ngày + loại giải. After tournament is created we
         // mark it active and redirect to admin.html, where the rest of
-        // setup (VĐV → Đội → Lịch) lives inline.
+        // setup (VĐV → Đội → Lịch) lives inline (or the minigame module
+        // takes over if mode === 'minigame').
         const name = (document.getElementById('tournament-name').value || '').trim();
         const date = document.getElementById('tournament-date').value;
+        const mode = document.querySelector('input[name="tournament-mode"]:checked')?.value || 'groups';
+
         if (!name || !date) {
           showStatus('Vui lòng điền đầy đủ thông tin', 'error');
           return;
+        }
+
+        let extraConfig = {};
+        if (mode === 'minigame') {
+          const clubA = (document.getElementById('club-name-a').value || '').trim();
+          const clubB = (document.getElementById('club-name-b').value || '').trim();
+          if (!clubA || !clubB) {
+            showStatus('Vui lòng nhập đủ tên 2 CLB.', 'error');
+            return;
+          }
+          if (clubA === clubB) {
+            showStatus('2 CLB phải có tên khác nhau.', 'error');
+            return;
+          }
+          extraConfig = {
+            mode: 'minigame',
+            clubs: [clubA, clubB],
+            matchFormat: 'BO1',
+            targetScore: 11,
+            winByMargin: 2
+          };
         }
 
         try {
@@ -1061,8 +1162,17 @@
             numGroups: 2,
             teamsPerGroup: 5,
             enableThirdPlace: true,
-            enableConsolation: false
+            enableConsolation: false,
+            // extraConfig is merged into tournament.config below via a patch
+            // call — createTournament() doesn't forward unknown keys.
           });
+          // Patch extra mode-specific config in a follow-up update (keeps
+          // createTournament's signature untouched).
+          if (Object.keys(extraConfig).length) {
+            await window.tournamentManager.updateTournament(tournament.id, {
+              config: { ...(tournament.config || {}), ...extraConfig }
+            });
+          }
           await window.tournamentManager.setActiveTournament(tournament.id);
           // Flag so admin.html jumps straight to the VĐV tab on landing.
           localStorage.setItem('pb_just_created', String(tournament.id));
