@@ -494,6 +494,18 @@
         });
         card.appendChild(btn);
       }
+      if (!card.querySelector('.mg-match-score-entry')) {
+        const sbtn = document.createElement('button');
+        sbtn.type = 'button';
+        sbtn.className = 'mg-match-score-entry admin-only';
+        sbtn.title = 'Nhập điểm thủ công & kết thúc';
+        sbtn.textContent = '📝';
+        sbtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          window.mgOpenScoreEntry(id);
+        });
+        card.appendChild(sbtn);
+      }
     });
     if (typeof applyRoleVisibility === 'function') applyRoleVisibility();
   }
@@ -869,7 +881,9 @@
                 ${playerRows.map((p, i) => {
                   const c = clubColor(p.club);
                   const diff = p.pointsFor - p.pointsAgainst;
-                  return `<tr>
+                  return `<tr class="mg-player-row"
+                              data-mid="${p.memberId}"
+                              onclick="mgOpenPlayerMatches('${p.memberId}')">
                     <td class="mg-rank">${i + 1}</td>
                     <td class="mg-player-name">${esc(p.name)}</td>
                     <td><span class="mg-club-chip" style="background:${c.bg};color:${c.fg};">${esc(p.club)}</span></td>
@@ -885,6 +899,9 @@
             </table>
           </div>
         </div>` : '';
+
+      // Make the modal-opening function reachable from the row's onclick.
+      window._mgPlayerStatsData = Array.from(playerStats.values());
 
       container.innerHTML = `
         <div class="mg-standings-top">
@@ -999,6 +1016,11 @@
       }).join('');
     })();
 
+    // Finished matches history — most recent first (by match_order desc).
+    const SHOW_DONE = 6;
+    const doneList = [...done].reverse().slice(0, SHOW_DONE);
+    const doneRemaining = done.length - doneList.length;
+
     host.innerHTML = `
       ${live.length ? `
         <div class="mg-pub-section mg-pub-section-live">
@@ -1010,10 +1032,11 @@
           <div class="mg-pub-section-title">⏭️ Sắp tới (${nextList.length}${remaining > 0 ? ' / còn ' + remaining + ' trận' : ''})</div>
           ${nextList.map(m => card(m)).join('')}
         </div>` : ''}
-      ${!live.length && !nextList.length && done.length ? `
-        <div class="mg-pub-section">
-          <div class="mg-pub-section-title">✓ Đã kết thúc</div>
-          <p class="empty-state">Toàn bộ ${done.length} trận đã xong. Mở lịch bên dưới để xem kết quả từng trận.</p>
+      ${doneList.length ? `
+        <div class="mg-pub-section mg-pub-section-done">
+          <div class="mg-pub-section-title">✅ Đã kết thúc (${done.length})</div>
+          ${doneList.map(m => card(m, { showScore: true })).join('')}
+          ${doneRemaining > 0 ? `<p class="mg-pub-more">+ ${doneRemaining} trận nữa — mở lịch đầy đủ bên dưới</p>` : ''}
         </div>` : ''}
       ${mini.length ? `
         <details class="mg-pub-schedule">
@@ -1023,6 +1046,217 @@
         <p class="empty-state">Chưa có trận nào.</p>`}
     `;
   }
+
+  // ====================================================================
+  // 7. PLAYER MATCHES MODAL — click VĐV name in standings
+  //    Works on every page that renders renderStandings (admin + public).
+  // ====================================================================
+  window.mgOpenPlayerMatches = async function (memberId) {
+    const tid = (window.tournamentManager && window.tournamentManager.getActiveTournamentId &&
+                 window.tournamentManager.getActiveTournamentId()) || null;
+    if (!tid) return;
+    try {
+      const [members, teams, matches, participants] = await Promise.all([
+        window.storage.read('members'),
+        window.storage.read('teams',   { tournament_id: tid }),
+        window.storage.read('matches', { tournament_id: tid }),
+        window.storage.read('tournament_participants', { tournament_id: tid })
+      ]);
+      const memberById = new Map(members.map(m => [String(m.id), m]));
+      const me = memberById.get(String(memberId));
+      if (!me) return;
+      const myPart = participants.find(p => String(p.member_id) === String(memberId));
+      const myClub = myPart?.club_name || '';
+      const myColor = clubColor(myClub);
+
+      // Teams this player is in.
+      const myTeamIds = new Set(
+        teams.filter(t => String(t.member1_id) === String(memberId)
+                       || String(t.member2_id) === String(memberId))
+             .map(t => String(t.id))
+      );
+      // Matches involving any of those teams (only mini-game stage)
+      const myMatches = matches
+        .filter(m => m.stage === 'minigame' &&
+          (myTeamIds.has(String(m.team_a_id)) || myTeamIds.has(String(m.team_b_id))))
+        .sort((a, b) => (a.match_order || 0) - (b.match_order || 0));
+
+      const played = myMatches.filter(m => m.status === 'done' || m.status === 'completed');
+      const upcoming = myMatches.filter(m => m.status !== 'done' && m.status !== 'completed');
+
+      const row = (m) => {
+        const cat = CATEGORIES.find(c => c.key === (m.group_name || 'dn')) || CATEGORIES[0];
+        const iAmA = myTeamIds.has(String(m.team_a_id));
+        const myScore  = iAmA ? (m.score_a || 0) : (m.score_b || 0);
+        const oppScore = iAmA ? (m.score_b || 0) : (m.score_a || 0);
+        const myLabel  = iAmA ? (m.team_a || '') : (m.team_b || '');
+        const oppLabel = iAmA ? (m.team_b || '') : (m.team_a || '');
+        const resultTag = (m.status === 'done' || m.status === 'completed')
+          ? (myScore > oppScore
+              ? '<span class="mg-pm-result mg-pm-win">Thắng</span>'
+              : myScore < oppScore
+                ? '<span class="mg-pm-result mg-pm-loss">Thua</span>'
+                : '<span class="mg-pm-result mg-pm-draw">Hoà</span>')
+          : (m.status === 'playing'
+              ? '<span class="mg-pm-result mg-pm-live">🔴 Live</span>'
+              : '<span class="mg-pm-result mg-pm-ns">Sắp tới</span>');
+        const scoreTxt = (m.status === 'done' || m.status === 'completed' || m.status === 'playing')
+          ? `${myScore} — ${oppScore}`
+          : 'vs';
+        return `
+          <div class="mg-pm-row">
+            <span class="mg-pm-ord">#${m.match_order || '?'}</span>
+            <span class="mg-pm-cat">${cat.label}</span>
+            <div class="mg-pm-pair">
+              <div class="mg-pm-me">${esc(myLabel)}</div>
+              <div class="mg-pm-score">${scoreTxt}</div>
+              <div class="mg-pm-opp">${esc(oppLabel)}</div>
+            </div>
+            ${resultTag}
+          </div>`;
+      };
+
+      // Quick totals
+      let w = 0, l = 0, pf = 0, pa = 0;
+      played.forEach(m => {
+        const iAmA = myTeamIds.has(String(m.team_a_id));
+        const my  = iAmA ? (m.score_a || 0) : (m.score_b || 0);
+        const opp = iAmA ? (m.score_b || 0) : (m.score_a || 0);
+        pf += my; pa += opp;
+        if (my > opp) w++; else if (my < opp) l++;
+      });
+
+      const html = `
+        <div class="mg-modal-overlay" id="mg-player-matches-overlay"
+             onclick="if(event.target===this)mgClosePlayerMatches()">
+          <div class="mg-modal mg-modal-wide">
+            <div class="mg-modal-title">
+              👤 ${esc(me.name)}
+              <span class="mg-club-chip" style="background:${myColor.bg};color:${myColor.fg};">${esc(myClub)}</span>
+            </div>
+            <div class="mg-modal-note">
+              ${w} Thắng · ${l} Thua · ${played.length}/${myMatches.length} trận ·
+              điểm ${pf}–${pa} (${pf - pa >= 0 ? '+' : ''}${pf - pa})
+            </div>
+
+            <div class="mg-pm-section">
+              <div class="mg-pm-section-title">✅ Đã chơi (${played.length})</div>
+              ${played.length ? played.map(row).join('') : '<p class="empty" style="opacity:.6;">Chưa có trận nào kết thúc.</p>'}
+            </div>
+
+            <div class="mg-pm-section">
+              <div class="mg-pm-section-title">⏭️ Sắp chơi / đang chơi (${upcoming.length})</div>
+              ${upcoming.length ? upcoming.map(row).join('') : '<p class="empty" style="opacity:.6;">Không còn trận nào.</p>'}
+            </div>
+
+            <div class="mg-modal-actions">
+              <button class="mg-modal-cancel" onclick="mgClosePlayerMatches()">Đóng</button>
+            </div>
+          </div>
+        </div>`;
+      document.body.insertAdjacentHTML('beforeend', html);
+    } catch (err) {
+      console.error('mgOpenPlayerMatches:', err);
+    }
+  };
+
+  window.mgClosePlayerMatches = function () {
+    document.getElementById('mg-player-matches-overlay')?.remove();
+  };
+
+  // ====================================================================
+  // 8. ADMIN MANUAL SCORE ENTRY — set score + finish a match outright
+  // ====================================================================
+  window.mgOpenScoreEntry = async function (matchId) {
+    if (typeof isAdmin === 'function' && !isAdmin()) {
+      alert('Chỉ admin mới nhập điểm thủ công.');
+      return;
+    }
+    const tid = window.tournamentManager.getActiveTournamentId();
+    if (!tid) return;
+    try {
+      const matches = await window.tournamentManager.getMatches(tid);
+      const m = matches.find(x => String(x.id) === String(matchId));
+      if (!m) return;
+      const cat = CATEGORIES.find(c => c.key === (m.group_name || 'dn')) || CATEGORIES[0];
+      const sa = m.score_a || 0, sb = m.score_b || 0;
+      const html = `
+        <div class="mg-modal-overlay" id="mg-score-entry-overlay"
+             onclick="if(event.target===this)mgCloseScoreEntry()">
+          <div class="mg-modal">
+            <div class="mg-modal-title">📝 Nhập điểm trận #${m.match_order || '?'}</div>
+            <div class="mg-modal-note">${cat.label}</div>
+            <div class="mg-score-entry">
+              <div class="mg-score-side">
+                <label>${esc(m.team_a)}</label>
+                <input type="number" min="0" max="99" value="${sa}" id="mg-se-a">
+              </div>
+              <span class="mg-vs">–</span>
+              <div class="mg-score-side">
+                <label>${esc(m.team_b)}</label>
+                <input type="number" min="0" max="99" value="${sb}" id="mg-se-b">
+              </div>
+            </div>
+            <div class="mg-score-warn">
+              ⚠️ Lưu sẽ đặt trận về trạng thái <b>"Đã kết thúc"</b>. Nếu trọng tài
+              muốn chơi tiếp, bắt buộc phải reset trận hoặc chỉnh lại thủ công.
+            </div>
+            <div class="mg-modal-actions">
+              <button class="mg-modal-cancel" onclick="mgCloseScoreEntry()">Hủy</button>
+              <button class="mg-add-btn" onclick="mgSaveScoreEntry('${matchId}')">💾 Lưu & Kết thúc</button>
+            </div>
+          </div>
+        </div>`;
+      document.body.insertAdjacentHTML('beforeend', html);
+    } catch (err) {
+      console.error('mgOpenScoreEntry:', err);
+      alert('Không mở được: ' + err.message);
+    }
+  };
+
+  window.mgCloseScoreEntry = function () {
+    document.getElementById('mg-score-entry-overlay')?.remove();
+  };
+
+  window.mgSaveScoreEntry = async function (matchId) {
+    const a = parseInt(document.getElementById('mg-se-a')?.value, 10);
+    const b = parseInt(document.getElementById('mg-se-b')?.value, 10);
+    if (!Number.isFinite(a) || !Number.isFinite(b) || a < 0 || b < 0) {
+      return alert('Điểm không hợp lệ.');
+    }
+    if (a === b) {
+      return alert('Chạm 11, không có hoà — một bên phải thắng.');
+    }
+    const max = Math.max(a, b), diff = Math.abs(a - b);
+    const reaches11WinBy2 = max >= 11 && diff >= 2;
+    if (!reaches11WinBy2) {
+      if (!confirm(`Điểm ${a}-${b} KHÔNG thoả luật chạm 11 win-by-2. Vẫn ghi?`)) return;
+    } else {
+      if (!confirm(`Kết thúc trận #? với tỉ số ${a}-${b}?`)) return;
+    }
+    try {
+      const winner = a > b ? 'A' : 'B';
+      await window.storage.update('matches', matchId, {
+        status: 'done',
+        score_a: a,
+        score_b: b,
+        s1a: a, s1b: b,
+        s2a: 0, s2b: 0, s3a: 0, s3b: 0,
+        current_set: 1,
+        completed_sets: [{ set: 1, scoreA: a, scoreB: b, winner }],
+        updated_at: new Date().toISOString()
+      });
+      // Drop admin's cached scoring state for this match so the next render
+      // reflects the new DB state instead of an in-memory tap-score copy.
+      if (typeof matchStates !== 'undefined' && matchStates?.delete) matchStates.delete(matchId);
+      if (typeof _matchActionLog !== 'undefined' && _matchActionLog?.delete) _matchActionLog.delete(matchId);
+      window.mgCloseScoreEntry();
+      if (typeof fetchMatches === 'function') await fetchMatches();
+    } catch (err) {
+      console.error('mgSaveScoreEntry:', err);
+      alert('Không lưu được: ' + err.message);
+    }
+  };
 
   window.minigame = {
     isMinigame,
