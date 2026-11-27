@@ -151,7 +151,10 @@
     }
   };
 
-  // Admin-only inline rename
+  // Admin-only inline rename. Cascades the new name into every team label
+  // and every match's cached team_a / team_b string — otherwise the Trận
+  // list would keep showing the old name because those fields are
+  // denormalized from members at write-time.
   window.mgEditMemberName = async function (memberId, newName) {
     if (typeof isAdmin === 'function' && !isAdmin()) {
       alert('Chỉ admin mới sửa được tên VĐV.');
@@ -162,12 +165,62 @@
     if (!name) return window.minigame.reload();
     try {
       await window.storage.update('members', memberId, { name });
+      await cascadeRelabel(window.tournamentManager.getActiveTournamentId());
+      await window.minigame.reload();
     } catch (err) {
       console.error('mgEditMemberName:', err);
       alert('Không đổi được tên: ' + err.message);
       await window.minigame.reload();
     }
   };
+
+  /**
+   * Rebuild denormalized team.name + match.team_a / match.team_b strings
+   * from the current members table. Called after any mutation that could
+   * change a displayed player name (rename, pair swap).
+   *
+   * Writes are issued only when the computed label differs from what's
+   * already stored, so rerunning this is cheap when nothing is stale.
+   */
+  async function cascadeRelabel(tid) {
+    if (!tid) return;
+    const [members, teams, matches] = await Promise.all([
+      window.storage.read('members'),
+      window.storage.read('teams',   { tournament_id: tid }),
+      window.storage.read('matches', { tournament_id: tid })
+    ]);
+    const memberById = new Map(members.map(m => [String(m.id), m]));
+    const labelFor = (team) => {
+      const n1 = memberById.get(String(team.member1_id))?.name || '';
+      const n2 = memberById.get(String(team.member2_id))?.name || '';
+      return `${n1} + ${n2}`;
+    };
+
+    const teamUpdates = [];
+    const teamById = new Map();
+    for (const t of teams) {
+      const newName = labelFor(t);
+      if (t.name !== newName) {
+        teamUpdates.push(window.storage.update('teams', t.id, { name: newName }));
+      }
+      teamById.set(String(t.id), { ...t, name: newName });
+    }
+    await Promise.all(teamUpdates);
+
+    const matchUpdates = [];
+    for (const m of matches) {
+      const tA = teamById.get(String(m.team_a_id));
+      const tB = teamById.get(String(m.team_b_id));
+      if (!tA || !tB) continue;
+      if (m.team_a !== tA.name || m.team_b !== tB.name) {
+        matchUpdates.push(window.storage.update('matches', m.id, {
+          team_a: tA.name,
+          team_b: tB.name
+        }));
+      }
+    }
+    await Promise.all(matchUpdates);
+  }
 
   // Remove from current tournament (participant only — member row is kept
   // so other giải still see them)
@@ -337,14 +390,12 @@
     if (!m1 || !m2) return alert('Chọn đủ 2 VĐV.');
     if (m1 === m2)   return alert('2 VĐV phải khác nhau.');
     try {
-      const members = await window.storage.read('members');
-      const n1 = members.find(x => x.id == m1)?.name || `#${m1}`;
-      const n2 = members.find(x => x.id == m2)?.name || `#${m2}`;
       await window.storage.update('teams', teamId, {
         member1_id: m1,
-        member2_id: m2,
-        name: `${n1} + ${n2}`
+        member2_id: m2
       });
+      // Cascade rebuilds this team's name + any match string that refs it.
+      await cascadeRelabel(window.tournamentManager.getActiveTournamentId());
       await window.minigame.reload();
     } catch (err) {
       console.error('mgSavePairEdit:', err);
