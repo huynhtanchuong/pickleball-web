@@ -731,7 +731,12 @@ function renderStageList(containerId, matches, stage) {
         return 0;
       });
 
-  if (stage === "group") {
+  // Mini-game batches are already pre-grouped by the mini-game category
+  // renderer above (⚔️ Đôi nam / 🤝 Đôi nam nữ / 👯 Đôi nữ), so skip the
+  // extra "Bảng {group}" wrapper here — just flatten the card list.
+  if (stage === "group" && allMinigame) {
+    container.innerHTML = sorted.map(m => matchHTML(m, stage)).join("");
+  } else if (stage === "group") {
     const groups = {};
     sorted.forEach(m => {
       if (!groups[m.group_name]) groups[m.group_name] = [];

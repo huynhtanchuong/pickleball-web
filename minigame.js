@@ -423,21 +423,29 @@
     { key: 'nu',  label: '👯 Đôi nữ' }
   ];
 
+  // Persist collapse state across renders (fetchMatches rebuilds the HTML).
+  const _collapsedCats = new Set();
+
   // Render the 25 (or however many) mini-game matches grouped by category
   // under #match-list-group. Delegates each category's card rendering to
   // the existing renderStageList so the tap-to-score UI stays identical.
   function renderMinigameMatches(matches) {
     const host = document.getElementById('match-list-group');
     if (!host) return;
-    // Scaffold one sub-container per category.
-    host.innerHTML = CATEGORIES.map(c => `
-      <div class="mg-match-category">
-        <div class="mg-match-category-title">${c.label}
-          <span class="mg-match-category-count" id="mg-cat-count-${c.key}">0</span>
-        </div>
-        <div class="mg-match-category-body" id="mg-cat-${c.key}"></div>
-      </div>
-    `).join('');
+    // Scaffold one sub-container per category. Title is clickable to
+    // collapse/expand the body. Chevron reflects state.
+    host.innerHTML = CATEGORIES.map(c => {
+      const collapsed = _collapsedCats.has(c.key);
+      return `
+        <div class="mg-match-category">
+          <div class="mg-match-category-title" onclick="mgToggleCategory('${c.key}')" role="button">
+            <span class="mg-cat-label">${c.label}</span>
+            <span class="mg-match-category-count" id="mg-cat-count-${c.key}">0</span>
+            <span class="mg-cat-chev" id="mg-cat-chev-${c.key}">${collapsed ? '▶' : '▼'}</span>
+          </div>
+          <div class="mg-match-category-body" id="mg-cat-${c.key}" ${collapsed ? 'hidden' : ''}></div>
+        </div>`;
+    }).join('');
     CATEGORIES.forEach(c => {
       const sub = matches.filter(m => (m.group_name || 'dn') === c.key)
                          .sort((a, b) => (a.match_order || 0) - (b.match_order || 0));
@@ -465,6 +473,24 @@
     });
     if (typeof applyRoleVisibility === 'function') applyRoleVisibility();
   }
+
+  // Click the category title to collapse/expand that block. State is
+  // remembered in _collapsedCats so a background fetchMatches re-render
+  // doesn't snap everything open again.
+  window.mgToggleCategory = function (key) {
+    const body = document.getElementById(`mg-cat-${key}`);
+    const chev = document.getElementById(`mg-cat-chev-${key}`);
+    if (!body) return;
+    const willHide = !body.hasAttribute('hidden');
+    if (willHide) {
+      body.setAttribute('hidden', '');
+      _collapsedCats.add(key);
+    } else {
+      body.removeAttribute('hidden');
+      _collapsedCats.delete(key);
+    }
+    if (chev) chev.textContent = willHide ? '▶' : '▼';
+  };
 
   // ----- Edit match pairs (admin swaps which 2 pairs play a given trận) -----
   window.mgOpenMatchEdit = async function (matchId) {

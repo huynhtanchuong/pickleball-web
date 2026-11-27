@@ -155,7 +155,20 @@
   font-weight: 800;
   color: var(--adm-text, #f1f5f9);
   letter-spacing: 0.02em;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
 }
+.mg-match-category-title:hover {
+  background: linear-gradient(135deg, rgba(59,130,246,0.18), rgba(124,58,237,0.14));
+}
+.mg-cat-chev {
+  margin-left: 4px;
+  font-size: 0.8rem;
+  color: var(--adm-muted, #94a3b8);
+  transition: transform 0.15s;
+}
+.mg-match-category-body[hidden] { display: none !important; }
 .mg-match-category-count {
   margin-left: auto;
   background: rgba(255,255,255,0.08);
