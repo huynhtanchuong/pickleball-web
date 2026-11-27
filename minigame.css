@@ -341,16 +341,16 @@ body.mode-minigame {
 /* Wider modal for player-matches list */
 .mg-modal-wide { max-width: 560px; }
 
-/* ── Admin score-entry button (📝) ── sits next to 🔀 ── */
-.mg-match-score-entry {
+/* ── Admin action buttons overlaid top-right of each match card ──
+   Order from right-to-left: 🔀 (swap pair, 6px) · 📝 (score, 40px) · ↺ (reset, 74px) */
+.mg-match-score-entry,
+.mg-match-reset {
   position: absolute;
   top: 6px;
-  right: 40px;       /* left of the pair-edit button */
   width: 28px;
   height: 28px;
   border-radius: 6px;
   border: 1px solid var(--adm-border, #1e2d45);
-  background: rgba(34, 211, 238, 0.14);
   color: var(--adm-text, #f1f5f9);
   font-size: 0.85rem;
   cursor: pointer;
@@ -359,8 +359,12 @@ body.mode-minigame {
   display: flex; align-items: center; justify-content: center;
   transition: background 0.15s, transform 0.1s;
 }
+.mg-match-score-entry { right: 40px; background: rgba(34, 211, 238, 0.14); }
 .mg-match-score-entry:hover { background: rgba(34, 211, 238, 0.3); }
-.mg-match-score-entry:active { transform: scale(0.95); }
+.mg-match-reset       { right: 74px; background: rgba(251, 191, 36, 0.14); }
+.mg-match-reset:hover { background: rgba(251, 191, 36, 0.3); }
+.mg-match-score-entry:active,
+.mg-match-reset:active { transform: scale(0.95); }
 
 /* ── Score entry modal body ── */
 .mg-score-entry {

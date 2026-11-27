@@ -506,6 +506,18 @@
         });
         card.appendChild(sbtn);
       }
+      if (!card.querySelector('.mg-match-reset')) {
+        const rbtn = document.createElement('button');
+        rbtn.type = 'button';
+        rbtn.className = 'mg-match-reset admin-only';
+        rbtn.title = 'Reset trận về "Chưa bắt đầu"';
+        rbtn.textContent = '↺';
+        rbtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          window.mgResetMatch(id);
+        });
+        card.appendChild(rbtn);
+      }
     });
     if (typeof applyRoleVisibility === 'function') applyRoleVisibility();
   }
@@ -1223,6 +1235,49 @@
 
   window.mgCloseScoreEntry = function () {
     document.querySelectorAll('#mg-score-entry-overlay').forEach(el => el.remove());
+  };
+
+  // Soft-reset a single match: scores → 0, status → not_started, clear
+  // serve state. Teams + match order stay intact. Mirrors the full
+  // tournament soft reset but for just one row.
+  window.mgResetMatch = async function (matchId) {
+    if (typeof isAdmin === 'function' && !isAdmin()) {
+      alert('Chỉ admin mới reset được trận.');
+      return;
+    }
+    const tid = window.tournamentManager.getActiveTournamentId();
+    if (!tid) return;
+    let m;
+    try {
+      const matches = await window.tournamentManager.getMatches(tid);
+      m = matches.find(x => String(x.id) === String(matchId));
+    } catch (_) { /* ignore — confirm still works without the label */ }
+    const label = m ? `trận #${m.match_order || '?'} (${m.team_a || ''} vs ${m.team_b || ''})` : 'trận này';
+    if (!confirm(`Reset ${label} về "Chưa bắt đầu"?\n\n` +
+                 `• Điểm số → 0-0\n` +
+                 `• Serve / set state → xoá\n` +
+                 `• Giữ nguyên 2 cặp đã chọn`)) return;
+    try {
+      await window.storage.update('matches', matchId, {
+        status: 'not_started',
+        score_a: 0, score_b: 0,
+        s1a: 0, s1b: 0, s2a: 0, s2b: 0, s3a: 0, s3b: 0,
+        current_set: 1,
+        completed_sets: [],
+        serving_team: null,
+        server_number: null,
+        server_slot: 1,
+        game_state: null,
+        updated_at: null
+      });
+      // Drop cached scoring state for this match.
+      if (typeof matchStates !== 'undefined' && matchStates?.delete) matchStates.delete(matchId);
+      if (typeof _matchActionLog !== 'undefined' && _matchActionLog?.delete) _matchActionLog.delete(matchId);
+      if (typeof fetchMatches === 'function') await fetchMatches();
+    } catch (err) {
+      console.error('mgResetMatch:', err);
+      alert('Không reset được: ' + err.message);
+    }
   };
 
   window.mgSaveScoreEntry = async function (matchId) {
