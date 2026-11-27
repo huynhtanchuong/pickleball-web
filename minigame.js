@@ -577,32 +577,59 @@
     const nextOrder = (matches.filter(m => m.stage === 'minigame').length) + 1;
     const builder = document.createElement('div');
     builder.id = 'mg-match-builder';
-    builder.className = 'adm-section upcoming-only';
+    // admin-only: hide the whole creator for referees + viewers.
+    // upcoming-only: hide once the giải has started.
+    builder.className = 'adm-section admin-only upcoming-only';
     builder.innerHTML = `
-      <div class="adm-section-title">➕ Tạo trận mini-game (${nextOrder})</div>
-      <div class="mg-match-form">
-        <div class="mg-match-side mg-match-cat">
-          <label>Thể loại</label>
-          <select id="mg-match-cat">
-            ${CATEGORIES.map(c => `<option value="${c.key}">${c.label}</option>`).join('')}
-          </select>
+      <button type="button" class="mg-add-btn mg-add-match-toggle"
+              onclick="mgToggleMatchForm()">
+        ➕ Thêm trận đấu
+      </button>
+      <div class="mg-match-form-wrap" id="mg-match-form-wrap" hidden>
+        <div class="adm-section-title">Tạo trận #${nextOrder}</div>
+        <div class="mg-match-form">
+          <div class="mg-match-side mg-match-cat">
+            <label>Thể loại</label>
+            <select id="mg-match-cat">
+              ${CATEGORIES.map(c => `<option value="${c.key}">${c.label}</option>`).join('')}
+            </select>
+          </div>
+          <div class="mg-match-side">
+            <label>${esc(clubA)}</label>
+            <input type="text" placeholder="🔍 Lọc cặp…" oninput="mgFilterSelect('mg-match-a', this.value)">
+            <select id="mg-match-a"><option value="">— Chọn cặp —</option>${teamsA.map(opt).join('')}</select>
+          </div>
+          <span class="mg-vs">VS</span>
+          <div class="mg-match-side">
+            <label>${esc(clubB)}</label>
+            <input type="text" placeholder="🔍 Lọc cặp…" oninput="mgFilterSelect('mg-match-b', this.value)">
+            <select id="mg-match-b"><option value="">— Chọn cặp —</option>${teamsB.map(opt).join('')}</select>
+          </div>
+          <button class="mg-add-btn" onclick="mgCreateMatch()">+ Tạo</button>
+          <button type="button" class="mg-pair-cancel"
+                  onclick="mgToggleMatchForm()" title="Hủy">✕</button>
         </div>
-        <div class="mg-match-side">
-          <label>${esc(clubA)}</label>
-          <input type="text" placeholder="🔍 Lọc cặp…" oninput="mgFilterSelect('mg-match-a', this.value)">
-          <select id="mg-match-a"><option value="">— Chọn cặp —</option>${teamsA.map(opt).join('')}</select>
-        </div>
-        <span class="mg-vs">VS</span>
-        <div class="mg-match-side">
-          <label>${esc(clubB)}</label>
-          <input type="text" placeholder="🔍 Lọc cặp…" oninput="mgFilterSelect('mg-match-b', this.value)">
-          <select id="mg-match-b"><option value="">— Chọn cặp —</option>${teamsB.map(opt).join('')}</select>
-        </div>
-        <button class="mg-add-btn" onclick="mgCreateMatch()">+ Tạo trận</button>
       </div>`;
     host.insertBefore(builder, host.firstChild);
     if (typeof applyTournamentStatusVisibility === 'function') applyTournamentStatusVisibility();
+    if (typeof applyRoleVisibility === 'function') applyRoleVisibility();
   }
+
+  // Toggle the match-creation form in/out of view. Default state is
+  // collapsed — admin sees just a "Thêm trận đấu" button.
+  window.mgToggleMatchForm = function () {
+    const wrap = document.getElementById('mg-match-form-wrap');
+    const btn  = document.querySelector('.mg-add-match-toggle');
+    if (!wrap) return;
+    const opening = wrap.hasAttribute('hidden');
+    if (opening) {
+      wrap.removeAttribute('hidden');
+      if (btn) btn.style.display = 'none';
+    } else {
+      wrap.setAttribute('hidden', '');
+      if (btn) btn.style.display = '';
+    }
+  };
 
   window.mgFilterSelect = function (selectId, q) {
     const sel = document.getElementById(selectId);
