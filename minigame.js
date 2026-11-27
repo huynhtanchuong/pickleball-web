@@ -997,6 +997,9 @@
         : '';
       const timeTag = m.match_time ? `<span class="mg-pub-time">🕐 ${esc(m.match_time)}</span>` : '';
       const courtTag = m.court ? `<span class="mg-pub-court">🏟 ${esc(m.court)}</span>` : '';
+      // Mark winner so CSS can bold / highlight the winning team's name.
+      const winA = (m.status === 'done' || m.status === 'completed') && (m.score_a || 0) > (m.score_b || 0);
+      const winB = (m.status === 'done' || m.status === 'completed') && (m.score_b || 0) > (m.score_a || 0);
       return `
         <div class="mg-pub-card ${m.status === 'playing' ? 'is-live' : m.status === 'done' ? 'is-done' : 'is-ns'}">
           <div class="mg-pub-top">
@@ -1006,9 +1009,9 @@
             <span class="mg-pub-meta">${timeTag} ${courtTag}</span>
           </div>
           <div class="mg-pub-row">
-            <span class="mg-pub-team mg-pub-team-a">${esc(m.team_a || '—')}</span>
+            <span class="mg-pub-team mg-pub-team-a${winA ? ' is-winner' : ''}">${esc(m.team_a || '—')}</span>
             ${score}
-            <span class="mg-pub-team mg-pub-team-b">${esc(m.team_b || '—')}</span>
+            <span class="mg-pub-team mg-pub-team-b${winB ? ' is-winner' : ''}">${esc(m.team_b || '—')}</span>
           </div>
         </div>`;
     };
@@ -1107,16 +1110,19 @@
         const oppScore = iAmA ? (m.score_b || 0) : (m.score_a || 0);
         const myLabel  = iAmA ? (m.team_a || '') : (m.team_b || '');
         const oppLabel = iAmA ? (m.team_b || '') : (m.team_a || '');
-        const resultTag = (m.status === 'done' || m.status === 'completed')
-          ? (myScore > oppScore
+        const finished = (m.status === 'done' || m.status === 'completed');
+        const iWon = finished && myScore > oppScore;
+        const oppWon = finished && oppScore > myScore;
+        const resultTag = finished
+          ? (iWon
               ? '<span class="mg-pm-result mg-pm-win">Thắng</span>'
-              : myScore < oppScore
+              : oppWon
                 ? '<span class="mg-pm-result mg-pm-loss">Thua</span>'
                 : '<span class="mg-pm-result mg-pm-draw">Hoà</span>')
           : (m.status === 'playing'
               ? '<span class="mg-pm-result mg-pm-live">🔴 Live</span>'
               : '<span class="mg-pm-result mg-pm-ns">Sắp tới</span>');
-        const scoreTxt = (m.status === 'done' || m.status === 'completed' || m.status === 'playing')
+        const scoreTxt = (finished || m.status === 'playing')
           ? `${myScore} — ${oppScore}`
           : 'vs';
         return `
@@ -1124,9 +1130,9 @@
             <span class="mg-pm-ord">#${m.match_order || '?'}</span>
             <span class="mg-pm-cat">${cat.label}</span>
             <div class="mg-pm-pair">
-              <div class="mg-pm-me">${esc(myLabel)}</div>
+              <div class="mg-pm-me${iWon ? ' is-winner' : ''}">${esc(myLabel)}</div>
               <div class="mg-pm-score">${scoreTxt}</div>
-              <div class="mg-pm-opp">${esc(oppLabel)}</div>
+              <div class="mg-pm-opp${oppWon ? ' is-winner' : ''}">${esc(oppLabel)}</div>
             </div>
             ${resultTag}
           </div>`;

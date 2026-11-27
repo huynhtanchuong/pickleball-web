@@ -1014,7 +1014,7 @@ function matchHTML(m, stage) {
     <div class="adm-card-summary" onclick="toggleCard('${m.id}')">
       <div class="adm-summary-left">
         ${statusBadge}
-        <span class="adm-summary-teams">${esc(m.teamA)}${admServingBadge(m, 'A')} <span style="color:var(--adm-muted)">vs</span> ${esc(m.teamB)}${admServingBadge(m, 'B')}</span>
+        <span class="adm-summary-teams"><span class="adm-sum-team${winnerA ? ' adm-sum-team-win' : ''}">${esc(m.teamA)}</span>${admServingBadge(m, 'A')} <span style="color:var(--adm-muted)">vs</span> <span class="adm-sum-team${winnerB ? ' adm-sum-team-win' : ''}">${esc(m.teamB)}</span>${admServingBadge(m, 'B')}</span>
       </div>
       <div class="adm-summary-right">
         ${scoreInSummary}

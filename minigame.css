@@ -473,9 +473,20 @@ body.mode-minigame .mg-pm-cat { color: var(--mg-cyan); }
   word-break: break-word;
 }
 .mg-pm-me { font-weight: 700; text-align: right; color: var(--adm-text, #f1f5f9); }
-body.mode-minigame .mg-pm-me { color: var(--mg-green-1); }
+body.mode-minigame .mg-pm-me { color: var(--mg-text); }
 .mg-pm-score { font-weight: 800; font-variant-numeric: tabular-nums; min-width: 48px; text-align: center; }
 .mg-pm-opp { color: var(--adm-muted, #94a3b8); }
+/* Winner side (me or opp) gets bold + green across both themes */
+.mg-pm-me.is-winner,
+.mg-pm-opp.is-winner {
+  font-weight: 900;
+  color: #22c55e;
+}
+body.mode-minigame .mg-pm-me.is-winner,
+body.mode-minigame .mg-pm-opp.is-winner {
+  color: var(--mg-green-1);
+  text-shadow: 0 0 10px rgba(34, 255, 153, 0.4);
+}
 .mg-pm-result {
   font-size: 0.68rem;
   font-weight: 800;
@@ -609,6 +620,14 @@ body.mode-minigame .mg-pub-section-done .mg-pub-section-title {
 }
 .mg-pub-team-a { text-align: right; }
 .mg-pub-team-b { text-align: left; }
+.mg-pub-team.is-winner {
+  font-weight: 900;
+  color: #22c55e;
+}
+body.mode-minigame .mg-pub-team.is-winner {
+  color: var(--mg-green-1);
+  text-shadow: 0 0 10px rgba(34, 255, 153, 0.4);
+}
 .mg-pub-vs {
   font-size: 0.72rem;
   color: var(--text-muted, #64748b);
