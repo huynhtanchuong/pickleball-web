@@ -1043,18 +1043,18 @@
 
     host.innerHTML = `
       ${live.length ? `
-        <div class="mg-pub-section mg-pub-section-live">
+        <div class="mg-pub-section mg-pub-section-live" id="mg-sec-live">
           <div class="mg-pub-section-title"><span class="mg-pub-live-dot"></span> TRỰC TIẾP</div>
           ${live.map(m => card(m, { showScore: true })).join('')}
         </div>` : ''}
       ${nextList.length ? `
-        <div class="mg-pub-section">
+        <div class="mg-pub-section" id="mg-sec-upcoming">
           <div class="mg-pub-section-title">⏭️ Sắp tới (${nextList.length}${remaining > 0 ? ' / còn ' + remaining + ' trận' : ''})</div>
           ${nextList.map(m => card(m)).join('')}
         </div>` : ''}
       ${doneList.length ? `
-        <div class="mg-pub-section mg-pub-section-done">
-          <div class="mg-pub-section-title">✅ Đã kết thúc (${done.length})</div>
+        <div class="mg-pub-section mg-pub-section-done" id="mg-sec-done">
+          <div class="mg-pub-section-title">✅ Kết quả (${done.length})</div>
           ${doneList.map(m => card(m, { showScore: true })).join('')}
           ${doneRemaining > 0 ? `<p class="mg-pub-more">+ ${doneRemaining} trận nữa — mở lịch đầy đủ bên dưới</p>` : ''}
         </div>` : ''}
@@ -1065,6 +1065,52 @@
         </details>` : `
         <p class="empty-state">Chưa có trận nào.</p>`}
     `;
+
+    // Inject the sticky nav tabs above the first section (once per page —
+    // reuse the element on subsequent rerenders so the sticky offset
+    // stays consistent and buttons don't flicker).
+    ensurePublicNav(host);
+  }
+
+  // Build or refresh the sticky tab nav (⏭️ Sắp tới · 🏆 BXH · ✅ Kết quả).
+  // Lives just above the match list inside <main> so it scrolls with
+  // the page then sticks to the top under the site header.
+  function ensurePublicNav(host) {
+    const main = host?.closest('main');
+    if (!main) return;
+    let nav = document.getElementById('mg-pub-nav');
+    if (!nav) {
+      nav = document.createElement('nav');
+      nav.id = 'mg-pub-nav';
+      nav.className = 'mg-pub-nav';
+      nav.innerHTML = `
+        <button type="button" class="mg-pub-nav-btn" data-target="mg-sec-upcoming">⏭️ Sắp tới</button>
+        <button type="button" class="mg-pub-nav-btn" data-target="standings-container">🏆 BXH</button>
+        <button type="button" class="mg-pub-nav-btn" data-target="mg-sec-done">✅ Kết quả</button>
+      `;
+      nav.addEventListener('click', (e) => {
+        const btn = e.target.closest('.mg-pub-nav-btn');
+        if (!btn) return;
+        const target = document.getElementById(btn.dataset.target);
+        if (!target) return;
+        // Offset by the nav + header heights so the section header isn't
+        // hidden under the sticky bars.
+        const navHeight = nav.offsetHeight || 48;
+        const header = document.querySelector('.site-header');
+        const headerHeight = header?.offsetHeight || 0;
+        const y = target.getBoundingClientRect().top + window.scrollY - navHeight - headerHeight - 8;
+        window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+      });
+      // Prepend so the nav sits above the first content section.
+      main.insertBefore(nav, main.firstChild);
+    }
+    // Disable buttons whose target section isn't rendered right now (e.g.
+    // "Kết quả" when nothing's finished yet).
+    nav.querySelectorAll('.mg-pub-nav-btn').forEach(btn => {
+      const ok = !!document.getElementById(btn.dataset.target);
+      btn.disabled = !ok;
+      btn.classList.toggle('is-disabled', !ok);
+    });
   }
 
   // ====================================================================

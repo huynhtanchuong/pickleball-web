@@ -547,6 +547,66 @@ body.mode-minigame .mg-pub-section-done .mg-pub-section-title {
   color: var(--mg-cyan);
   border-left-color: var(--mg-cyan);
 }
+
+/* Sticky nav tabs on the public viewer — Sắp tới · BXH · Kết quả */
+.mg-pub-nav {
+  position: sticky;
+  /* Site header is also sticky (top:0), so sit right under it.
+     Use env(safe-area-inset-top) just in case we're on iOS standalone. */
+  top: calc(env(safe-area-inset-top, 0px));
+  z-index: 50;
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px;
+  margin: -16px -12px 16px;   /* bleed to viewport edges, tighten below */
+  background: rgba(8, 20, 32, 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border, #1e2d45);
+}
+body.mode-minigame .mg-pub-nav {
+  background: rgba(5, 10, 20, 0.88);
+  border-bottom-color: var(--mg-border);
+  box-shadow: 0 2px 20px rgba(34, 255, 153, 0.08);
+}
+.mg-pub-nav-btn {
+  flex: 1;
+  padding: 10px 6px;
+  background: transparent;
+  color: var(--text-dim, #94a3b8);
+  border: 1px solid var(--border, #1e2d45);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+.mg-pub-nav-btn:hover:not(.is-disabled) {
+  background: rgba(34, 197, 94, 0.08);
+  color: var(--green, #22c55e);
+  border-color: rgba(34, 197, 94, 0.4);
+}
+.mg-pub-nav-btn:active:not(.is-disabled) { transform: scale(0.97); }
+.mg-pub-nav-btn.is-disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+body.mode-minigame .mg-pub-nav-btn {
+  color: var(--mg-text-dim);
+  border-color: var(--mg-border);
+}
+body.mode-minigame .mg-pub-nav-btn:hover:not(.is-disabled) {
+  background: rgba(34, 255, 153, 0.1);
+  color: var(--mg-green-1);
+  border-color: rgba(34, 255, 153, 0.5);
+  box-shadow: inset 0 0 8px rgba(34, 255, 153, 0.12);
+}
+
+@media (max-width: 500px) {
+  .mg-pub-nav { padding: 6px 10px; gap: 4px; }
+  .mg-pub-nav-btn { padding: 8px 4px; font-size: 0.72rem; }
+}
 .mg-pub-section-done .mg-pub-card { opacity: 0.85; }
 .mg-pub-more {
   text-align: center;
