@@ -420,6 +420,38 @@ body.mode-minigame {
 .mg-player-row:hover td { background: rgba(255, 255, 255, 0.04); }
 body.mode-minigame .mg-player-row:hover td { background: rgba(34, 255, 153, 0.06); }
 
+/* ── Admin match cards: stack the two team names on two separate lines ── */
+body.mode-minigame .adm-summary-teams {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+body.mode-minigame .adm-summary-teams > span { display: block; }
+body.mode-minigame .adm-summary-teams > span[style*="var(--adm-muted)"] {
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  opacity: 0.6;
+}
+body.mode-minigame .adm-teams {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 4px;
+}
+body.mode-minigame .adm-teams .adm-team-name,
+body.mode-minigame .adm-teams .adm-team-name.right {
+  text-align: left !important;
+  display: block;
+}
+body.mode-minigame .adm-teams .adm-vs {
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  opacity: 0.55;
+  padding: 0;
+  text-align: left;
+}
+
 .mg-pm-section { margin-top: 12px; }
 .mg-pm-section-title {
   font-size: 0.82rem;
@@ -604,10 +636,16 @@ body.mode-minigame .mg-pub-section-done .mg-pub-section-title {
   font-size: 0.72rem;
 }
 
+/* Two teams on two separate lines so long names never crowd each other.
+   Layout: team-row | score strip | team-row. Score sits centered between. */
 .mg-pub-row {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  gap: 10px;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "teamA scoreA"
+    "teamB scoreB";
+  column-gap: 12px;
+  row-gap: 4px;
   align-items: center;
 }
 .mg-pub-team {
@@ -617,14 +655,45 @@ body.mode-minigame .mg-pub-section-done .mg-pub-section-title {
   overflow-wrap: anywhere;
   word-break: break-word;
   line-height: 1.25;
+  text-align: left;
 }
-.mg-pub-team-a { text-align: right; }
-.mg-pub-team-b { text-align: left; }
+.mg-pub-team-a { grid-area: teamA; }
+.mg-pub-team-b { grid-area: teamB; }
+/* Score column — shown as two stacked numbers aligned with each team */
+.mg-pub-score {
+  grid-area: scoreA / scoreA / scoreB / scoreB;
+  display: inline-grid;
+  grid-template-rows: 1fr 1fr;
+  align-items: center;
+  justify-items: end;
+  font-size: 1.3rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  padding: 0 4px;
+  min-width: 48px;
+}
+.mg-pub-score .mg-pub-sa { grid-row: 1; }
+.mg-pub-score .mg-pub-sb { grid-row: 2; }
+/* Hide the "11 — 9" inline sep when using stacked layout */
+.mg-pub-score-sep { display: none; }
+.mg-pub-vs {
+  grid-area: scoreA / scoreA / scoreB / scoreB;
+  align-self: center;
+  justify-self: center;
+  font-size: 0.72rem;
+  color: var(--text-muted, #64748b);
+  font-weight: 700;
+}
 .mg-pub-team.is-winner {
   font-weight: 900;
   color: #22c55e;
 }
 body.mode-minigame .mg-pub-team.is-winner {
+  color: var(--mg-green-1);
+  text-shadow: 0 0 10px rgba(34, 255, 153, 0.4);
+}
+.mg-pub-score .mg-pub-win-num { color: #22c55e; }
+body.mode-minigame .mg-pub-score .mg-pub-win-num {
   color: var(--mg-green-1);
   text-shadow: 0 0 10px rgba(34, 255, 153, 0.4);
 }
@@ -702,14 +771,8 @@ body.mode-minigame .mg-pub-team.is-winner {
 }
 
 @media (max-width: 500px) {
-  .mg-pub-row {
-    grid-template-columns: 1fr;
-    gap: 4px;
-    text-align: center;
-  }
-  .mg-pub-team-a, .mg-pub-team-b { text-align: center; }
-  .mg-pub-score { padding: 6px 0; font-size: 1.6rem; }
-  .mg-pub-vs { padding: 4px 0; }
+  .mg-pub-team { font-size: 0.9rem; }
+  .mg-pub-score { font-size: 1.1rem; min-width: 42px; }
 }
 
 /* ============================================================

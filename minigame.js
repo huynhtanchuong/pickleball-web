@@ -989,17 +989,21 @@
 
     const card = (m, opts = {}) => {
       const cat = catOf(m);
-      const score = (opts.showScore || m.status !== 'not_started')
-        ? `<span class="mg-pub-score ${m.status === 'playing' ? 'live' : ''}">${m.score_a || 0}<span class="mg-pub-score-sep">—</span>${m.score_b || 0}</span>`
+      // Mark winner so CSS can bold / highlight the winning team's name.
+      const winA = (m.status === 'done' || m.status === 'completed') && (m.score_a || 0) > (m.score_b || 0);
+      const winB = (m.status === 'done' || m.status === 'completed') && (m.score_b || 0) > (m.score_a || 0);
+      const showScore = opts.showScore || m.status !== 'not_started';
+      const scoreBlock = showScore
+        ? `<span class="mg-pub-score ${m.status === 'playing' ? 'live' : ''}">
+             <span class="mg-pub-sa${winA ? ' mg-pub-win-num' : ''}">${m.score_a || 0}</span>
+             <span class="mg-pub-sb${winB ? ' mg-pub-win-num' : ''}">${m.score_b || 0}</span>
+           </span>`
         : `<span class="mg-pub-vs">vs</span>`;
       const liveTag = m.status === 'playing'
         ? `<span class="mg-pub-live-dot" title="Đang diễn ra"></span>`
         : '';
       const timeTag = m.match_time ? `<span class="mg-pub-time">🕐 ${esc(m.match_time)}</span>` : '';
       const courtTag = m.court ? `<span class="mg-pub-court">🏟 ${esc(m.court)}</span>` : '';
-      // Mark winner so CSS can bold / highlight the winning team's name.
-      const winA = (m.status === 'done' || m.status === 'completed') && (m.score_a || 0) > (m.score_b || 0);
-      const winB = (m.status === 'done' || m.status === 'completed') && (m.score_b || 0) > (m.score_a || 0);
       return `
         <div class="mg-pub-card ${m.status === 'playing' ? 'is-live' : m.status === 'done' ? 'is-done' : 'is-ns'}">
           <div class="mg-pub-top">
@@ -1010,8 +1014,8 @@
           </div>
           <div class="mg-pub-row">
             <span class="mg-pub-team mg-pub-team-a${winA ? ' is-winner' : ''}">${esc(m.team_a || '—')}</span>
-            ${score}
             <span class="mg-pub-team mg-pub-team-b${winB ? ' is-winner' : ''}">${esc(m.team_b || '—')}</span>
+            ${scoreBlock}
           </div>
         </div>`;
     };
