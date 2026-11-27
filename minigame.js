@@ -73,9 +73,12 @@
           const tier = p.effective_tier || m.tier || 2;
           return `
             <div class="mg-member-row" data-pid="${p.id}" data-mid="${p.member_id}">
-              <input type="text" value="${esc(memberName)}"
-                     class="mg-name-input"
-                     onchange="mgEditMemberName('${p.member_id}', this.value)"/>
+              <div class="mg-name-input"
+                   contenteditable="true"
+                   spellcheck="false"
+                   data-original="${esc(memberName)}"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
+                   onblur="mgEditMemberName('${p.member_id}', this.textContent)">${esc(memberName)}</div>
               <span class="mg-tier-badge mg-tier-${tier}">T${tier}</span>
               <button class="mg-row-del" title="Xóa khỏi giải"
                       onclick="mgRemoveParticipant('${p.id}')">✕</button>

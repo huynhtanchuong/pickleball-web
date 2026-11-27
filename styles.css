@@ -377,12 +377,16 @@ body {
   font-size: 1rem;
   font-weight: 700;
   color: var(--text);
-  white-space: nowrap;
   display: inline-flex;
   flex-direction: column;
   gap: 2px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  min-width: 0;
+  /* Long names like "Phương Cokacola + Daniel Trường" need to wrap on
+     narrow phones instead of being ellipsized. */
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
+  line-height: 1.25;
 }
 .mc-team.right { text-align: right; align-items: flex-end; }
 .mc-team:not(.right) { align-items: flex-start; }
