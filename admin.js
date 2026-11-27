@@ -578,7 +578,11 @@ function renderMatches(matches) {
   const semiMatches  = isMini ? [] : matches.filter(m => m.stage === 'semi');
   const finalMatches = isMini ? [] : matches.filter(m => m.stage === 'final');
 
-  renderStageList("match-list-group", groupMatches, "group");
+  if (isMini) {
+    window.minigame.renderMinigameMatches(groupMatches);
+  } else {
+    renderStageList("match-list-group", groupMatches, "group");
+  }
   renderStageList("match-list-semi",  semiMatches,  "semi");
   renderStageList("match-list-final", finalMatches, "final");
   if (!isMini) renderSpecialMatches(matches);

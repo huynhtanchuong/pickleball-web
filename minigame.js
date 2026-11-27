@@ -364,10 +364,40 @@
   };
 
   // ====================================================================
-  // 3. TAB TRẬN — create matches from pairs with search
-  // (We tack the creator onto the existing match-list-group section
-  //  by injecting a mg-match-builder card at the top.)
+  // 3. TAB TRẬN — categories: đôi nam / đôi nam nữ / đôi nữ
   // ====================================================================
+  const CATEGORIES = [
+    { key: 'dn',  label: '⚔️ Đôi nam' },
+    { key: 'dnn', label: '🤝 Đôi nam nữ' },
+    { key: 'nu',  label: '👯 Đôi nữ' }
+  ];
+
+  // Render the 25 (or however many) mini-game matches grouped by category
+  // under #match-list-group. Delegates each category's card rendering to
+  // the existing renderStageList so the tap-to-score UI stays identical.
+  function renderMinigameMatches(matches) {
+    const host = document.getElementById('match-list-group');
+    if (!host) return;
+    // Scaffold one sub-container per category.
+    host.innerHTML = CATEGORIES.map(c => `
+      <div class="mg-match-category">
+        <div class="mg-match-category-title">${c.label}
+          <span class="mg-match-category-count" id="mg-cat-count-${c.key}">0</span>
+        </div>
+        <div class="mg-match-category-body" id="mg-cat-${c.key}"></div>
+      </div>
+    `).join('');
+    CATEGORIES.forEach(c => {
+      const sub = matches.filter(m => (m.group_name || 'dn') === c.key)
+                         .sort((a, b) => (a.match_order || 0) - (b.match_order || 0));
+      const countEl = document.getElementById(`mg-cat-count-${c.key}`);
+      if (countEl) countEl.textContent = sub.length;
+      if (typeof renderStageList === 'function') {
+        renderStageList(`mg-cat-${c.key}`, sub, 'group');
+      }
+    });
+  }
+
   async function renderMatchBuilder(tournament) {
     const host = document.getElementById('tab-matches') || document.getElementById('match-list-group');
     if (!host) return;
@@ -397,8 +427,14 @@
     builder.id = 'mg-match-builder';
     builder.className = 'adm-section upcoming-only';
     builder.innerHTML = `
-      <div class="adm-section-title">➕ Tạo trận mini-game (${nextOrder}/25)</div>
+      <div class="adm-section-title">➕ Tạo trận mini-game (${nextOrder})</div>
       <div class="mg-match-form">
+        <div class="mg-match-side mg-match-cat">
+          <label>Thể loại</label>
+          <select id="mg-match-cat">
+            ${CATEGORIES.map(c => `<option value="${c.key}">${c.label}</option>`).join('')}
+          </select>
+        </div>
         <div class="mg-match-side">
           <label>${esc(clubA)}</label>
           <input type="text" placeholder="🔍 Lọc cặp…" oninput="mgFilterSelect('mg-match-a', this.value)">
@@ -443,6 +479,7 @@
       const matches = await window.tournamentManager.getMatches(tid);
       const order = matches.filter(m => m.stage === 'minigame').length + 1;
 
+      const cat = document.getElementById('mg-match-cat')?.value || 'dn';
       await window.storage.create('matches', {
         tournament_id: tid,
         team_a: labelA,
@@ -452,7 +489,7 @@
         stage: 'minigame',
         status: 'not_started',
         match_type: 'exhibition',
-        group_name: 'MINIGAME',
+        group_name: cat,
         match_order: order,
         s1a: 0, s1b: 0, s2a: 0, s2b: 0, s3a: 0, s3b: 0,
         score_a: 0, score_b: 0,
@@ -580,6 +617,7 @@
     renderMembersTab,
     renderTeamsTab,
     renderMatchBuilder,
+    renderMinigameMatches,
     renderStandings,
     reload,
     getClubs

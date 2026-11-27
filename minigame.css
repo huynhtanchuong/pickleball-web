@@ -136,6 +136,49 @@
   padding: 5px 10px;
   font-size: 0.78rem;
 }
+
+/* Match categories (đôi nam / đôi nam nữ / đôi nữ) inside tab Trận */
+.mg-match-category {
+  margin-bottom: 20px;
+}
+.mg-match-category:last-child { margin-bottom: 0; }
+.mg-match-category-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(124,58,237,0.08));
+  border-left: 4px solid #7c3aed;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--adm-text, #f1f5f9);
+  letter-spacing: 0.02em;
+}
+.mg-match-category-count {
+  margin-left: auto;
+  background: rgba(255,255,255,0.08);
+  color: var(--adm-muted, #94a3b8);
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.mg-match-category-body:empty::after {
+  content: '— Chưa có trận nào —';
+  display: block;
+  padding: 12px;
+  color: var(--adm-muted, #94a3b8);
+  font-style: italic;
+  font-size: 0.85rem;
+}
+
+/* Category selector in the match builder */
+.mg-match-cat {
+  flex: 0 0 140px;
+  min-width: 120px;
+}
 .mg-name-input {
   flex: 1;
   background: transparent;
