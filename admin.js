@@ -3034,7 +3034,69 @@ async function resetTournament() {
       alert(t('notStartedNoReset'));
       return;
     }
-    
+
+    // ── Mini-game soft reset ────────────────────────────────────
+    // Keep teams + matches intact — just wipe scores + statuses so the
+    // same 25-trận bracket can be replayed. Falls back to the hard reset
+    // below for regular (chia-bảng) tournaments.
+    if (window.minigame && window.minigame.isMinigame(tournament)) {
+      if (!confirm(`Reset giải "${tournament.name}"?\n\n` +
+                   `• Xoá toàn bộ điểm số\n` +
+                   `• Đưa mọi trận về trạng thái "Chưa bắt đầu"\n` +
+                   `• GIỮ NGUYÊN danh sách VĐV, cặp đôi và lịch trận\n` +
+                   `• Trạng thái → "Sắp diễn ra"`)) return;
+
+      setStatus(t('tournamentResetting') || 'Đang reset…', 'ok');
+      try {
+        if (storage.provider.client) {
+          const { error } = await storage.provider.client
+            .from('matches')
+            .update({
+              status: 'not_started',
+              score_a: 0, score_b: 0,
+              s1a: 0, s1b: 0, s2a: 0, s2b: 0, s3a: 0, s3b: 0,
+              serving_team: null,
+              server_number: null,
+              server_slot: 1,
+              current_set: 1,
+              completed_sets: [],
+              game_state: null,
+              updated_at: null
+            })
+            .eq('tournament_id', tournamentId)
+            .eq('stage', 'minigame');
+          if (error) throw new Error(error.message);
+        } else {
+          const matches = await tournamentManager.getMatches(tournamentId);
+          for (const m of matches.filter(x => x.stage === 'minigame')) {
+            await storage.update('matches', m.id, {
+              status: 'not_started',
+              score_a: 0, score_b: 0,
+              s1a: 0, s1b: 0, s2a: 0, s2b: 0, s3a: 0, s3b: 0,
+              serving_team: null, server_number: null, server_slot: 1,
+              current_set: 1, completed_sets: [], game_state: null, updated_at: null
+            });
+          }
+        }
+
+        // Admin's inline-scoring cache would otherwise show old live state
+        // until the page is refreshed — drop it now so the next fetch
+        // hydrates fresh from DB.
+        if (typeof matchStates !== 'undefined' && matchStates?.clear) matchStates.clear();
+        if (typeof _matchActionLog !== 'undefined' && _matchActionLog?.clear) _matchActionLog.clear();
+
+        await tournamentManager.updateStatus(tournamentId, 'upcoming');
+        setStatus('✓ Đã reset điểm số & trận', 'ok');
+        await loadTournamentSelector();
+        await fetchMatches();
+      } catch (error) {
+        console.error('resetTournament (minigame) error:', error);
+        setStatus(`❌ Lỗi: ${error.message}`, 'err');
+        alert(`Không thể reset giải!\n\nLỗi: ${error.message}`);
+      }
+      return;
+    }
+
     // 6.2: Add confirmation dialog with warning message
     if (!confirm(`Reset giải đấu "${tournament.name}"?\n\n` +
                  `⚠️ CẢNH BÁO: Hành động này sẽ:\n` +
