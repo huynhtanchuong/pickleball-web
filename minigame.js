@@ -530,6 +530,7 @@
 
   // ----- Edit match pairs (admin swaps which 2 pairs play a given trận) -----
   window.mgOpenMatchEdit = async function (matchId) {
+    window.mgCloseMatchEdit();
     const tid = window.tournamentManager.getActiveTournamentId();
     if (!tid) return;
     try {
@@ -584,7 +585,7 @@
   };
 
   window.mgCloseMatchEdit = function () {
-    document.getElementById('mg-match-edit-overlay')?.remove();
+    document.querySelectorAll('#mg-match-edit-overlay').forEach(el => el.remove());
   };
 
   window.mgSaveMatchEdit = async function (matchId) {
@@ -1052,6 +1053,9 @@
   //    Works on every page that renders renderStandings (admin + public).
   // ====================================================================
   window.mgOpenPlayerMatches = async function (memberId) {
+    // Idempotent — if the modal is already open (user clicked another row),
+    // drop the previous instance so we never stack duplicates in the DOM.
+    window.mgClosePlayerMatches();
     const tid = (window.tournamentManager && window.tournamentManager.getActiveTournamentId &&
                  window.tournamentManager.getActiveTournamentId()) || null;
     if (!tid) return;
@@ -1161,13 +1165,16 @@
   };
 
   window.mgClosePlayerMatches = function () {
-    document.getElementById('mg-player-matches-overlay')?.remove();
+    // Remove every stray instance (defensive — handles the pre-fix state
+    // where multiple modals could have been appended before this patch).
+    document.querySelectorAll('#mg-player-matches-overlay').forEach(el => el.remove());
   };
 
   // ====================================================================
   // 8. ADMIN MANUAL SCORE ENTRY — set score + finish a match outright
   // ====================================================================
   window.mgOpenScoreEntry = async function (matchId) {
+    window.mgCloseScoreEntry();
     if (typeof isAdmin === 'function' && !isAdmin()) {
       alert('Chỉ admin mới nhập điểm thủ công.');
       return;
@@ -1215,7 +1222,7 @@
   };
 
   window.mgCloseScoreEntry = function () {
-    document.getElementById('mg-score-entry-overlay')?.remove();
+    document.querySelectorAll('#mg-score-entry-overlay').forEach(el => el.remove());
   };
 
   window.mgSaveScoreEntry = async function (matchId) {
@@ -1269,4 +1276,13 @@
     reload,
     getClubs
   };
+
+  // Global Esc handler to close any open mini-game modal. One listener,
+  // delegated across all three modal types to keep it simple.
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (document.getElementById('mg-player-matches-overlay')) window.mgClosePlayerMatches();
+    if (document.getElementById('mg-score-entry-overlay'))    window.mgCloseScoreEntry();
+    if (document.getElementById('mg-match-edit-overlay'))     window.mgCloseMatchEdit();
+  });
 })();
