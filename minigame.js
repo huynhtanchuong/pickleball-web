@@ -80,7 +80,7 @@
                    onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
                    onblur="mgEditMemberName('${p.member_id}', this.textContent)">${esc(memberName)}</div>
               <span class="mg-tier-badge mg-tier-${tier}">T${tier}</span>
-              <button class="mg-row-del" title="Xóa khỏi giải"
+              <button class="mg-row-del upcoming-only" title="Xóa khỏi giải"
                       onclick="mgRemoveParticipant('${p.id}')">✕</button>
             </div>`;
         }).join('') || '<p class="empty" style="margin:8px 4px;">— Chưa có VĐV —</p>';
@@ -93,7 +93,7 @@
               <span class="mg-club-count">${list.length}</span>
             </div>
             <div class="mg-member-list">${rows}</div>
-            <div class="mg-add-row">
+            <div class="mg-add-row upcoming-only">
               <input type="text" placeholder="Tên VĐV mới…"
                      class="mg-add-name" id="mg-add-name-${esc(clubName)}"/>
               <select class="mg-add-tier" id="mg-add-tier-${esc(clubName)}">
@@ -117,6 +117,7 @@
         <div class="mg-club-grid">
           ${clubs.map(clubColumn).join('')}
         </div>`;
+      if (typeof applyTournamentStatusVisibility === 'function') applyTournamentStatusVisibility();
     } catch (err) {
       console.error('mg renderMembersTab:', err);
       container.innerHTML = '<p class="empty" style="color:#ef4444;">Lỗi khi tải VĐV</p>';
@@ -207,14 +208,37 @@
         byClub[c].push(t);
       });
 
+      // Pre-build the member-options string once per club so each pair's
+      // edit dropdown can reuse it without a per-pair loop.
+      const optsForClub = (clubName) => participants
+        .filter(p => p.club_name === clubName)
+        .map(p => {
+          const n = p.member?.name || `#${p.member_id}`;
+          return `<option value="${p.member_id}">${esc(n)}</option>`;
+        }).join('');
+
       const pairCard = (t) => {
         const n1 = t.member1?.name || `#${t.member1_id}`;
         const n2 = t.member2?.name || `#${t.member2_id}`;
+        const clubOpts = optsForClub(t.group_name);
         return `
-          <div class="mg-pair-card">
-            <span class="mg-pair-names">${esc(n1)} + ${esc(n2)}</span>
-            <button class="mg-row-del" title="Xóa cặp"
-                    onclick="mgDeletePair('${t.id}')">✕</button>
+          <div class="mg-pair-card" data-pair-id="${t.id}">
+            <div class="mg-pair-row-display">
+              <span class="mg-pair-names">${esc(n1)} + ${esc(n2)}</span>
+              <button class="mg-pair-edit" title="Sửa cặp"
+                      onclick="mgTogglePairEdit('${t.id}')">✏️</button>
+              <button class="mg-row-del upcoming-only" title="Xóa cặp"
+                      onclick="mgDeletePair('${t.id}')">✕</button>
+            </div>
+            <div class="mg-pair-row-edit" id="mg-pair-edit-${t.id}" hidden>
+              <select id="mg-edit1-${t.id}" data-selected="${t.member1_id}">${clubOpts}</select>
+              <span class="mg-pair-plus">+</span>
+              <select id="mg-edit2-${t.id}" data-selected="${t.member2_id}">${clubOpts}</select>
+              <button class="mg-add-btn mg-pair-save"
+                      onclick="mgSavePairEdit('${t.id}')">💾 Lưu</button>
+              <button class="mg-pair-cancel"
+                      onclick="mgTogglePairEdit('${t.id}')" title="Hủy">✕</button>
+            </div>
           </div>`;
       };
 
@@ -235,7 +259,7 @@
               <span class="mg-club-name">${esc(clubName)}</span>
               <span class="mg-club-count">${(byClub[clubName] || []).length} cặp</span>
             </div>
-            <div class="mg-pair-picker">
+            <div class="mg-pair-picker upcoming-only">
               <select id="mg-pick1-${esc(clubName)}"><option value="">VĐV 1…</option>${opts}</select>
               <span>+</span>
               <select id="mg-pick2-${esc(clubName)}"><option value="">VĐV 2…</option>${opts}</select>
@@ -248,10 +272,12 @@
       container.innerHTML = `
         <div class="mg-banner small">
           Tạo cặp ad-hoc theo CLB. 1 VĐV có thể xuất hiện ở nhiều cặp — cứ chọn lại.
+          <br>Sau khi giải bắt đầu, nút <b>✏️</b> trên mỗi cặp vẫn cho phép sửa.
         </div>
         <div class="mg-club-grid">
           ${getClubs(tournament).map(pickerPerClub).join('')}
         </div>`;
+      if (typeof applyTournamentStatusVisibility === 'function') applyTournamentStatusVisibility();
     } catch (err) {
       console.error('mg renderTeamsTab:', err);
       container.innerHTML = '<p class="empty" style="color:#ef4444;">Lỗi khi tải cặp</p>';
@@ -284,6 +310,45 @@
     } catch (err) {
       console.error('mgCreatePair:', err);
       alert('Không tạo được cặp: ' + err.message);
+    }
+  };
+
+  // Toggle the inline edit row for a pair. Also seeds the two selects
+  // with the current members (HTML `selected` can't be set declaratively
+  // because the same optgroup is reused across all pairs).
+  window.mgTogglePairEdit = function (teamId) {
+    const row = document.getElementById(`mg-pair-edit-${teamId}`);
+    if (!row) return;
+    const nowVisible = row.hasAttribute('hidden');
+    if (nowVisible) {
+      ['mg-edit1', 'mg-edit2'].forEach(prefix => {
+        const sel = document.getElementById(`${prefix}-${teamId}`);
+        if (sel) sel.value = sel.dataset.selected || '';
+      });
+      row.removeAttribute('hidden');
+    } else {
+      row.setAttribute('hidden', '');
+    }
+  };
+
+  window.mgSavePairEdit = async function (teamId) {
+    const m1 = document.getElementById(`mg-edit1-${teamId}`)?.value;
+    const m2 = document.getElementById(`mg-edit2-${teamId}`)?.value;
+    if (!m1 || !m2) return alert('Chọn đủ 2 VĐV.');
+    if (m1 === m2)   return alert('2 VĐV phải khác nhau.');
+    try {
+      const members = await window.storage.read('members');
+      const n1 = members.find(x => x.id == m1)?.name || `#${m1}`;
+      const n2 = members.find(x => x.id == m2)?.name || `#${m2}`;
+      await window.storage.update('teams', teamId, {
+        member1_id: m1,
+        member2_id: m2,
+        name: `${n1} + ${n2}`
+      });
+      await window.minigame.reload();
+    } catch (err) {
+      console.error('mgSavePairEdit:', err);
+      alert('Không lưu được: ' + err.message);
     }
   };
 
@@ -330,7 +395,7 @@
     const nextOrder = (matches.filter(m => m.stage === 'minigame').length) + 1;
     const builder = document.createElement('div');
     builder.id = 'mg-match-builder';
-    builder.className = 'adm-section';
+    builder.className = 'adm-section upcoming-only';
     builder.innerHTML = `
       <div class="adm-section-title">➕ Tạo trận mini-game (${nextOrder}/25)</div>
       <div class="mg-match-form">
@@ -348,6 +413,7 @@
         <button class="mg-add-btn" onclick="mgCreateMatch()">+ Tạo trận</button>
       </div>`;
     host.insertBefore(builder, host.firstChild);
+    if (typeof applyTournamentStatusVisibility === 'function') applyTournamentStatusVisibility();
   }
 
   window.mgFilterSelect = function (selectId, q) {

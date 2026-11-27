@@ -347,6 +347,10 @@ async function loadTournamentSelector() {
       if (activeTournament) {
         _activeTournament = activeTournament;
         window._activeTournament = _activeTournament;
+        document.body.classList.toggle('mode-minigame',
+          !!(window.minigame && window.minigame.isMinigame(_activeTournament)));
+        document.body.classList.toggle('tourn-upcoming',
+          _activeTournament?.status === 'upcoming');
         applyTournamentStatusVisibility();
         await refreshTeamsCache();
         await renderTournamentControls(activeTournament);
@@ -403,6 +407,10 @@ async function switchTournament(tournamentId) {
     // Cache the active tournament so gateScoringByRole can read .status
     _activeTournament = await tournamentManager.getTournament(tournamentId);
     window._activeTournament = _activeTournament;
+    document.body.classList.toggle('mode-minigame',
+      !!(window.minigame && window.minigame.isMinigame(_activeTournament)));
+    document.body.classList.toggle('tourn-upcoming',
+      _activeTournament?.status === 'upcoming');
     applyTournamentStatusVisibility();
     await refreshTeamsCache();
 
@@ -2970,6 +2978,10 @@ async function startTournament() {
     // Refresh cached tournament so gateScoringByRole unlocks scoring
     _activeTournament = await tournamentManager.getTournament(tournamentId);
     window._activeTournament = _activeTournament;
+    document.body.classList.toggle('mode-minigame',
+      !!(window.minigame && window.minigame.isMinigame(_activeTournament)));
+    document.body.classList.toggle('tourn-upcoming',
+      _activeTournament?.status === 'upcoming');
     applyTournamentStatusVisibility(); // hide auto-schedule bar etc.
 
     setStatus(t('tournamentStartedOk'), 'ok');

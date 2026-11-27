@@ -61,7 +61,7 @@
   flex-direction: column;
   gap: 4px;
 }
-.mg-member-row, .mg-pair-card {
+.mg-member-row {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -70,8 +70,71 @@
   border-radius: 6px;
   transition: background 0.12s;
 }
+.mg-pair-card {
+  background: rgba(255,255,255,0.03);
+  border-radius: 6px;
+  transition: background 0.12s;
+}
+.mg-pair-row-display {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+}
 .mg-member-row:hover, .mg-pair-card:hover {
   background: rgba(255,255,255,0.06);
+}
+.mg-pair-edit,
+.mg-pair-cancel {
+  background: transparent;
+  border: 1px solid var(--adm-border, #1e2d45);
+  color: var(--adm-muted, #94a3b8);
+  width: 26px; height: 26px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+}
+.mg-pair-edit:hover {
+  color: #fbbf24;
+  border-color: #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
+}
+.mg-pair-cancel:hover {
+  color: #ef4444;
+  border-color: rgba(239,68,68,0.5);
+}
+.mg-pair-row-edit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border-top: 1px dashed var(--adm-border, #1e2d45);
+  background: rgba(124, 58, 237, 0.06);
+  flex-wrap: wrap;
+}
+.mg-pair-row-edit[hidden] { display: none !important; }
+.mg-pair-row-edit select {
+  flex: 1;
+  min-width: 100px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--adm-border, #1e2d45);
+  color: var(--adm-text, #f1f5f9);
+  padding: 5px 6px;
+  border-radius: 4px;
+  font-size: 0.82rem;
+}
+.mg-pair-plus {
+  color: var(--adm-muted, #94a3b8);
+  font-weight: 700;
+}
+.mg-pair-save {
+  padding: 5px 10px;
+  font-size: 0.78rem;
 }
 .mg-name-input {
   flex: 1;
@@ -296,6 +359,52 @@
   .mg-club-grid { grid-template-columns: 1fr; }
   .mg-standings-table { font-size: 0.82rem; }
   .mg-standings-table th, .mg-standings-table td { padding: 8px 6px; }
+}
+
+/* ============================================================
+   MODE: minigame — strip KO-tournament UI entirely.
+   Body carries .mode-minigame when the active giải has
+   config.mode === 'minigame'. The sections below only make sense
+   for the vòng-bảng → bán kết → chung kết flow.
+   ============================================================ */
+
+body.mode-minigame #auto-schedule-bar,
+body.mode-minigame .adm-section:has(#match-list-semi),
+body.mode-minigame .adm-section:has(#match-list-final),
+body.mode-minigame .adm-section:has(#match-list-special),
+body.mode-minigame .adm-section:has(#bracket-container) {
+  display: none !important;
+}
+
+/* Rename the only remaining section title ("Vòng Bảng" → "Trận đấu") */
+body.mode-minigame .adm-section-title[data-i18n="groupStageSection"] {
+  font-size: 0;
+}
+body.mode-minigame .adm-section-title[data-i18n="groupStageSection"]::before {
+  content: '⚔️ Trận đấu';
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+/* Hide the "Trọng tài" assignment in each match card's edit form —
+   mini-game doesn't track per-match referees. */
+body.mode-minigame .adm-info-form label:has(select[data-field="referee"]) {
+  display: none !important;
+}
+
+/* Standings → "Tổng kết" relabel */
+body.mode-minigame .admin-tab[data-tab="standings"] {
+  /* keep the tab visible; the label text itself comes from i18n so
+     we leave it alone and reword the section header inside instead */
+}
+
+/* Lock inline rename when the tournament is no longer upcoming — the
+   contenteditable div can't take the .upcoming-only class (it's the
+   name display itself), so gate it with body state instead. */
+body.mode-minigame:not(.tourn-upcoming) .mg-name-input {
+  pointer-events: none;
+  background: transparent !important;
+  border-color: transparent !important;
 }
 
 /* Mini-game start bar (replaces the 5-step wizard setup bar) */
