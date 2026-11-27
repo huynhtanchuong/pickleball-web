@@ -217,6 +217,20 @@ async function fetchMatches() {
   //  because SAMPLE_MATCHES insert with tournament_id=NULL never satisfies the
   //  filter, so the next fetch returned [] again → seed → repeat.)
   const normalized = (data || []).map(normalizeMatch);
+
+  // Cache the active tournament so the sync render/standings paths can
+  // check config.mode without going async. Also drives body.mode-minigame.
+  try {
+    if (typeof tournamentManager !== 'undefined' && tournamentManager) {
+      const tid = tournamentManager.getActiveTournamentId();
+      if (tid) {
+        window._publicTournament = await tournamentManager.getTournament(tid);
+        document.body.classList.toggle('mode-minigame',
+          window._publicTournament?.config?.mode === 'minigame');
+      }
+    }
+  } catch (_) { /* best-effort */ }
+
   renderMatches(normalized);
   calculateStandings(normalized);
   storeUpdatedAt(normalized); // track timestamps for conflict detection
@@ -248,6 +262,17 @@ async function seedMatches() {
 // ── Render matches (public read-only view) ────────────────────
 //  admin.js overrides this function for the admin panel.
 function renderMatches(matches) {
+  // Mini-game public layout: live matches + next few + full schedule.
+  // Skips the KO sections entirely (CSS also hides them via body.mode-minigame).
+  const t = window._publicTournament;
+  if (t?.config?.mode === 'minigame' && window.minigame?.renderPublicMinigame) {
+    window.minigame.renderPublicMinigame(matches, t);
+    // Hide featured section — the "live" block already surfaces it.
+    const feat = document.getElementById('featured-section');
+    if (feat) feat.style.display = 'none';
+    return;
+  }
+
   const groupMatches = matches.filter(m => !m.stage || m.stage === "group");
   const semiMatches  = matches.filter(m => m.stage === "semi");
   const finalMatches = matches.filter(m => m.stage === "final");
@@ -967,6 +992,13 @@ async function markDone(id) {
 //   3. Head-to-head wins
 //   4. Head-to-head point diff
 function calculateStandings(matches) {
+  // Mini-game: 2-club tally lives in minigame.renderStandings.
+  const t = window._publicTournament;
+  if (t?.config?.mode === 'minigame' && window.minigame?.renderStandings) {
+    window.minigame.renderStandings(t);
+    return;
+  }
+
   const groupMatches = matches.filter(m => !m.stage || m.stage === "group");
   const groups = {};
 

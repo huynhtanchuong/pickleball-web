@@ -663,12 +663,100 @@
     if (visibleIsMatches)  { await renderMatchBuilder(t); if (typeof fetchMatches === 'function') await fetchMatches(); }
   }
 
+  // ====================================================================
+  // 6. PUBLIC VIEWER (index.html) — minimal layout for spectators
+  //    • Live matches on top
+  //    • Next ~5 upcoming
+  //    • Collapsible full schedule, grouped by category
+  //    (Standings/tổng kết is rendered by renderStandings in #standings-container.)
+  // ====================================================================
+  function renderPublicMinigame(matches, tournament) {
+    const host = document.getElementById('match-list-group');
+    if (!host) return;
+
+    const mini = matches.filter(m => m.stage === 'minigame')
+                        .sort((a, b) => (a.match_order || 0) - (b.match_order || 0));
+    const live     = mini.filter(m => m.status === 'playing');
+    const upcoming = mini.filter(m => m.status === 'not_started');
+    const done     = mini.filter(m => m.status === 'done' || m.status === 'completed');
+    const SHOW_NEXT = 5;
+
+    const catOf = (m) => (CATEGORIES.find(c => c.key === (m.group_name || 'dn'))) || CATEGORIES[0];
+
+    const card = (m, opts = {}) => {
+      const cat = catOf(m);
+      const score = (opts.showScore || m.status !== 'not_started')
+        ? `<span class="mg-pub-score ${m.status === 'playing' ? 'live' : ''}">${m.score_a || 0}<span class="mg-pub-score-sep">—</span>${m.score_b || 0}</span>`
+        : `<span class="mg-pub-vs">vs</span>`;
+      const liveTag = m.status === 'playing'
+        ? `<span class="mg-pub-live-dot" title="Đang diễn ra"></span>`
+        : '';
+      const timeTag = m.match_time ? `<span class="mg-pub-time">🕐 ${esc(m.match_time)}</span>` : '';
+      const courtTag = m.court ? `<span class="mg-pub-court">🏟 ${esc(m.court)}</span>` : '';
+      return `
+        <div class="mg-pub-card ${m.status === 'playing' ? 'is-live' : m.status === 'done' ? 'is-done' : 'is-ns'}">
+          <div class="mg-pub-top">
+            <span class="mg-pub-order">#${m.match_order || '?'}</span>
+            <span class="mg-pub-cat">${cat.label}</span>
+            ${liveTag}
+            <span class="mg-pub-meta">${timeTag} ${courtTag}</span>
+          </div>
+          <div class="mg-pub-row">
+            <span class="mg-pub-team mg-pub-team-a">${esc(m.team_a || '—')}</span>
+            ${score}
+            <span class="mg-pub-team mg-pub-team-b">${esc(m.team_b || '—')}</span>
+          </div>
+        </div>`;
+    };
+
+    const nextList = upcoming.slice(0, SHOW_NEXT);
+    const remaining = mini.length - live.length - nextList.length;
+
+    const scheduleBlock = (() => {
+      // Show every match grouped by category inside the collapsible.
+      return CATEGORIES.map(c => {
+        const list = mini.filter(m => (m.group_name || 'dn') === c.key);
+        if (!list.length) return '';
+        return `
+          <div class="mg-pub-cat-block">
+            <div class="mg-pub-cat-title">${c.label} <span class="mg-pub-cat-n">${list.length}</span></div>
+            ${list.map(m => card(m, { showScore: m.status !== 'not_started' })).join('')}
+          </div>`;
+      }).join('');
+    })();
+
+    host.innerHTML = `
+      ${live.length ? `
+        <div class="mg-pub-section mg-pub-section-live">
+          <div class="mg-pub-section-title"><span class="mg-pub-live-dot"></span> TRỰC TIẾP</div>
+          ${live.map(m => card(m, { showScore: true })).join('')}
+        </div>` : ''}
+      ${nextList.length ? `
+        <div class="mg-pub-section">
+          <div class="mg-pub-section-title">⏭️ Sắp tới (${nextList.length}${remaining > 0 ? ' / còn ' + remaining + ' trận' : ''})</div>
+          ${nextList.map(m => card(m)).join('')}
+        </div>` : ''}
+      ${!live.length && !nextList.length && done.length ? `
+        <div class="mg-pub-section">
+          <div class="mg-pub-section-title">✓ Đã kết thúc</div>
+          <p class="empty-state">Toàn bộ ${done.length} trận đã xong. Mở lịch bên dưới để xem kết quả từng trận.</p>
+        </div>` : ''}
+      ${mini.length ? `
+        <details class="mg-pub-schedule">
+          <summary>📅 Xem lịch thi đấu đầy đủ (${mini.length} trận)</summary>
+          <div class="mg-pub-schedule-body">${scheduleBlock}</div>
+        </details>` : `
+        <p class="empty-state">Chưa có trận nào.</p>`}
+    `;
+  }
+
   window.minigame = {
     isMinigame,
     renderMembersTab,
     renderTeamsTab,
     renderMatchBuilder,
     renderMinigameMatches,
+    renderPublicMinigame,
     renderStandings,
     reload,
     getClubs

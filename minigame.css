@@ -179,6 +179,186 @@
   flex: 0 0 140px;
   min-width: 120px;
 }
+
+/* ============================================================
+   PUBLIC VIEWER (index.html) — mini-game layout
+   ============================================================ */
+.mg-pub-section {
+  margin-bottom: 20px;
+}
+.mg-pub-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted, #64748b);
+  margin: 0 0 10px 2px;
+}
+.mg-pub-section-live .mg-pub-section-title {
+  color: #ef4444;
+}
+.mg-pub-live-dot {
+  display: inline-block;
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 10px rgba(239,68,68,0.8);
+  animation: mgPubPulse 1.3s ease-in-out infinite;
+}
+@keyframes mgPubPulse {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50%     { opacity: 0.55; transform: scale(0.8); }
+}
+
+.mg-pub-card {
+  background: var(--bg-card, #111827);
+  border: 1px solid var(--border, #1e2d45);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 0.2s, transform 0.18s;
+}
+.mg-pub-card.is-live {
+  border-color: rgba(239,68,68,0.6);
+  box-shadow: 0 0 18px rgba(239,68,68,0.15);
+  background: linear-gradient(135deg, rgba(239,68,68,0.04), var(--bg-card, #111827));
+}
+.mg-pub-card.is-done {
+  opacity: 0.75;
+}
+.mg-pub-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  color: var(--text-muted, #64748b);
+}
+.mg-pub-order {
+  font-weight: 800;
+  background: rgba(255,255,255,0.06);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--text-dim, #94a3b8);
+}
+.mg-pub-cat {
+  font-weight: 600;
+}
+.mg-pub-meta {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.mg-pub-time, .mg-pub-court {
+  color: var(--text-dim, #94a3b8);
+  font-size: 0.72rem;
+}
+
+.mg-pub-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 10px;
+  align-items: center;
+}
+.mg-pub-team {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text, #f1f5f9);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.25;
+}
+.mg-pub-team-a { text-align: right; }
+.mg-pub-team-b { text-align: left; }
+.mg-pub-vs {
+  font-size: 0.72rem;
+  color: var(--text-muted, #64748b);
+  font-weight: 700;
+}
+.mg-pub-score {
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: var(--text, #f1f5f9);
+  font-variant-numeric: tabular-nums;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+.mg-pub-score.live {
+  color: #fde047;
+  text-shadow: 0 0 12px rgba(253,224,71,0.5);
+}
+.mg-pub-score-sep {
+  margin: 0 4px;
+  color: var(--text-muted, #64748b);
+  font-weight: 700;
+}
+
+/* Collapsible full schedule */
+.mg-pub-schedule {
+  margin-top: 14px;
+  background: var(--bg-card, #111827);
+  border: 1px solid var(--border, #1e2d45);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.mg-pub-schedule summary {
+  padding: 12px 14px;
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--text, #f1f5f9);
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mg-pub-schedule summary::-webkit-details-marker { display: none; }
+.mg-pub-schedule summary::after {
+  content: '▾';
+  margin-left: auto;
+  transition: transform 0.2s;
+}
+.mg-pub-schedule[open] summary::after { transform: rotate(180deg); }
+.mg-pub-schedule-body {
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--border, #1e2d45);
+}
+.mg-pub-cat-block { margin-bottom: 18px; }
+.mg-pub-cat-block:last-child { margin-bottom: 0; }
+.mg-pub-cat-title {
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim, #94a3b8);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mg-pub-cat-n {
+  background: rgba(255,255,255,0.06);
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+}
+
+@media (max-width: 500px) {
+  .mg-pub-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    text-align: center;
+  }
+  .mg-pub-team-a, .mg-pub-team-b { text-align: center; }
+  .mg-pub-score { padding: 6px 0; font-size: 1.6rem; }
+  .mg-pub-vs { padding: 4px 0; }
+}
 .mg-name-input {
   flex: 1;
   background: transparent;
@@ -411,12 +591,30 @@
    for the vòng-bảng → bán kết → chung kết flow.
    ============================================================ */
 
+/* Admin page (admin.html) */
 body.mode-minigame #auto-schedule-bar,
 body.mode-minigame .adm-section:has(#match-list-semi),
 body.mode-minigame .adm-section:has(#match-list-final),
 body.mode-minigame .adm-section:has(#match-list-special),
 body.mode-minigame .adm-section:has(#bracket-container) {
   display: none !important;
+}
+
+/* Public scoreboard (index.html) — same idea, different markup */
+body.mode-minigame #featured-section,
+body.mode-minigame #section-semi,
+body.mode-minigame #section-final,
+body.mode-minigame #section-bracket,
+body.mode-minigame #demo-controls {
+  display: none !important;
+}
+/* Replace the "Vòng Bảng" section header on the public view */
+body.mode-minigame .sb-section .section-header:has(+ #match-list-group) .section-title {
+  font-size: 0;
+}
+body.mode-minigame .sb-section .section-header:has(+ #match-list-group) .section-title::before {
+  content: 'Trận đấu';
+  font-size: 1rem;
 }
 
 /* Rename the only remaining section title ("Vòng Bảng" → "Trận đấu") */
