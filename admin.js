@@ -2346,6 +2346,10 @@ function openServeDialog(matchId) {
  * Show serve selection dialog
  */
 function showServeDialog(matchId, state) {
+  // Idempotent — drop any existing serve dialog (same or other match)
+  // so we never stack duplicate overlays if the user taps multiple times
+  // or fetchAllMatches resolves after a second click.
+  document.querySelectorAll('.dialog-overlay[id^="serve-dialog-"]').forEach(el => el.remove());
   // Force the page to scroll up so the fixed dialog is in front of the user
   // (some mobile browsers anchor fixed elements to the layout viewport, which
   // can leave the dialog above the visible scroll area)

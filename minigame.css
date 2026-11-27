@@ -804,10 +804,14 @@ body.mode-minigame::before {
   mask-image: radial-gradient(ellipse at center, #000 30%, transparent 85%);
   -webkit-mask-image: radial-gradient(ellipse at center, #000 30%, transparent 85%);
 }
-/* Stack above the grid ::before layer. Exclude .mg-modal-overlay so its
-   own position: fixed isn't overridden to relative — otherwise the modal
-   drops into normal document flow and multiple opens stack vertically. */
-body.mode-minigame > :not(.mg-modal-overlay) { position: relative; z-index: 1; }
+/* Stack above the grid ::before layer. Exclude every fixed-positioned
+   overlay class so its own position: fixed isn't overridden to relative —
+   otherwise the modal/dialog drops into normal document flow and multiple
+   opens stack vertically at the bottom of the page. */
+body.mode-minigame > :not(.mg-modal-overlay):not(.dialog-overlay) {
+  position: relative;
+  z-index: 1;
+}
 
 /* ── Header / nav (public + admin) ── */
 body.mode-minigame .site-header,
