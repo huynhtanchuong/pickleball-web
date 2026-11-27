@@ -180,6 +180,106 @@
   min-width: 120px;
 }
 
+/* "Đổi cặp" button overlaid in the top-right of each minigame match card */
+.adm-match-card {
+  position: relative;
+}
+.mg-match-pair-edit {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--adm-border, #1e2d45);
+  background: rgba(124, 58, 237, 0.14);
+  color: var(--adm-text, #f1f5f9);
+  font-size: 0.85rem;
+  cursor: pointer;
+  z-index: 2;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, transform 0.1s;
+}
+.mg-match-pair-edit:hover {
+  background: rgba(124, 58, 237, 0.3);
+}
+.mg-match-pair-edit:active { transform: scale(0.95); }
+
+/* Modal for editing which 2 pairs play a given match */
+.mg-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  backdrop-filter: blur(3px);
+}
+.mg-modal {
+  background: var(--adm-card, #111827);
+  border: 1px solid var(--adm-border, #1e2d45);
+  border-radius: 12px;
+  padding: 18px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+}
+.mg-modal-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--adm-text, #f1f5f9);
+  margin-bottom: 4px;
+}
+.mg-modal-note {
+  font-size: 0.8rem;
+  color: var(--adm-muted, #94a3b8);
+  margin-bottom: 14px;
+}
+.mg-modal-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.mg-modal-row label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--adm-muted, #94a3b8);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.mg-modal-row select {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--adm-border, #1e2d45);
+  color: var(--adm-text, #f1f5f9);
+  padding: 8px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+.mg-modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+.mg-modal-cancel {
+  background: transparent;
+  border: 1px solid var(--adm-border, #1e2d45);
+  color: var(--adm-muted, #94a3b8);
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.mg-modal-cancel:hover {
+  color: var(--adm-text, #f1f5f9);
+}
+
 /* ============================================================
    PUBLIC VIEWER (index.html) — mini-game layout
    ============================================================ */

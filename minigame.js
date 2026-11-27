@@ -447,7 +447,108 @@
         renderStageList(`mg-cat-${c.key}`, sub, 'group');
       }
     });
+    // Decorate each .adm-match-card with an "Đổi cặp" button so admin can
+    // swap which two pairs play that match.
+    host.querySelectorAll('.adm-match-card').forEach(card => {
+      const id = card.getAttribute('data-id');
+      if (!id || card.querySelector('.mg-match-pair-edit')) return;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'mg-match-pair-edit admin-only';
+      btn.title = 'Đổi cặp cho trận này';
+      btn.textContent = '🔀';
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation(); // don't toggle the card
+        window.mgOpenMatchEdit(id);
+      });
+      card.appendChild(btn);
+    });
+    if (typeof applyRoleVisibility === 'function') applyRoleVisibility();
   }
+
+  // ----- Edit match pairs (admin swaps which 2 pairs play a given trận) -----
+  window.mgOpenMatchEdit = async function (matchId) {
+    const tid = window.tournamentManager.getActiveTournamentId();
+    if (!tid) return;
+    try {
+      const [matches, teams] = await Promise.all([
+        window.tournamentManager.getMatches(tid),
+        window.tournamentManager.getTeamsWithMembers(tid)
+      ]);
+      const m = matches.find(x => String(x.id) === String(matchId));
+      if (!m) return;
+      const tournament = window._activeTournament;
+      const clubs = getClubs(tournament);
+      const [clubA, clubB] = clubs;
+      const teamsA = teams.filter(t => t.group_name === clubA);
+      const teamsB = teams.filter(t => t.group_name === clubB);
+      const opt = (t, selId) => {
+        const n1 = t.member1?.name || '';
+        const n2 = t.member2?.name || '';
+        const label = n1 && n2 ? `${n1} + ${n2}` : (t.name || `#${t.id}`);
+        return `<option value="${t.id}" ${String(t.id) === String(selId) ? 'selected' : ''}>${esc(label)}</option>`;
+      };
+      const html = `
+        <div class="mg-modal-overlay" id="mg-match-edit-overlay"
+             onclick="if(event.target===this)mgCloseMatchEdit()">
+          <div class="mg-modal">
+            <div class="mg-modal-title">🔀 Đổi cặp cho trận #${m.match_order || '?'}</div>
+            <div class="mg-modal-note">${esc(CATEGORIES.find(c => c.key === (m.group_name || 'dn'))?.label || '')}</div>
+            <div class="mg-modal-row">
+              <label>${esc(clubA)}</label>
+              <select id="mg-match-edit-a">
+                <option value="">— Chọn cặp —</option>
+                ${teamsA.map(t => opt(t, m.team_a_id)).join('')}
+              </select>
+            </div>
+            <div class="mg-modal-row">
+              <label>${esc(clubB)}</label>
+              <select id="mg-match-edit-b">
+                <option value="">— Chọn cặp —</option>
+                ${teamsB.map(t => opt(t, m.team_b_id)).join('')}
+              </select>
+            </div>
+            <div class="mg-modal-actions">
+              <button class="mg-modal-cancel" onclick="mgCloseMatchEdit()">Hủy</button>
+              <button class="mg-add-btn" onclick="mgSaveMatchEdit('${matchId}')">💾 Lưu</button>
+            </div>
+          </div>
+        </div>`;
+      document.body.insertAdjacentHTML('beforeend', html);
+    } catch (err) {
+      console.error('mgOpenMatchEdit:', err);
+      alert('Không mở được: ' + err.message);
+    }
+  };
+
+  window.mgCloseMatchEdit = function () {
+    document.getElementById('mg-match-edit-overlay')?.remove();
+  };
+
+  window.mgSaveMatchEdit = async function (matchId) {
+    const aId = document.getElementById('mg-match-edit-a')?.value;
+    const bId = document.getElementById('mg-match-edit-b')?.value;
+    if (!aId || !bId) return alert('Chọn đủ 2 cặp.');
+    try {
+      const tid = window.tournamentManager.getActiveTournamentId();
+      const teams = await window.tournamentManager.getTeamsWithMembers(tid);
+      const a = teams.find(t => String(t.id) === String(aId));
+      const b = teams.find(t => String(t.id) === String(bId));
+      const nameOf = (x) => x?.name ||
+        `${x?.member1?.name || ''} + ${x?.member2?.name || ''}`;
+      await window.storage.update('matches', matchId, {
+        team_a_id: aId,
+        team_b_id: bId,
+        team_a: nameOf(a),
+        team_b: nameOf(b)
+      });
+      window.mgCloseMatchEdit();
+      if (typeof fetchMatches === 'function') await fetchMatches();
+    } catch (err) {
+      console.error('mgSaveMatchEdit:', err);
+      alert('Không lưu được: ' + err.message);
+    }
+  };
 
   async function renderMatchBuilder(tournament) {
     const host = document.getElementById('tab-matches') || document.getElementById('match-list-group');
