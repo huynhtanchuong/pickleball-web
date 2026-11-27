@@ -749,6 +749,17 @@
       const partById  = new Map(participants.map(p => [String(p.member_id), p]));
       const teamById  = new Map(teams.map(t => [String(t.id), t]));
       const playerStats = new Map();
+      // Seed every participant with 0s so the table lists all VĐV from
+      // day 1 — not just the ones who've already played a match.
+      participants.forEach(p => {
+        playerStats.set(String(p.member_id), {
+          memberId: p.member_id,
+          name: p.member?.name || `#${p.member_id}`,
+          club: p.club_name || '',
+          wins: 0, losses: 0, played: 0,
+          pointsFor: 0, pointsAgainst: 0
+        });
+      });
       const bumpPlayer = (mid, winLoss, scored, conceded) => {
         if (!mid) return;
         if (!playerStats.has(mid)) {
@@ -788,11 +799,12 @@
                      || (y.played - x.played)
                      || x.name.localeCompare(y.name));
 
+      const playedCount = playerRows.filter(p => p.played > 0).length;
       const playerTable = playerRows.length ? `
         <div class="mg-player-stats">
           <div class="mg-player-stats-title">
             👤 Thống kê theo vận động viên
-            <span class="mg-player-stats-sub">${playerRows.length} VĐV đã ra sân</span>
+            <span class="mg-player-stats-sub">${playedCount}/${playerRows.length} VĐV đã ra sân</span>
           </div>
           <div class="mg-player-table-wrap">
             <table class="mg-standings-table mg-player-table">
