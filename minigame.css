@@ -226,6 +226,12 @@ body.mode-minigame {
 .adm-match-card {
   position: relative;
 }
+/* In minigame mode the status badge (● ĐANG ĐẤU / ◌ CHƯA BẮT ĐẦU / ✓ XONG)
+   is pure noise — the card already tells the story via its border + the
+   win-highlighted team name — and on mobile its ~90px width was eating
+   the team row and crashing into the ↺/📝/🔀 action buttons.
+   Card edge-color still indicates status. */
+body.mode-minigame .adm-status-badge { display: none !important; }
 /* Match-order tag in the top-left corner */
 .mg-match-order {
   position: absolute;
