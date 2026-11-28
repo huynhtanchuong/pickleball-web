@@ -1539,9 +1539,12 @@ async function loadPublicTournamentSelector() {
         </option>
       `).join('');
 
-    // Set active tournament to first ongoing if current active is not ongoing
+    // Set active tournament to first ongoing if current active is archived,
+    // deleted, or not ongoing. An archived tournament keeps status='ongoing'
+    // in the DB, so checking status alone leaves the public view stuck on
+    // a hidden tournament the dropdown doesn't even show.
     const currentTournament = tournaments.find(t => t.id == activeId);
-    if (!currentTournament || currentTournament.status !== 'ongoing') {
+    if (!currentTournament || currentTournament.archived || currentTournament.status !== 'ongoing') {
       activeId = ongoingTournaments[0].id;
     }
     
