@@ -548,7 +548,10 @@ body.mode-minigame .mg-pub-section-done .mg-pub-section-title {
   border-left-color: var(--mg-cyan);
 }
 
-/* Sticky nav tabs on the public viewer — Sắp tới · BXH · Kết quả */
+/* Sticky nav tabs on the public viewer — Sắp tới · BXH · Kết quả
+   A centered pill group, not 3 fat outlined boxes. The outer bar
+   bleeds full-width and stays sticky; the pills themselves live in
+   a transparent inline-flex capsule so they read as one widget. */
 .mg-pub-nav {
   position: sticky;
   /* Site header is also sticky (top:0), so sit right under it.
@@ -556,56 +559,66 @@ body.mode-minigame .mg-pub-section-done .mg-pub-section-title {
   top: calc(env(safe-area-inset-top, 0px));
   z-index: 50;
   display: flex;
-  gap: 6px;
-  padding: 8px 12px;
-  margin: -16px -12px 16px;   /* bleed to viewport edges, tighten below */
+  justify-content: center;
+  padding: 10px 12px;
+  margin: -16px -12px 20px;   /* bleed to viewport edges, tighten below */
   background: rgba(8, 20, 32, 0.92);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
   border-bottom: 1px solid var(--border, #1e2d45);
 }
 body.mode-minigame .mg-pub-nav {
-  background: rgba(5, 10, 20, 0.88);
-  border-bottom-color: var(--mg-border);
-  box-shadow: 0 2px 20px rgba(34, 255, 153, 0.08);
+  background:
+    radial-gradient(1200px 60px at 50% 100%, rgba(34, 255, 153, 0.1), transparent 70%),
+    rgba(5, 10, 20, 0.88);
+  border-bottom-color: rgba(34, 255, 153, 0.22);
+  box-shadow: 0 6px 24px rgba(34, 255, 153, 0.08);
 }
 .mg-pub-nav-btn {
-  flex: 1;
-  padding: 10px 6px;
+  position: relative;
+  padding: 7px 18px;
   background: transparent;
   color: var(--text-dim, #94a3b8);
-  border: 1px solid var(--border, #1e2d45);
-  border-radius: 8px;
+  border: none;
+  border-radius: 999px;
   font-size: 0.82rem;
   font-weight: 700;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.1s;
+  transition: color 0.15s, background 0.2s, transform 0.1s;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.mg-pub-nav-btn + .mg-pub-nav-btn {
+  margin-left: 2px;
 }
 .mg-pub-nav-btn:hover:not(.is-disabled) {
-  background: rgba(34, 197, 94, 0.08);
+  background: rgba(34, 197, 94, 0.1);
   color: var(--green, #22c55e);
-  border-color: rgba(34, 197, 94, 0.4);
 }
-.mg-pub-nav-btn:active:not(.is-disabled) { transform: scale(0.97); }
+.mg-pub-nav-btn:active:not(.is-disabled) { transform: scale(0.96); }
 .mg-pub-nav-btn.is-disabled {
   opacity: 0.35;
   cursor: not-allowed;
 }
 body.mode-minigame .mg-pub-nav-btn {
   color: var(--mg-text-dim);
-  border-color: var(--mg-border);
 }
 body.mode-minigame .mg-pub-nav-btn:hover:not(.is-disabled) {
-  background: rgba(34, 255, 153, 0.1);
+  background: linear-gradient(180deg, rgba(34, 255, 153, 0.18), rgba(34, 255, 153, 0.06));
   color: var(--mg-green-1);
-  border-color: rgba(34, 255, 153, 0.5);
-  box-shadow: inset 0 0 8px rgba(34, 255, 153, 0.12);
+  text-shadow: 0 0 8px rgba(34, 255, 153, 0.45);
+  box-shadow:
+    0 0 0 1px rgba(34, 255, 153, 0.35),
+    0 0 14px rgba(34, 255, 153, 0.22);
 }
 
 @media (max-width: 500px) {
-  .mg-pub-nav { padding: 6px 10px; gap: 4px; }
-  .mg-pub-nav-btn { padding: 8px 4px; font-size: 0.72rem; }
+  .mg-pub-nav { padding: 8px 10px; }
+  .mg-pub-nav-btn { padding: 6px 12px; font-size: 0.74rem; }
+  .mg-pub-nav-btn + .mg-pub-nav-btn { margin-left: 0; }
 }
 .mg-pub-section-done .mg-pub-card { opacity: 0.85; }
 .mg-pub-more {
