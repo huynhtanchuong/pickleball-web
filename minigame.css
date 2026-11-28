@@ -232,6 +232,13 @@ body.mode-minigame {
    the team row and crashing into the ↺/📝/🔀 action buttons.
    Card edge-color still indicates status. */
 body.mode-minigame .adm-status-badge { display: none !important; }
+/* The #N match-order badge is absolute-positioned in the top-left corner;
+   without the status badge taking up slot 1, the team name row runs under
+   it. Reserve ~44px on the left so #N sits above empty space. */
+body.mode-minigame .adm-summary-left { padding-left: 44px; }
+@media (max-width: 500px) {
+  body.mode-minigame .adm-summary-left { padding-left: 40px; }
+}
 /* Match-order tag in the top-left corner */
 .mg-match-order {
   position: absolute;
