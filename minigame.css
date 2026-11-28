@@ -236,8 +236,13 @@ body.mode-minigame .adm-status-badge { display: none !important; }
    without the status badge taking up slot 1, the team name row runs under
    it. Reserve ~44px on the left so #N sits above empty space. */
 body.mode-minigame .adm-summary-left { padding-left: 44px; }
+/* The ↺ 📝 🔀 action icons sit absolute in the top-right corner (~102px
+   wide, 28px tall). Push the score / time / collapse-arrow block DOWN
+   so it sits below the icons instead of behind them. */
+body.mode-minigame .adm-summary-right { padding-top: 36px; }
 @media (max-width: 500px) {
-  body.mode-minigame .adm-summary-left { padding-left: 40px; }
+  body.mode-minigame .adm-summary-left  { padding-left: 40px; }
+  body.mode-minigame .adm-summary-right { padding-top: 32px; }
 }
 /* Match-order tag in the top-left corner */
 .mg-match-order {
